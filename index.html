@@ -340,6 +340,7 @@ a.btn.primary{color:var(--azul-ink,#fff)}
 .pu{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;--pbg:#FBFAF7;--pfg:#1A1A1A;--pmut:#6F6F6F;--pline:#E3E0D8;--pq:#1F6B57;--pov:#7A5A00;--pacc:#1D3557;--pimp:#8E2A22;--phl:#FCEBB0;background:var(--pbg);color:var(--pfg)}
 .pu-sepia{--pbg:#F4ECD8;--pfg:#2B2116;--pmut:#7A6A55;--pline:#DFD2B5;--pq:#2E6650;--pov:#7A5200;--pacc:#3A2A16;--pimp:#8A2B1E;--phl:#EBD58E}
 .pu-noche{--pbg:#0E1116;--pfg:#D3D0C8;--pmut:#8C939E;--pline:#252B35;--pq:#8FD3BC;--pov:#E2B866;--pacc:#BFD3EE;--pimp:#F2A08F;--phl:#5A4A15;color-scheme:dark}
+html.pu-open .app,html.pu-open #actionbar,html.pu-open #sheet{visibility:hidden}
 .pu-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--pline);background:var(--pbg);font-family:var(--f-ui)}
 .pu-mid,.pu-right{display:flex;align-items:center;gap:6px}
 .pu-mid{flex:1;justify-content:center;min-width:0}
@@ -1847,6 +1848,27 @@ function pulpitHTML(mdText){
 }
 function fmtT(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60);return `${m}:${String(s%60).padStart(2,"0")}`}
 async function keepAwake(on){try{if(on&&"wakeLock" in navigator){PUL.wake=await navigator.wakeLock.request("screen")}else if(!on&&PUL.wake){await PUL.wake.release();PUL.wake=null}}catch{}}
+const PUBG={claro:"#FBFAF7",sepia:"#F4ECD8",noche:"#0E1116"};
+const PUCHROME={saved:null};
+function puChrome(theme){
+  try{
+    const root=document.documentElement,col=PUBG[theme]||PUBG.claro;
+    if(!PUCHROME.saved){
+      PUCHROME.saved={metas:[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>m.cloneNode(true)),bg:root.style.background,bbg:document.body.style.background,cs:root.style.colorScheme};
+      document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
+      const n=document.createElement("meta");n.name="theme-color";n.id="pu-theme";document.head.append(n);
+    }
+    root.classList.add("pu-open");root.style.background=col;document.body.style.background=col;root.style.colorScheme=theme==="noche"?"dark":"light";
+    const m=document.getElementById("pu-theme");if(m)m.content=col;
+  }catch{}
+}
+function puChromeOff(){
+  try{
+    const sv=PUCHROME.saved;if(!sv)return;const root=document.documentElement;
+    root.classList.remove("pu-open");root.style.background=sv.bg;document.body.style.background=sv.bbg;root.style.colorScheme=sv.cs;
+    document.getElementById("pu-theme")?.remove();sv.metas.forEach(m=>document.head.append(m));PUCHROME.saved=null;
+  }catch{}
+}
 function openPulpit(mdText,titulo){
   if(!mdText){toast("Todavía no hay una enseñanza para predicar");return}
   const {h,sec}=pulpitHTML(mdText);
@@ -1860,7 +1882,7 @@ function openPulpit(mdText,titulo){
     </header>
     <div class="pu-prog"><i></i></div>
     <main class="pu-scroll"><article class="pu-doc">${h}<p class="pu-end">Pastor Antonio Sierra J.</p></article></main>`;
-  m.hidden=false;document.body.style.overflow="hidden";
+  m.hidden=false;document.body.style.overflow="hidden";puChrome(pref.theme);
   try{const rf=m.requestFullscreen||m.webkitRequestFullscreen;if(rf)rf.call(m).catch?.(()=>{})}catch{}
   keepAwake(true);
   PUL.acc=0;PUL.run=false;PUL.t0=0;clearInterval(PUL.tick);
@@ -1883,13 +1905,13 @@ function openPulpit(mdText,titulo){
     if(a==="prev")return goto(curIdx()-1);
     if(a==="next")return goto(curIdx()+1);
     if(a==="bigger"||a==="smaller"){const y=sc.scrollTop/(sc.scrollHeight||1);pref.size=Math.max(18,Math.min(44,pref.size+(a==="bigger"?2:-2)));m.style.setProperty("--ps",pref.size+"px");sc.scrollTop=y*sc.scrollHeight;save();return}
-    if(a==="theme"){pref.theme=themes[(themes.indexOf(pref.theme)+1)%themes.length];m.className="pu pu-"+pref.theme;save();return}
+    if(a==="theme"){pref.theme=themes[(themes.indexOf(pref.theme)+1)%themes.length];m.className="pu pu-"+pref.theme;puChrome(pref.theme);save();return}
   };
   PUL.key=e=>{if(m.hidden)return;if(e.key==="Escape")closePulpit();if(e.key==="ArrowRight"||e.key==="PageDown")goto(curIdx()+1);if(e.key==="ArrowLeft"||e.key==="PageUp")goto(curIdx()-1)};
   document.addEventListener("keydown",PUL.key);
   document.addEventListener("visibilitychange",PUL.vis=()=>{if(!m.hidden&&document.visibilityState==="visible")keepAwake(true)});
 }
-function closePulpit(){const m=$("#pulpit");if(!m)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";clearInterval(PUL.tick);keepAwake(false);
+function closePulpit(){const m=$("#pulpit");if(!m)return;m.hidden=true;m.innerHTML="";puChromeOff();document.body.style.overflow="";clearInterval(PUL.tick);keepAwake(false);
   document.removeEventListener("keydown",PUL.key);document.removeEventListener("visibilitychange",PUL.vis);
   try{const d=document;if(d.fullscreenElement||d.webkitFullscreenElement)(d.exitFullscreen||d.webkitExitFullscreen).call(d)}catch{}}
 
