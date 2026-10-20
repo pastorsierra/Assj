@@ -340,6 +340,7 @@ a.btn.primary{color:var(--azul-ink,#fff)}
 .pu{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;--pbg:#FBFAF7;--pfg:#1A1A1A;--pmut:#6F6F6F;--pline:#E3E0D8;--pq:#1F6B57;--pov:#7A5A00;--pacc:#1D3557;--pimp:#8E2A22;--phl:#FCEBB0;background:var(--pbg);color:var(--pfg)}
 .pu-sepia{--pbg:#F4ECD8;--pfg:#2B2116;--pmut:#7A6A55;--pline:#DFD2B5;--pq:#2E6650;--pov:#7A5200;--pacc:#3A2A16;--pimp:#8A2B1E;--phl:#EBD58E}
 .pu-noche{--pbg:#0E1116;--pfg:#D3D0C8;--pmut:#8C939E;--pline:#252B35;--pq:#8FD3BC;--pov:#E2B866;--pacc:#BFD3EE;--pimp:#F2A08F;--phl:#5A4A15;color-scheme:dark}
+.navbtns{display:flex;gap:6px;flex:none}.navbtns .btn{min-width:42px;height:40px;padding:0 12px;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 html.pu-open .app,html.pu-open #actionbar,html.pu-open #sheet{visibility:hidden}
 .pu-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--pline);background:var(--pbg);font-family:var(--f-ui)}
 .pu-mid,.pu-right{display:flex;align-items:center;gap:6px}
@@ -420,6 +421,7 @@ code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
   </aside>
   <div class="main">
     <header class="top">
+      <div class="navbtns"><button class="btn" type="button" id="nvb" aria-label="Atrás" title="Atrás" disabled>‹</button><button class="btn" type="button" id="nvf" aria-label="Adelante" title="Adelante" disabled>›</button></div>
       <div class="mbrand">Taller del Predicador</div>
       <form class="jump" id="jumpform" autocomplete="off">
         <input type="search" id="jump" placeholder="Ir a un pasaje (Juan 3:16) o buscar una palabra…" aria-label="Ir a un pasaje o buscar">
@@ -1056,9 +1058,10 @@ function renderNav(){
   $("#tabnav").innerHTML=NAV.flatMap(g=>g.items).map(([id,n])=>`<button class="nav" data-go="${id}" ${id===CURRENT?'aria-current="page"':""}>${n}</button>`).join("");
   const cur=$('#tabnav [aria-current="page"]');cur?.scrollIntoView({inline:"center",block:"nearest"});
 }
+document.addEventListener("click",e=>{const nv=e.target.closest("#nvb,#nvf");if(nv){navStep(nv.id==="nvb"?-1:1);return}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b){if(b.dataset.go==="armarnuevo"){LSTATE.openNew=true;LSTATE.item=null;go("sermones");return}go(b.dataset.go)}});
-function go(id,opts={}){
-  CURRENT=id;try{history.replaceState(null,"","#"+id)}catch{}
+function _go(id,opts={}){
+  CURRENT=id;try{history.replaceState(history.state,"","#"+id)}catch{}
   renderNav();hideActionbar();window.scrollTo({top:0});
   const v=$("#view");
   if(id==="inicio")return viewInicio(v);
@@ -1072,6 +1075,41 @@ function go(id,opts={}){
   if(TOOLS[id])return viewTool(v,id,opts);
   viewInicio(v);
 }
+
+/* ============ atrás y adelante ============ */
+let NAVH=[],NAVI=-1,NAVSKIP=false,NAVPOP=0;
+function navSnap(opts){const o={};["open","q","item","keepSel"].forEach(k=>{if(opts&&opts[k]!=null)o[k]=opts[k]});
+  return {id:CURRENT,opts:o,ls:{c:LSTATE.c,q:LSTATE.q,f:LSTATE.f,item:LSTATE.item},bs:{...BSTATE},sel:[...SEL],y:0}}
+function navSig(e){return JSON.stringify([e.id,e.opts,e.ls,e.bs,e.sel])}
+function navButtons(){const b=$("#nvb"),f=$("#nvf");if(b)b.disabled=NAVI<=0;if(f)f.disabled=NAVI>=NAVH.length-1}
+function navRecord(opts,y0){
+  if(NAVSKIP)return;
+  const e=navSnap(opts);
+  if(NAVI>=0&&NAVH[NAVI]){NAVH[NAVI].y=y0||0;if(navSig(NAVH[NAVI])===navSig(e)){navButtons();return}}
+  NAVH=NAVH.slice(0,NAVI+1);NAVH.push(e);NAVI=NAVH.length-1;
+  try{NAVI===0?history.replaceState({tp:0},"","#"+CURRENT):history.pushState({tp:NAVI},"","#"+CURRENT)}catch{}
+  navButtons();
+}
+function navApply(e){
+  if($("#pulpit")&&!$("#pulpit").hidden)closePulpit();
+  NAVSKIP=true;
+  try{Object.assign(LSTATE,e.ls,{flash:null,openNew:false});BSTATE={...e.bs};SEL=[...e.sel];
+    const o={...e.opts};if(e.id==="sermones"&&!o.open&&e.ls.item!=null)o.item=e.ls.item;if(e.id==="biblia")o.keepSel=true;
+    _go(e.id,o)}
+  finally{NAVSKIP=false}
+  setTimeout(()=>window.scrollTo(0,e.y||0),80);navButtons();
+}
+function navStep(d){
+  const t=NAVI+d;if(!NAVH[t])return;
+  NAVI=t;navApply(NAVH[t]);
+  NAVPOP=1;setTimeout(()=>{NAVPOP=0},400);try{history.go(d)}catch{NAVPOP=0}
+}
+window.addEventListener("popstate",e=>{
+  if(NAVPOP){NAVPOP=0;return}
+  const n=e.state&&e.state.tp;if(n==null||!NAVH[n]||n===NAVI)return;
+  NAVH[NAVI]&&(NAVH[NAVI].y=window.scrollY);NAVI=n;navApply(NAVH[n]);
+});
+function go(id,opts={}){const y0=window.scrollY;_go(id,opts);navRecord(opts,y0)}
 
 /* ============ Inicio ============ */
 function viewInicio(v){
@@ -1364,10 +1402,10 @@ function viewBiblioteca(v,opts){
     box.innerHTML=`<div class="section-head"><h2>${n?`${total} ${total===1?"resultado":"resultados"}${where}`:(LSTATE.c==null?MOSTRAR[f]:LSTATE.c==="sin"?"Sin carpeta":esc(LIB.carpetas[LSTATE.c].t))}</h2>${LSTATE.c!=null&&n?`<button class="btn small" id="lall">Buscar en todas</button>`:""}</div>`+
       (total?`<div class="sermon-list">${S2.map(sRow).join("")}${L2.slice(0,150).map(it=>libItem(it,q)).join("")}</div>${L2.length>150?`<p class="muted">Mostrando las primeras. Escriba algo más específico para afinar.</p>`:""}`:`<div class="card muted">No hay enseñanzas${where}${q?` con «${esc(q)}»`:""}.</div>`);
     const la=$("#lall");if(la)la.onclick=()=>{LSTATE.c=null;draw()};};
-  $("#lcats").onclick=e=>{const t=e.target.closest("[data-lc]");if(!t)return;const k=t.dataset.lc;LSTATE.c=k===""?null:k==="sin"?"sin":+k;const nc=$("#ncat");if(nc&&typeof LSTATE.c==="number")nc.value=CATS[LSTATE.c][0];draw();$("#lres").scrollIntoView({block:"start",behavior:"smooth"})};
+  $("#lcats").onclick=e=>{const t=e.target.closest("[data-lc]");if(!t)return;const k=t.dataset.lc;LSTATE.c=k===""?null:k==="sin"?"sin":+k;const nc=$("#ncat");if(nc&&typeof LSTATE.c==="number")nc.value=CATS[LSTATE.c][0];draw();navRecord({},window.scrollY);$("#lres").scrollIntoView({block:"start",behavior:"smooth"})};
   let tm;$("#lq").oninput=()=>{clearTimeout(tm);tm=setTimeout(draw,180)};
   $("#fest").onchange=draw;
-  $("#lres").onclick=e=>{const b=e.target.closest("[data-lib]");if(b){LSTATE.item=+b.dataset.lib;viewBiblioteca($("#view"),{});window.scrollTo({top:0})}};
+  $("#lres").onclick=e=>{const b=e.target.closest("[data-lib]");if(b){const y0=window.scrollY;LSTATE.item=+b.dataset.lib;viewBiblioteca($("#view"),{});window.scrollTo({top:0});navRecord({},y0)}};
   $("#newbtn").onclick=()=>{const fm=$("#newform");fm.hidden=!fm.hidden;if(!fm.hidden)$("#nt").focus()};
   $("#newform").onsubmit=async e=>{e.preventDefault();const mode=e.submitter?.dataset.mode||"open";const t=$("#nt").value.trim();if(!t){$("#nt").focus();return}const id=await Store.saveSermon({titulo:t,texto:$("#ntx").value.trim(),categoria:$("#ncat").value,culto:"dominical",estado:"idea",fecha:"",notas:"",enserie:false,serie:""});mode==="armar"?go("armar",{id}):go("sermones",{open:id})};
   if(LSTATE.openNew){LSTATE.openNew=false;$("#newform").hidden=false;$("#nt").focus()}
@@ -1395,7 +1433,7 @@ function libRead(v,it){
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
   <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">Predicar</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
-  $("#lback").onclick=()=>{LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{})};
+  $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
     const id=await Store.saveSermon({titulo:it.t,texto:it.r||"",categoria:cat,culto:"dominical",estado:"prep",fecha:"",notas:"",enserie:false,serie:"",origen:it.i,origenTitulo:it.t,ensenanza:prep?"":libToMd(it)});
     if(prep)PREP[id]={old:libToText(it)};
