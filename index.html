@@ -682,6 +682,10 @@ const LOGO_B64="iVBORw0KGgoAAAANSUhEUgAAAyAAAAIqCAYAAADcnC66AAEAAElEQVR4nOyde1wT
 </script>
 <script type="text/app">
 /* ============ Ajustes (versión independiente) ============ */
+function bvRows(){
+  const row=(ab,name,builtin)=>`<div class="row" style="justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line,#ddd);border-radius:10px;padding:8px 10px"><span><b>${esc(ab)}</b> · ${esc(name)}${BVER.abbr===ab?` <span class="label" style="margin-left:6px">Principal</span>`:""}</span><span class="row" style="gap:6px">${BVER.abbr===ab?"":`<button class="btn small" data-bv="${esc(ab)}" data-act="main">Hacer principal</button>`}${builtin?"":`<button class="btn small ghost" data-bv="${esc(ab)}" data-act="del">Quitar</button>`}</span></div>`;
+  return row("RV1909","Reina-Valera 1909 (incluida en la app)",true)+bvList().filter(x=>bvGet(x.abbr)).map(x=>row(x.abbr,x.name,false)).join("");
+}
 function viewAjustes(v){
   const c=TP.cfg();
   const opts=sel=>TP.MODELOS.map(([id,n,d])=>`<option value="${id}" ${sel===id?"selected":""}>${n} · ${d}</option>`).join("");
@@ -709,8 +713,12 @@ function viewAjustes(v){
 
   <div class="section-head"><h2>Texto bíblico</h2></div>
   <div class="card" style="display:grid;gap:12px">
-    <p class="muted" style="margin:0">Versión que usa la app ahora: <b>${esc(BVER.name)}</b>. Puede cargar su propia Biblia (por ejemplo la Reina-Valera 1960) desde un archivo .json. Queda guardada solo en este equipo y no se incluye en las copias de seguridad.</p>
-    <div class="row" style="gap:8px"><button class="btn primary" id="bbin">Cargar una Biblia (.json)</button>${BVER.propia?`<button class="btn" id="bbout">Volver a la Reina-Valera 1909</button>`:""}<input type="file" id="bbfile" accept=".json,application/json" hidden></div>
+    <p class="muted" style="margin:0">Cargue sus Biblias (archivos .json) y quedan guardadas en este equipo para usarlas <b>sin internet</b>. La <b>principal</b> es la que se abre en la pestaña Biblia, en la Concordancia y al tocar una cita. Estas Biblias no se incluyen en las copias de seguridad.</p>
+    <div id="bvlist" style="display:grid;gap:8px">${bvRows()}</div>
+    <div class="row" style="gap:8px"><button class="btn primary" id="bbin">Cargar Biblias (.json)</button><input type="file" id="bbfile" accept=".json,application/json" multiple hidden></div>
+    <p class="muted" style="margin:0;font-size:13.5px" id="bbmsg" role="status"></p>
+    <div class="row" style="gap:8px"><button class="btn" id="vall">Verificar citas de todas mis enseñanzas</button></div>
+    <p class="muted" style="margin:0;font-size:13.5px">Compara cada cita con la Reina-Valera 1960 y corrige las que difieran. Necesita tener cargada la RVR1960. Cada enseñanza guarda su versión anterior por si quiere volver.</p>
   </div>
 
   <div class="section-head"><h2>Sin conexión</h2></div>
@@ -724,20 +732,30 @@ function viewAjustes(v){
     try{await TP.ping(c2.key,c2.modelDefault);msg("Conexión correcta. La IA está lista.")}
     catch(e){msg(ERR[e.code]||e.message||"No se pudo conectar.",true)}};
   $("#bbin").onclick=()=>$("#bbfile").click();
-  if($("#bbout"))$("#bbout").onclick=()=>{if(!confirm("Se vuelve a la Reina-Valera 1909. ¿Continuar?"))return;ls.set("tp_biblia_user",null);toast("Listo");setTimeout(()=>location.reload(),600)};
-  $("#bbfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
-    try{
-      const d=JSON.parse(await f.text());
-      const ok=Array.isArray(d)&&d.length===66&&d.every(b=>Array.isArray(b)&&Array.isArray(b[2])&&b[2].length>0&&b[2].every(c=>Array.isArray(c)&&c.every(v=>typeof v==="string")));
-      if(!ok)throw new Error("formato");
-      const ab=(prompt("Nombre corto de esta versión (por ejemplo RVR1960):",/1960/.test(f.name)?"RVR1960":"")||"").trim();
-      if(!ab)return;
-      const name=ab.toUpperCase()==="RVR1960"?"Reina-Valera 1960":ab;
-      ls.set("tp_biblia_user",{abbr:ab,name,data:d});
-      toast("Biblia cargada: "+name);setTimeout(()=>location.reload(),700);
-    }catch{toast("Ese archivo no tiene el formato de Biblia de la app")}
-    e.target.value="";
+  const bm=(t,bad)=>{const m=$("#bbmsg");if(m){m.textContent=t;m.style.color=bad?"var(--danger)":"inherit"}};
+  const refresh=()=>{const l=$("#bvlist");if(l)l.innerHTML=bvRows()};
+  $("#bvlist").onclick=async e=>{const k=e.target.closest("[data-bv]");if(!k)return;const ab=k.dataset.bv,act=k.dataset.act;
+    if(act==="main"){await setMainVersion(ab);bm("Principal: "+(bvGet(ab)?.name||"Reina-Valera 1909"));refresh()}
+    if(act==="del"){if(!confirm("¿Quitar la "+ab+" de este equipo? Puede volver a cargarla cuando quiera."))return;const wasMain=BVER.abbr===ab;bvRemove(ab);if(wasMain)await loadBible();bm(ab+" quitada.");refresh()}};
+  $("#bbfile").onchange=async e=>{const fs=[...e.target.files];e.target.value="";if(!fs.length)return;let n=0,bad=[];
+    for(const f of fs){
+      try{bm("Cargando "+f.name+"…");const d=JSON.parse(await f.text());let ab,name,books;
+        if(d&&Array.isArray(d.books)){books=d.books;ab=String(d.abbr||"").trim();name=String(d.name||ab)}
+        else if(Array.isArray(d)){books=d;ab=(prompt("Nombre corto de esta versión (por ejemplo RVR1960):",/1960/.test(f.name)?"RVR1960":"")||"").trim();name=ab.toUpperCase()==="RVR1960"?"Reina-Valera 1960":ab}
+        if(!ab||!bvOk(books))throw new Error("formato");
+        bvInstall(ab,name,books);n++;await new Promise(r=>setTimeout(r,30));
+      }catch{bad.push(f.name)}
+    }
+    if(n&&(BVER.abbr==="RV1909"||!bvGet(BVER.abbr))){const pick=bvGet("RVR1960")?"RVR1960":bvList().find(x=>bvGet(x.abbr))?.abbr;if(pick)await setMainVersion(pick)}
+    else if(n)await applyBible(BVER.abbr);
+    refresh();bm(n?`Listo: ${n} ${n===1?"Biblia cargada":"Biblias cargadas"}.`+(bad.length?` No se pudo leer: ${bad.join(", ")}.`:""):"Ese archivo no tiene el formato de Biblia de la app.",!n);
   };
+  $("#vall").onclick=async()=>{
+    if(!bvHas("RVR1960")){bm("Primero cargue la Reina-Valera 1960.",true);return}
+    const all=Store.localAll();let ns=0,nf=0,nb=0;const now=new Date().toISOString();
+    for(const s of all){if(!s.ensenanza)continue;const r=fixCitas(s.ensenanza);nb+=r.bad.length;if(r.fixed.length){s.ensanterior=s.ensenanza;s.ensenanza=r.text;s.actualizado=now;ns++;nf+=r.fixed.length}}
+    if(ns)Store.localSave(all);
+    bm(ns?`Se corrigieron ${nf} citas en ${ns} enseñanzas.`+(nb?` Quedan ${nb} para revisar una por una con "Verificar citas".`:""):(nb?`Todo coincide, salvo ${nb} citas para revisar una por una con "Verificar citas".`:"Todas las citas coinciden con la RVR1960."))};
   $("#bkout").onclick=backupData;
   $("#bkin").onclick=()=>$("#bkfile").click();
   $("#bkfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
@@ -748,7 +766,7 @@ function viewAjustes(v){
       const cur=Store.localAll();const byId=new Map(cur.map(s=>[s.id,s]));
       for(const s of d.sermones){const o=byId.get(s.id);if(!o||(s.actualizado||"")>=(o.actualizado||""))byId.set(s.id,s)}
       Store.localSave([...byId.values()]);
-      for(const [k,val] of Object.entries(d.kv||{})){if(/^tp_/.test(k)&&k!=="tp_cfg"&&k!=="tp_sermones"&&k!=="tp_biblia_user"&&k!=="tp_biblia")ls.set(k,val)}
+      for(const [k,val] of Object.entries(d.kv||{})){if(/^tp_/.test(k)&&k!=="tp_cfg"&&k!=="tp_sermones"&&k!=="tp_biblia_user"&&k!=="tp_biblia"&&!k.startsWith("tp_bv_"))ls.set(k,val)}
       toast("Copia restaurada");setTimeout(()=>location.reload(),700);
     }catch{toast("Ese archivo no es una copia del Taller del Predicador")}
     e.target.value="";
@@ -777,14 +795,6 @@ async function copyText(txt){try{await navigator.clipboard.writeText(txt);toast(
 let BIBLE=null, VERSES=[], ALIAS=new Map(), REFRE=null;
 let BVER={abbr:"RV1909",name:"Reina-Valera 1909",propia:false};
 const NT_START=39;
-async function loadBible(){
-  let data=null;
-  try{const u=ls.get("tp_biblia_user",null);if(u&&Array.isArray(u.data)&&u.data.length===66){data=u.data;BVER={abbr:u.abbr||"RVR1960",name:u.name||"Reina-Valera 1960",propia:true}}}catch{}
-  if(!data){const r=await fetch("rv1909.json");data=await r.json()}
-  BIBLE=data.map(([name,abbr,chs])=>({name,abbr,chs:chs.map(c=>c.map(v=>v.normalize("NFC")))}));
-  BIBLE.forEach((b,bi)=>b.chs.forEach((c,ci)=>c.forEach((t,vi)=>{if(t)VERSES.push({b:bi,c:ci+1,v:vi+1,t,n:norm(t)})})));
-  buildAliases();
-}
 function buildAliases(){
   const extra={"Salmos":["Salmo","Sal"],"Cantares":["Cantar de los Cantares","Cantar","Cnt","Cant"],"Eclesiastés":["Ecl","Ec"],"Proverbios":["Prov","Pr"],"Génesis":["Gn","Gén","Gen"],"Éxodo":["Éx","Ex"],"Levítico":["Lv","Lev"],"Números":["Nm","Núm","Num"],"Deuteronomio":["Dt","Deut"],"Josué":["Jos"],"Jueces":["Jue","Jc"],"Rut":["Rt"],"Nehemías":["Neh"],"Ester":["Est"],"Isaías":["Is","Isa"],"Jeremías":["Jer"],"Lamentaciones":["Lm","Lam"],"Ezequiel":["Ez","Eze"],"Daniel":["Dn","Dan"],"Oseas":["Os"],"Joel":["Jl"],"Amós":["Am"],"Abdías":["Abd"],"Jonás":["Jon"],"Miqueas":["Mi","Miq"],"Nahúm":["Nah"],"Habacuc":["Hab"],"Sofonías":["Sof"],"Hageo":["Hag"],"Zacarías":["Zac"],"Malaquías":["Mal"],"Mateo":["Mt"],"Marcos":["Mr","Mc"],"Lucas":["Lc"],"Juan":["Jn"],"Hechos":["Hch"],"Romanos":["Ro","Rom"],"Gálatas":["Gá","Gál","Gal"],"Efesios":["Ef"],"Filipenses":["Fil","Flp"],"Colosenses":["Col"],"Tito":["Tit"],"Filemón":["Flm"],"Hebreos":["He","Heb"],"Santiago":["Stg","Sant"],"Judas":["Jud"],"Apocalipsis":["Ap","Apoc"],"Esdras":["Esd"],"Job":["Job"]};
   const nums={"1":["1","I","Primera de","1ra"],"2":["2","II","Segunda de","2da"],"3":["3","III","Tercera de"]};
@@ -816,6 +826,106 @@ function parseRef(str){
 function refLabel(r){const n=BIBLE[r.b].name;if(!r.v1)return `${n} ${r.c}`;return r.v2&&r.v2!==r.v1?`${n} ${r.c}:${r.v1}-${r.v2}`:`${n} ${r.c}:${r.v1}`}
 function passageVerses(r){const ch=BIBLE[r.b].chs[r.c-1]||[];const a=r.v1||1,z=Math.min(r.v2||r.v1||ch.length,ch.length);const out=[];for(let v=a;v<=z;v++)if(ch[v-1])out.push([v,ch[v-1]]);return out}
 function passageText(r,max=80){return passageVerses(r).slice(0,max).map(([v,t])=>`${v} ${t}`).join("\n")}
+/* ============ Versiones de la Biblia y verificación de citas ============ */
+const BVC={};let RV1909=null;
+function bvList(){const l=ls.get("tp_bv_list",[]);return Array.isArray(l)?l:[]}
+function bvGet(ab){if(!ab)return null;if(BVC[ab])return BVC[ab];const o=ls.get("tp_bv_"+ab,null);if(o&&Array.isArray(o.books)&&o.books.length===66)return BVC[ab]=o;return null}
+function bvOk(d){return Array.isArray(d)&&d.length===66&&d.every(b=>Array.isArray(b)&&Array.isArray(b[2])&&b[2].length>0&&b[2].every(c=>Array.isArray(c)&&c.every(v=>typeof v==="string")))}
+function bvInstall(abbr,name,books){const o={abbr,name,books};ls.set("tp_bv_"+abbr,o);BVC[abbr]=o;const l=bvList().filter(x=>x.abbr!==abbr);l.push({abbr,name});ls.set("tp_bv_list",l)}
+function bvRemove(abbr){ls.set("tp_bv_"+abbr,undefined);delete BVC[abbr];ls.set("tp_bv_list",bvList().filter(x=>x.abbr!==abbr));if(ls.get("tp_bv_main","")===abbr)ls.set("tp_bv_main","")}
+function bvHas(abbr){return !!bvList().find(x=>x.abbr===abbr)&&!!bvGet(abbr)}
+function bvChapter(abbr,b,c){const o=bvGet(abbr);return (o&&o.books[b]&&o.books[b][2][c-1])||null}
+async function applyBible(ab){
+  const o=ab&&ab!=="RV1909"?bvGet(ab):null;let books,abbr,name,propia;
+  if(o){books=o.books;abbr=o.abbr;name=o.name;propia=true}
+  else{if(!RV1909){const r=await fetch("rv1909.json");RV1909=await r.json()}books=RV1909;abbr="RV1909";name="Reina-Valera 1909";propia=false}
+  BVER={abbr,name,propia};
+  BIBLE=books.map(([n,a,chs])=>({name:n,abbr:a,chs:chs.map(c=>c.map(v=>v.normalize("NFC")))}));
+  VERSES.length=0;ALIAS.clear();
+  BIBLE.forEach((b,bi)=>b.chs.forEach((c,ci)=>c.forEach((t,vi)=>{if(t)VERSES.push({b:bi,c:ci+1,v:vi+1,t,n:norm(t)})})));
+  buildAliases();
+}
+async function setMainVersion(ab){ls.set("tp_bv_main",ab);await applyBible(ab)}
+async function loadBible(){
+  try{const u=ls.get("tp_biblia_user",null);if(u&&Array.isArray(u.data)&&u.data.length===66){const ab=u.abbr||"RVR1960";if(!bvHas(ab))bvInstall(ab,u.name||ab,u.data);if(!ls.get("tp_bv_main",""))ls.set("tp_bv_main",ab);ls.set("tp_biblia_user",undefined)}}catch{}
+  let main=ls.get("tp_bv_main","");
+  if(!main||!bvGet(main))main=bvGet("RVR1960")?"RVR1960":(bvList().find(x=>bvGet(x.abbr))?.abbr||"RV1909");
+  await applyBible(main);
+}
+/* --- verificación de citas contra la Reina-Valera 1960 --- */
+const SUPD="⁰¹²³⁴⁵⁶⁷⁸⁹";const supN=n=>String(n).replace(/\d/g,d=>SUPD[d]);
+const REFV=/^((?:[123]\s)?[A-Za-zÁÉÍÓÚáéíóúñÑ]+(?:\s[A-Za-zÁÉÍÓÚáéíóúñ]+)?)\s+(\d+):(\d+)(?:\s*[-–]\s*(\d+))?$/;
+function nk(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ").split(/\s+/).filter(Boolean)}
+function parseVRef(str,defBook){
+  let r=str.trim().replace(/\s+/g," ");if(/^\d+:\d+/.test(r)&&defBook)r=defBook+" "+r;
+  const m=r.match(REFV);if(!m)return null;const b=bookIndex(m[1]);if(b==null)return null;
+  const c=+m[2],a=+m[3],z=+(m[4]||m[3]);return {b,c,a,z:Math.max(a,z)}
+}
+function verseList(ab,x){const ch=bvChapter(ab,x.b,x.c);if(!ch)return null;const out=[];for(let v=x.a;v<=Math.min(x.z,ch.length);v++)if(ch[v-1])out.push([v,ch[v-1]]);return out.length?out:null}
+function blockText(vs){return vs.map(([v,t],i)=>(i?supN(v):"")+t).join(" ")}
+function spanOf(frag,vtext){
+  const parts=frag.split(/…|\.\.\./).map(p=>p.trim()).filter(Boolean);
+  const words=[...vtext.matchAll(/\S+/g)].map(m=>m[0]);const flat=[];
+  words.forEach((w,i)=>nk(w).forEach(t=>flat.push([t,i])));
+  let start=0;const out=[];
+  for(const p of parts){const toks=nk(p);if(!toks.length)continue;let found=-1;
+    for(let s=start;s<=flat.length-toks.length;s++){let ok=true;for(let k=0;k<toks.length;k++)if(flat[s+k][0]!==toks[k]){ok=false;break}if(ok){found=s;break}}
+    if(found<0)return null;
+    out.push(words.slice(flat[found][1],flat[found+toks.length-1][1]+1).join(" "));start=found+toks.length}
+  return out.length?out.join(" … "):null
+}
+function mainBookOf(text){const m=text.match(/^> ([^—\n(]+?)(?: —|$)/m);if(!m)return "";const mm=m[1].trim().match(/^((?:[123]\s)?\D+?)\s+\d+/);return mm?mm[1].trim():""}
+function fixCitas(text){
+  const VB="RVR1960";const res={text,fixed:[],bad:[],ok:0,sinBiblia:!bvHas(VB)};
+  if(res.sinBiblia||!BIBLE)return res;
+  const book=mainBookOf(text);
+  let s=text.replace(/^> (?!\()([^—\n]+?)(?: — (.*))?$/gm,(all,ref)=>{
+    const x=parseVRef(ref.trim());if(!x)return all;
+    const vs=verseList(VB,x);if(!vs){res.bad.push({ref:ref.trim(),tipo:"bloque",why:"Ese versículo no existe en la RVR1960"});return all}
+    const nw=`> ${ref.trim()} — ${blockText(vs)}`;if(nw===all)res.ok++;else res.fixed.push({ref:ref.trim(),tipo:"bloque",antes:all.replace(/^> [^—]+— ?/,""),despues:blockText(vs)});return nw});
+  s=s.replace(/«([^»]+)»\s*\(([^)]+)\)/g,(all,frag,ref)=>{
+    if(/\b(NTV|NVI|DHH|NBLA|LBLA|RVC|RVA|TLA|PDT)\b/.test(ref))return all;
+    const x=parseVRef(ref,book);if(!x)return all;
+    const vs=verseList(VB,x);if(!vs){res.bad.push({ref,tipo:"cita",frag,why:"Ese versículo no existe en la RVR1960"});return all}
+    const full=vs.map(v=>v[1]).join(" ");let sp=spanOf(frag,full);
+    if(sp==null){res.bad.push({ref,tipo:"cita",frag,real:full,orig:all,why:"El texto no coincide con la RVR1960"});return all}
+    if(!/[.,;:?!]$/.test(frag.trim()))sp=sp.replace(/[.,;:]+$/,"");
+    if(frag&&sp&&/[a-záéíóúñ]/.test(frag[0])!==/[a-záéíóúñ]/.test(sp[0]))sp=(/[a-záéíóúñ]/.test(frag[0])?sp[0].toLowerCase():sp[0].toUpperCase())+sp.slice(1);
+    if(sp===frag){res.ok++;return all}
+    res.fixed.push({ref,tipo:"cita",antes:frag,despues:sp});return `«${sp}» (${ref})`});
+  res.text=s;return res;
+}
+function autoFix(text,silent){try{const r=fixCitas(text);if(r.sinBiblia)return text;if(!silent&&(r.fixed.length||r.bad.length))toast(`Citas revisadas con la RVR1960: ${r.fixed.length} corregidas${r.bad.length?`, ${r.bad.length} para revisar`:""}`);return r.text}catch(e){console.warn(e);return text}}
+function addAltBlock(text,ab){
+  const o=bvGet(ab);if(!o)return null;const lines=text.split("\n");
+  const i=lines.findIndex(l=>/^> (?!\()[^—]+ — /.test(l));if(i<0)return null;
+  const x=parseVRef(lines[i].slice(2).split(" — ")[0]);if(!x)return null;
+  const vs=verseList(ab,x);if(!vs)return null;
+  let j=i+1;while(j<lines.length&&/^> \(/.test(lines[j]))j++;
+  lines.splice(i+1,j-i-1,`> (${ab}) ${blockText(vs)}`);return lines.join("\n");
+}
+function verifyUI(id){
+  const sh=$("#sheet");const r=fixCitas(OPEN.ensenanza||"");
+  const alts=bvList().filter(x=>x.abbr!=="RVR1960"&&bvGet(x.abbr));
+  const li=a=>a.map(f=>`<li style="margin:6px 0"><b>${esc(f.ref)}</b> <span class="muted">(${f.tipo})</span><br><span class="muted" style="font-size:13px">Antes:</span> ${esc(f.antes.length>160?f.antes.slice(0,160)+"…":f.antes)}<br><span class="muted" style="font-size:13px">RVR1960:</span> ${esc(f.despues.length>160?f.despues.slice(0,160)+"…":f.despues)}</li>`).join("");
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Verificar citas">
+    <div class="row" style="justify-content:space-between"><h2>Verificar citas</h2><button class="btn ghost" data-x>Cerrar</button></div>
+    ${r.sinBiblia?`<p>Para verificar necesita tener cargada la <b>Reina-Valera 1960</b>. Cárguela en Ajustes → Texto bíblico.</p>`:`
+    <p style="margin:6px 0"><b>${r.ok}</b> citas coinciden exactamente con la RVR1960.${r.fixed.length?` <b>${r.fixed.length}</b> se pueden corregir.`:""}${r.bad.length?` <b>${r.bad.length}</b> necesitan su revisión.`:""}</p>
+    ${r.fixed.length?`<details open><summary><b>Se pueden corregir</b></summary><ul style="padding-left:18px">${li(r.fixed)}</ul><div class="out-actions"><button class="btn primary" data-v="apply">Corregir todas con la RVR1960</button></div></details>`:""}
+    ${r.bad.length?`<details open><summary><b>Para revisar</b></summary><ul style="padding-left:18px">${r.bad.map((f,i)=>`<li style="margin:8px 0"><b>${esc(f.ref)}</b> · ${esc(f.why)}${f.frag?`<br><span class="muted" style="font-size:13px">En la enseñanza:</span> ${esc(f.frag)}`:""}${f.real?`<br><span class="muted" style="font-size:13px">RVR1960:</span> ${esc(f.real.length>200?f.real.slice(0,200)+"…":f.real)}<br><button class="btn small" data-v="use" data-i="${i}">Usar el texto de la Biblia</button>`:""}</li>`).join("")}</ul></details>`:""}
+    ${!r.fixed.length&&!r.bad.length?`<p>Todo coincide con la Biblia.</p>`:""}
+    <div style="margin-top:14px;border-top:1px solid var(--line,#ddd);padding-top:12px"><p class="label" style="margin:0 0 6px">Añadir otra versión al versículo inicial</p>
+    ${alts.length?`<div class="row" style="gap:8px"><select id="altv">${alts.map(a=>`<option value="${esc(a.abbr)}">${esc(a.abbr)} · ${esc(a.name)}</option>`).join("")}</select><button class="btn" data-v="alt">Añadir</button></div>`:`<p class="muted" style="margin:0">Cargue NTV, NVI u otra versión en Ajustes → Texto bíblico.</p>`}</div>
+  `}</div>`;
+  sh.hidden=false;
+  const commit=(t,msg)=>{if(t===OPEN.ensenanza){toast("Sin cambios");return}OPEN.ensanterior=OPEN.ensenanza;OPEN.ensenanza=t;saveOpen();renderEns(id);toast(msg);verifyUI(id)};
+  sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))return closeSheet();
+    const k=e.target.closest("[data-v]")?.dataset.v;if(!k)return;
+    if(k==="apply")commit(r.text,"Citas corregidas");
+    if(k==="use"){const f=r.bad[+e.target.dataset.i];commit(OPEN.ensenanza.replace(f.orig,`«${f.real}» (${f.ref})`),"Cita reemplazada")}
+    if(k==="alt"){const t=addAltBlock(OPEN.ensenanza,$("#altv").value);if(!t)return toast("No encontré el versículo inicial");commit(t,"Versión añadida")}};
+}
 
 /* ============ markdown + enlaces a pasajes ============ */
 function linkRefs(html){
@@ -847,11 +957,13 @@ document.addEventListener("click",e=>{const t=e.target.closest(".reflink");if(t)
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList?.contains("reflink"))e.target.click();if(e.key==="Escape")closeSheet()});
 
 /* ============ hoja de pasaje ============ */
-function openSheet(r){
-  const sh=$("#sheet");const vs=passageVerses(r);
+function openSheet(r,ab){
+  const sh=$("#sheet");ab=ab&&ab!==BVER.abbr&&bvGet(ab)?ab:BVER.abbr;const alt=ab!==BVER.abbr;
+  let vs;if(alt){const ch=bvChapter(ab,r.b,r.c)||[];vs=[];const a=r.v1||1,z=Math.min(r.v2||r.v1||ch.length,ch.length);for(let v=a;v<=z;v++)if(ch[v-1])vs.push([v,ch[v-1]])}else vs=passageVerses(r);
+  const vname=alt?bvGet(ab).name:BVER.name;const others=bvList().filter(x=>bvGet(x.abbr));
   sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(refLabel(r))}">
     <div class="row" style="justify-content:space-between"><h2>${esc(refLabel(r))}</h2><button class="btn ghost" data-x>Cerrar</button></div>
-    <p class="label" style="margin:4px 0 10px">${BVER.name} · dentro de la app, sin internet</p>
+    <div class="row" style="margin:4px 0 10px;gap:8px;align-items:center"><p class="label" style="margin:0">${vname} · sin internet</p>${others.length?`<select id="shv" aria-label="Ver en otra versión"><option value="${esc(BVER.abbr)}">${esc(BVER.abbr)}</option>${others.filter(x=>x.abbr!==BVER.abbr).map(x=>`<option value="${esc(x.abbr)}" ${x.abbr===ab?"selected":""}>${esc(x.abbr)}</option>`).join("")}</select>`:""}</div>
     <div class="chapter">${vs.length?vs.map(([v,t])=>`<span><sup>${v}</sup>${esc(t)} </span>`).join(""):"<p class='muted'>No se encontró ese pasaje.</p>"}</div>
     <div class="out-actions"><button class="btn primary" data-open>Abrir en la Biblia</button><button class="btn" data-copy>Copiar</button><button class="btn" data-add>Añadir a un sermón</button></div>
     ${versionLinks(r)}
@@ -859,14 +971,15 @@ function openSheet(r){
   sh.hidden=false;
   sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))closeSheet()};
   $("[data-open]",sh).onclick=()=>{closeSheet();goBible(r.b,r.c,r.v1?[r.v1,r.v2||r.v1]:null)};
-  $("[data-copy]",sh).onclick=()=>copyText(`${refLabel(r)} (${BVER.abbr})\n`+vs.map(([v,t])=>`${v} ${t}`).join("\n"));
-  $("[data-add]",sh).onclick=()=>pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:refLabel(r)+" ("+BVER.abbr+")",texto:vs.map(([v,t])=>`**${v}** ${t}`).join(" ")}));
+  const shv=$("#shv");if(shv)shv.onchange=()=>openSheet(r,shv.value);
+  $("[data-copy]",sh).onclick=()=>copyText(`${refLabel(r)} (${ab})\n`+vs.map(([v,t])=>`${v} ${t}`).join("\n"));
+  $("[data-add]",sh).onclick=()=>pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:refLabel(r)+" ("+ab+")",texto:vs.map(([v,t])=>`**${v}** ${t}`).join(" ")}));
 }
 const BG_BOOKS=["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi","Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"];
 const VERSIONES=[["RVR1960","Reina-Valera 1960"],["NTV","Nueva Traducción Viviente"],["NVI","Nueva Versión Internacional"],["DHH","Dios Habla Hoy"],["LBLA","La Biblia de las Américas"],["NBLA","Nueva Biblia de las Américas"],["RVC","Reina Valera Contemporánea"],["TLA","Traducción en Lenguaje Actual"],["PDT","Palabra de Dios para Todos"],["RVA-2015","Reina Valera Actualizada"]];
 function bgRef(r){const b=BG_BOOKS[r.b]||"";return r.v1?`${b} ${r.c}:${r.v1}${r.v2&&r.v2!==r.v1?"-"+r.v2:""}`:`${b} ${r.c}`}
 function bgUrl(r,vers){return "https://www.biblegateway.com/passage/?search="+encodeURIComponent(bgRef(r))+"&version="+encodeURIComponent(vers.join(";"))}
-function versionLinks(r){const own=BVER.propia?BVER.abbr.toUpperCase():"";const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]).filter(k=>k!==own);const VERS=VERSIONES.filter(([k])=>k!==own);
+function versionLinks(r){const own=bvList().filter(x=>bvGet(x.abbr)).map(x=>x.abbr.toUpperCase());const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]).filter(k=>!own.includes(k));const VERS=VERSIONES.filter(([k])=>!own.includes(k));
   return `<div class="verlinks"><span class="label">Otras versiones (necesitan internet)</span><div class="row" style="gap:6px;margin-top:6px">${VERS.map(([k,n])=>`<a class="btn small" href="${bgUrl(r,[k])}" target="_blank" rel="noopener" title="${esc(n)}">${k}</a>`).join("")}<a class="btn small primary" href="${bgUrl(r,cmp)}" target="_blank" rel="noopener">Comparar ${cmp.join(" · ")}</a></div><p class="muted" style="font-size:12px;margin:6px 0 0">Se abren en BibleGateway, con el texto completo de cada versión.</p></div>`}
 function closeSheet(){const sh=$("#sheet");sh.hidden=true;sh.innerHTML=""}
 
@@ -941,7 +1054,7 @@ async function allSermonsForBackup(){
 }
 async function backupData(){
   try{
-    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user")continue;kv[k]=ls.get(k,null)}
+    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user"||k.startsWith("tp_bv_"))continue;kv[k]=ls.get(k,null)}
     const data={app:"taller-del-predicador",v:1,fecha:new Date().toISOString(),sermones:await allSermonsForBackup(),kv};
     const d=window.claude?await claude.use("downloads"):null;
     const name="Taller del Predicador - copia de seguridad "+new Date().toISOString().slice(0,10)+".json";
@@ -1196,13 +1309,14 @@ function viewBiblia(v,opts){
   if(!BIBLE){v.innerHTML=`<div class="thinking"><span class="dot"></span>Cargando la Biblia…</div>`;return}
   const {b,c}=BSTATE;const book=BIBLE[b];ls.set("tp_biblia",BSTATE);
   v.innerHTML=`<div class="reader-bar">
-    <select id="bsel" aria-label="Libro">${BIBLE.map((x,i)=>`${i===0?'<optgroup label="Antiguo Testamento">':""}${i===NT_START?'</optgroup><optgroup label="Nuevo Testamento">':""}<option value="${i}" ${i===b?"selected":""}>${esc(x.name)}</option>`).join("")}</optgroup></select>
+    ${vselHTML()}<select id="bsel" aria-label="Libro">${BIBLE.map((x,i)=>`${i===0?'<optgroup label="Antiguo Testamento">':""}${i===NT_START?'</optgroup><optgroup label="Nuevo Testamento">':""}<option value="${i}" ${i===b?"selected":""}>${esc(x.name)}</option>`).join("")}</optgroup></select>
     <select id="csel" aria-label="Capítulo">${book.chs.map((_,i)=>`<option value="${i+1}" ${i+1===c?"selected":""}>Capítulo ${i+1}</option>`).join("")}</select>
     <button class="btn" id="prev" aria-label="Capítulo anterior">‹ Anterior</button><button class="btn" id="next" aria-label="Capítulo siguiente">Siguiente ›</button>
     <span class="muted" style="font-size:13px">Toque los versículos para marcarlos.</span></div>
   <article class="chapter"><h2>${esc(book.name)} ${c}</h2>${book.chs[c-1].map((t,i)=>t?`<span class="vs${SEL.includes(i+1)?" sel":""}" data-v="${i+1}" tabindex="0"><sup>${i+1}</sup>${esc(t)}</span> `:"").join("")}</article>
   ${versionLinks({b,c})}
-  <p class="notice">Texto de la app: ${BVER.propia?BVER.name+", cargada por usted en este equipo":"Reina-Valera 1909 (dominio público)"}. Las demás versiones tienen derechos de autor y no se pueden incluir dentro de la app; los botones de arriba las abren en BibleGateway, en este mismo capítulo.</p>`;
+  <p class="notice">Texto de la app: ${BVER.propia?BVER.name+", cargada por usted en este equipo":"Reina-Valera 1909 (dominio público)"}. Cambie de versión con el selector de arriba (las que usted cargó en Ajustes funcionan sin internet). Las demás se abren en BibleGateway, en este mismo capítulo.</p>`;
+  $("#vsel").onchange=async e=>{await setMainVersion(e.target.value);go("biblia",{keepSel:true})};
   $("#bsel").onchange=e=>{BSTATE={b:+e.target.value,c:1};go("biblia")};
   $("#csel").onchange=e=>{BSTATE.c=+e.target.value;go("biblia")};
   $("#prev").onclick=()=>{if(c>1)BSTATE.c--;else if(b>0){BSTATE.b--;BSTATE.c=BIBLE[BSTATE.b].chs.length}go("biblia")};
@@ -1212,6 +1326,7 @@ function viewBiblia(v,opts){
   updateActionbar();
   if(SEL.length){$(`.vs[data-v="${SEL[0]}"]`)?.scrollIntoView({block:"center"})}
 }
+function vselHTML(){const l=bvList().filter(x=>bvGet(x.abbr));return `<select id="vsel" aria-label="Versión de la Biblia"><option value="RV1909" ${BVER.abbr==="RV1909"?"selected":""}>RV1909</option>${l.map(x=>`<option value="${esc(x.abbr)}" ${x.abbr===BVER.abbr?"selected":""}>${esc(x.abbr)}</option>`).join("")}</select>`}
 function selRef(){const {b,c}=BSTATE;const a=Math.min(...SEL),z=Math.max(...SEL);return {b,c,v1:a,v2:z}}
 function selLabel(){const {b,c}=BSTATE;return `${BIBLE[b].name} ${c}:${compress(SEL)}`}
 function compress(arr){const out=[];let s=arr[0],p=arr[0];for(let i=1;i<=arr.length;i++){const x=arr[i];if(x===p+1){p=x;continue}out.push(s===p?`${s}`:`${s}-${p}`);s=p=x}return out.join(",")}
@@ -1479,7 +1594,7 @@ function libToMd(it){const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
   return L.join("\n")}
 function libToText(it){return [it.T||it.t,...it.p.map(([k,t])=>k==="li"?"• "+t:t)].join("\n\n")}
 function libRead(v,it){
-  const c=LIB.carpetas[it.c];const mdText=libToMd(it);
+  const c=LIB.carpetas[it.c];const mdText=autoFix(libToMd(it),true);
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
   <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.n+" · "+c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p><div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
@@ -1487,7 +1602,7 @@ function libRead(v,it){
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
   $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
-    const id=await Store.saveSermon({titulo:it.t,texto:it.r||"",categoria:cat,culto:"dominical",estado:"prep",fecha:"",notas:"",enserie:false,serie:"",origen:it.i,origenTitulo:it.t,ensenanza:prep?"":libToMd(it)});
+    const id=await Store.saveSermon({titulo:it.t,texto:it.r||"",categoria:cat,culto:"dominical",estado:"prep",fecha:"",notas:"",enserie:false,serie:"",origen:it.i,origenTitulo:it.t,ensenanza:prep?"":autoFix(libToMd(it),true)});
     if(prep)PREP[id]={old:libToText(it)};
     LSTATE.item=null;go("sermones",{open:id,prepFocus:prep});toast(prep?"Revise las opciones y toque «Preparar enseñanza».":"Copia lista. Toque «Editar» en la vista previa.")};
   $("#lprep").onclick=()=>toSermon(true);$("#lsave").onclick=()=>toSermon(false);
@@ -1611,7 +1726,7 @@ MODELO NUEVO (obligatorio):
 - Evita los tics de texto artificial: no repitas la fórmula "no es X, sino Y", no abuses de los dos puntos para revelar algo, no uses listas de tres adjetivos seguidas, no empieces viñetas siempre igual, no uses palabras rebuscadas.
 - La enseñanza se puede predicar en cualquier culto: NO menciones el día ni el tipo de servicio ("esta mañana", "esta noche", "este domingo", "escuela dominical"). Usa "hoy" o "en esta enseñanza".
 - NO incluyas versículo para memorizar ni preguntas para conversar.
-- Citas bíblicas dentro de la predicación: el texto entre comillas angulares «así» seguido de la referencia entre paréntesis, en Reina-Valera 1960, SOLO si estás seguro de la redacción exacta; si no, solo la referencia.
+- Citas bíblicas dentro de la predicación: el texto entre comillas angulares «así» seguido de la referencia entre paréntesis, en Reina-Valera 1960, solo si estás seguro de la redacción exacta y mejor corta (una frase o parte del versículo); si no, solo la referencia. La app comprueba cada cita contra la Biblia del pastor y corrige lo que difiera.
 - Versión más clara: en 1 a 3 citas del sermón, SOLO donde la RVR1960 suene difícil o donde otra versión aclare el sentido, añade la misma cita en una versión de lenguaje más claro (NTV, NVI o DHH), siempre DESPUÉS de la RVR1960. Dentro del texto: «texto» (Referencia, NTV). Si es un pasaje en bloque, en la línea siguiente: > (NTV) texto. No lo hagas en todas las citas; si ninguna lo necesita, no pongas ninguna.
 - Resalta con ==así== una o dos ideas clave por sección.
 - PROHIBIDO: oración final, declaraciones para repetir, frases para repetir en la introducción, indicaciones escénicas o de cómo predicar, y rótulos de "propósito" o "idea central".
@@ -2052,7 +2167,7 @@ async function saveToFolder(id){
   go("sermones");
 }
 function saveOpen(){const snap={...OPEN};saving=saving.then(()=>Store.saveSermon(snap)).catch(()=>toast("No se pudo guardar"));return saving}
-function setEns(id,text){if(OPEN?.id!==id)return;
+function setEns(id,text){if(OPEN?.id!==id)return;text=autoFix(text);
   if(OPEN.ensenanza&&OPEN.ensenanza!==text){ENSUI[id]={mode:"pending",pending:text,show:"new"};renderEns(id);renderPrep(id);$("#ensbox")?.scrollIntoView({block:"start",behavior:"smooth"});return}
   OPEN.ensenanza=text;if(OPEN.estado==="idea"){OPEN.estado="prep";const e=$("#e_estado");if(e)e.value="prep"}saveOpen();ENSUI[id]={mode:"view"};renderEns(id);renderPrep(id);$("#ensbox")?.scrollIntoView({block:"start",behavior:"smooth"})}
 function renderEns(id){
@@ -2072,8 +2187,8 @@ function renderEns(id){
     body=`${ui.mode==="view"?designPicker("ens"):""}${ui.mode==="view"?pageHTML(txt,curStyle()):`<div class="md paper">${md(txt)}</div>`}${ui.mode==="rev"?`<div class="thinking" style="margin-top:8px"><span class="dot"></span>Aplicando el cambio…</div>`:""}`;
   }
   const tools=ui.mode==="view"?`<div class="askbox"><label for="ens_ask" class="label">Pedirle un cambio a Claude</label><div class="row" style="margin-top:6px"><input type="text" id="ens_ask" placeholder="Ej.: quite el punto III · añada el ejemplo de Ana · haga la conclusión más corta" style="flex:1;min-width:220px"><button class="btn" data-e="ask">Aplicar</button></div></div>
-  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
-  <p class="muted" style="font-size:12.5px;margin:10px 0 0">El Word se descarga tal como se ve aquí. Revise las citas antes de predicar: Claude escribe la RVR1960 de memoria; toque las referencias en verde para compararlas con la ${BVER.abbr}.</p>`:ui.mode==="rev"?`<div class="out-actions"><button class="btn" data-e="revstop">Detener</button></div>`:"";
+  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
+  <p class="muted" style="font-size:12.5px;margin:10px 0 0">El Word se descarga tal como se ve aquí. Las citas se comparan con su Reina-Valera 1960 al crear la enseñanza; toque "Verificar citas" para revisarlas o para añadir otra versión.</p>`:ui.mode==="rev"?`<div class="out-actions"><button class="btn" data-e="revstop">Detener</button></div>`:"";
   const pend=ui.mode==="pending"?`<div class="decide"><p style="margin:0 0 4px"><b>Hay una versión nueva de esta enseñanza.</b> Revísela y decida qué hacer con ella.</p>
     <div class="row" style="margin:8px 0 2px;gap:6px"><span class="seg"><button class="btn small ${ui.show!=="old"?"on":""}" data-e="shownew">Ver la nueva</button><button class="btn small ${ui.show==="old"?"on":""}" data-e="showold">Ver la que tenía</button></span></div>
     <div class="row" style="margin-top:10px"><button class="btn" data-e="cmppend">Comparar lado a lado</button><button class="btn primary" data-e="replace">Reemplazar la que tenía</button><button class="btn" data-e="keepboth">Guardar como enseñanza aparte</button><button class="btn ghost" data-e="discard">Descartar la nueva</button></div></div>`:"";
@@ -2083,6 +2198,7 @@ function renderEns(id){
   const ask=$("#ens_ask");if(ask)ask.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();reviseEns(id,ask.value.trim())}};
   box.onclick=e=>{const a=e.target.closest("[data-e],[data-p]");if(!a)return;const k=a.dataset.e||a.dataset.p;
     if(k.startsWith("w_")){const [,kind,style]=k.split("_");return exportWord(kind==="hoja"?st.hoja:OPEN.ensenanza,style,kind==="hoja"?"Hoja para la congregación":"")}
+    if(k==="verif")return verifyUI(id);
     if(k==="edit"){ui.mode="edit";renderEns(id);$("#ens_ta")?.focus();return}
     if(k==="ecancel"){ui.mode="view";renderEns(id);return}
     if(k==="esave"){const t=$("#ens_ta").value;if(t!==OPEN.ensenanza){OPEN.ensanterior=OPEN.ensenanza;OPEN.ensenanza=t;saveOpen();toast("Cambios guardados")}ui.mode="view";renderEns(id);return}
@@ -2125,7 +2241,7 @@ Aplica SOLO ese cambio y devuelve la enseñanza COMPLETA con el mismo formato Ma
 ENSEÑANZA ACTUAL:
 ${OPEN.ensenanza}`;
   try{const {text}=await sample(prompt,{signal:ui.ctl.signal,cache:false,modelTier:"complex",onText:({text})=>{ui.out=text;renderEns(id)}});
-    ui.out=null;if(text.trim()){ui.mode="pending";ui.pending=text;ui.show="new"}else ui.mode="view"}
+    ui.out=null;if(text.trim()){ui.mode="pending";ui.pending=autoFix(text);ui.show="new"}else ui.mode="view"}
   catch(e){ui.mode="view";ui.out=null;if(e?.code!=="cancelled")toast(ERR[e?.code]||"No se pudo aplicar el cambio")}
   renderEns(id);
 }
