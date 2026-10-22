@@ -724,7 +724,7 @@ function viewAjustes(v){
     try{await TP.ping(c2.key,c2.modelDefault);msg("Conexión correcta. La IA está lista.")}
     catch(e){msg(ERR[e.code]||e.message||"No se pudo conectar.",true)}};
   $("#bbin").onclick=()=>$("#bbfile").click();
-  if($("#bbout"))$("#bbout").onclick=()=>{if(!confirm("Se vuelve a la Reina-Valera 1909. ¿Continuar?"))return;ls.set("tp_biblia",null);toast("Listo");setTimeout(()=>location.reload(),600)};
+  if($("#bbout"))$("#bbout").onclick=()=>{if(!confirm("Se vuelve a la Reina-Valera 1909. ¿Continuar?"))return;ls.set("tp_biblia_user",null);toast("Listo");setTimeout(()=>location.reload(),600)};
   $("#bbfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
     try{
       const d=JSON.parse(await f.text());
@@ -733,7 +733,7 @@ function viewAjustes(v){
       const ab=(prompt("Nombre corto de esta versión (por ejemplo RVR1960):",/1960/.test(f.name)?"RVR1960":"")||"").trim();
       if(!ab)return;
       const name=ab.toUpperCase()==="RVR1960"?"Reina-Valera 1960":ab;
-      ls.set("tp_biblia",{abbr:ab,name,data:d});
+      ls.set("tp_biblia_user",{abbr:ab,name,data:d});
       toast("Biblia cargada: "+name);setTimeout(()=>location.reload(),700);
     }catch{toast("Ese archivo no tiene el formato de Biblia de la app")}
     e.target.value="";
@@ -748,7 +748,7 @@ function viewAjustes(v){
       const cur=Store.localAll();const byId=new Map(cur.map(s=>[s.id,s]));
       for(const s of d.sermones){const o=byId.get(s.id);if(!o||(s.actualizado||"")>=(o.actualizado||""))byId.set(s.id,s)}
       Store.localSave([...byId.values()]);
-      for(const [k,val] of Object.entries(d.kv||{})){if(/^tp_/.test(k)&&k!=="tp_cfg"&&k!=="tp_sermones"&&k!=="tp_biblia")ls.set(k,val)}
+      for(const [k,val] of Object.entries(d.kv||{})){if(/^tp_/.test(k)&&k!=="tp_cfg"&&k!=="tp_sermones"&&k!=="tp_biblia_user"&&k!=="tp_biblia")ls.set(k,val)}
       toast("Copia restaurada");setTimeout(()=>location.reload(),700);
     }catch{toast("Ese archivo no es una copia del Taller del Predicador")}
     e.target.value="";
@@ -779,7 +779,7 @@ let BVER={abbr:"RV1909",name:"Reina-Valera 1909",propia:false};
 const NT_START=39;
 async function loadBible(){
   let data=null;
-  try{const u=ls.get("tp_biblia",null);if(u&&Array.isArray(u.data)&&u.data.length===66){data=u.data;BVER={abbr:u.abbr||"RVR1960",name:u.name||"Reina-Valera 1960",propia:true}}}catch{}
+  try{const u=ls.get("tp_biblia_user",null);if(u&&Array.isArray(u.data)&&u.data.length===66){data=u.data;BVER={abbr:u.abbr||"RVR1960",name:u.name||"Reina-Valera 1960",propia:true}}}catch{}
   if(!data){const r=await fetch("rv1909.json");data=await r.json()}
   BIBLE=data.map(([name,abbr,chs])=>({name,abbr,chs:chs.map(c=>c.map(v=>v.normalize("NFC")))}));
   BIBLE.forEach((b,bi)=>b.chs.forEach((c,ci)=>c.forEach((t,vi)=>{if(t)VERSES.push({b:bi,c:ci+1,v:vi+1,t,n:norm(t)})})));
@@ -941,7 +941,7 @@ async function allSermonsForBackup(){
 }
 async function backupData(){
   try{
-    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia")continue;kv[k]=ls.get(k,null)}
+    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user")continue;kv[k]=ls.get(k,null)}
     const data={app:"taller-del-predicador",v:1,fecha:new Date().toISOString(),sermones:await allSermonsForBackup(),kv};
     const d=window.claude?await claude.use("downloads"):null;
     const name="Taller del Predicador - copia de seguridad "+new Date().toISOString().slice(0,10)+".json";
@@ -1187,7 +1187,9 @@ function fmtDate(d){try{return new Date(d+"T12:00").toLocaleDateString("es-CO",{
 document.addEventListener("click",e=>{const s=e.target.closest("[data-sermon]");if(s&&!e.target.closest(".picker"))go("sermones",{open:s.dataset.sermon})});
 
 /* ============ Biblia ============ */
-let BSTATE=ls.get("tp_biblia",{b:18,c:1});let SEL=[];
+let BSTATE=ls.get("tp_biblia",{b:18,c:1});
+if(BSTATE&&Array.isArray(BSTATE.data)){ls.set("tp_biblia_user",BSTATE);ls.set("tp_biblia",{b:18,c:1});BSTATE={b:18,c:1}}
+if(!BSTATE||!(BSTATE.b>=0&&BSTATE.b<66)||!(BSTATE.c>=1))BSTATE={b:18,c:1};let SEL=[];
 function goBible(b,c,range){BSTATE={b,c};SEL=range?Array.from({length:range[1]-range[0]+1},(_,i)=>range[0]+i):[];go("biblia",{keepSel:true})}
 function viewBiblia(v,opts){
   if(!opts.keepSel)SEL=[];
