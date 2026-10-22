@@ -436,6 +436,43 @@ html.pu-open .app,html.pu-open #actionbar,html.pu-open #sheet{visibility:hidden}
 code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
 .bubble{border-radius:4px}
 .sheet{border-radius:6px 6px 0 0}
+
+/* ===== Navegación: barra inferior de 5 botones (iPad e iPhone) ===== */
+.app{grid-template-columns:minmax(0,1fr)!important}
+.side{display:none!important}
+.top{flex-wrap:nowrap!important;gap:8px}
+.top .mbrand{display:block!important;font-size:16px}
+.top .gear{display:inline-flex;align-items:center;justify-content:center;width:40px;padding:7px 0}
+.top .gear svg,.ico{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.content{margin-inline:auto;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+.tabs{display:flex!important;position:fixed;left:0;right:0;bottom:0;z-index:15;justify-content:center;gap:4px;overflow:visible!important;padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px))!important;background:color-mix(in srgb,var(--surface) 94%,transparent)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);border-bottom:0!important}
+.tabs .nav{flex:1;max-width:150px;display:flex!important;flex-direction:column;align-items:center;gap:3px;padding:6px 2px!important;font-size:11.5px!important;font-weight:600;color:var(--muted);text-align:center;border-radius:12px;box-shadow:none!important;text-decoration:none;white-space:nowrap}
+.tabs .nav svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tabs .nav[aria-current="page"]{color:var(--azul);background:color-mix(in srgb,var(--azul) 10%,transparent);font-weight:700}
+.actionbar{bottom:calc(66px + env(safe-area-inset-bottom,0px))!important;padding-bottom:10px!important;z-index:14}
+@media (max-width:560px){.top .mbrand{display:none!important}}
+/* inicio */
+.hello{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.hello h1{margin:0}
+.hello .date{color:var(--muted);font-size:14px}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:6px 0 26px}
+.act{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:118px}
+.act:hover{border-color:var(--azul)}
+.act .ico{width:28px;height:28px;color:var(--azul)}
+.act b{font-size:15.5px;font-weight:700;color:var(--ink)}
+.act span{font-size:13px;color:var(--muted);line-height:1.4}
+.act.main{background:var(--azul);border-color:var(--azul)}
+.act.main b,.act.main span,.act.main .ico{color:var(--azul-ink)}
+.act.main span{opacity:.85}
+@media (max-width:699px){.acts{grid-template-columns:repeat(3,1fr);gap:8px}.act b{font-size:13.5px}.act.main{grid-column:1/-1}.act{min-height:0;padding:14px}.act:not(.main) span{display:none}}
+#recent{display:flex;flex-direction:column}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 16px}
+.seg2 button{all:unset;cursor:pointer;padding:8px 16px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg2 button[aria-current="page"]{background:var(--azul);color:var(--azul-ink)}
+.tgroup{margin:18px 0 8px}
+.tool-card .ico{width:22px;height:22px;color:var(--azul);margin-bottom:4px}
+.cmpv .vrow{padding:10px 0;border-bottom:1px solid var(--line)}
+.cmpv .vrow b{display:block;font-size:12.5px;letter-spacing:.08em;color:var(--oro);margin-bottom:4px}
 </style>
 
 </head>
@@ -453,8 +490,9 @@ code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
         <input type="search" id="jump" placeholder="Ir a un pasaje (Juan 3:16) o buscar una palabra…" aria-label="Ir a un pasaje o buscar">
         <button class="btn primary" type="submit">Ir</button>
       </form>
+      <button class="btn gear" type="button" data-go="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
     </header>
-    <nav class="tabs" id="tabnav" aria-label="Herramientas"></nav>
+    <nav class="tabs" id="tabnav" aria-label="Secciones"></nav>
     <main class="content" id="view"></main>
   </div>
 </div>
@@ -695,7 +733,9 @@ function viewAjustes(v){
 
   <div class="section-head"><h2>Inteligencia artificial</h2></div>
   <div class="card" style="display:grid;gap:12px">
-    <p class="muted" style="margin:0">Preparar enseñanzas, mejorarlas, las herramientas de estudio y la Consulta libre usan Claude a través de una clave de la API de Anthropic. La clave se crea en <b>console.anthropic.com</b> y se paga por uso. Si no la pone, todo lo demás funciona igual.</p>
+    <p class="muted" style="margin:0">Preparar enseñanzas, mejorarlas, las herramientas de estudio y la Consulta libre usan Claude a través de una clave de la API de Anthropic. Se paga por uso (no es una suscripción). Si no la pone, todo lo demás funciona igual.</p>
+    <div class="row" style="gap:8px"><a class="btn primary" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Crear mi clave</a><a class="btn" href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">Cargar saldo</a></div>
+    <ol class="muted" style="margin:0;padding-left:20px;font-size:14px;line-height:1.6"><li>Toque <b>Crear mi clave</b> y entre con su correo (la primera vez le pide crear la cuenta).</li><li>En <b>Cargar saldo</b> agregue un saldo pequeño con su tarjeta, por ejemplo 5 dólares.</li><li>Vuelva a <b>Crear mi clave</b>, toque <b>Create Key</b>, póngale un nombre (por ejemplo «Taller») y copie la clave que empieza con <code>sk-ant-</code>.</li><li>Péguela abajo, toque <b>Guardar</b> y luego <b>Probar conexión</b>.</li></ol>
     <div class="field"><label for="ak">Clave de la API</label>
       <div class="row" style="gap:6px"><input type="password" id="ak" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(c.key)}" style="flex:1"><button class="btn" type="button" id="akshow">Ver</button></div></div>
     <div class="field"><label for="m1">Modelo para consultas, herramientas de estudio y hojas</label><select id="m1">${opts(c.modelDefault)}</select></div>
@@ -708,7 +748,6 @@ function viewAjustes(v){
   <div class="card" style="display:grid;gap:12px">
     <p class="muted" style="margin:0">Hoy tiene <b>${nd}</b> ${nd===1?"enseñanza guardada":"enseñanzas guardadas"} en este equipo, sin contar las de su archivo. Descargue una copia de vez en cuando y guárdela en Archivos o iCloud. Con ese archivo puede recuperar todo en otro equipo o si se borran los datos.</p>
     <div class="row" style="gap:8px"><button class="btn primary" id="bkout">Descargar copia</button><button class="btn" id="bkin">Restaurar desde una copia</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
-    <p class="muted" style="margin:0;font-size:13.5px">Si usaba la app dentro de Claude, abra allá Inicio y toque "Copia de seguridad de mis enseñanzas"; luego restáurela aquí.</p>
   </div>
 
   <div class="section-head"><h2>Texto bíblico</h2></div>
@@ -831,7 +870,7 @@ const BVC={};let RV1909=null;
 function bvList(){const l=ls.get("tp_bv_list",[]);return Array.isArray(l)?l:[]}
 function bvGet(ab){if(!ab)return null;if(BVC[ab])return BVC[ab];const o=ls.get("tp_bv_"+ab,null);if(o&&Array.isArray(o.books)&&o.books.length===66)return BVC[ab]=o;return null}
 function bvOk(d){return Array.isArray(d)&&d.length===66&&d.every(b=>Array.isArray(b)&&Array.isArray(b[2])&&b[2].length>0&&b[2].every(c=>Array.isArray(c)&&c.every(v=>typeof v==="string")))}
-function bvInstall(abbr,name,books){const o={abbr,name,books};ls.set("tp_bv_"+abbr,o);BVC[abbr]=o;const l=bvList().filter(x=>x.abbr!==abbr);l.push({abbr,name});ls.set("tp_bv_list",l)}
+function bvInstall(abbr,name,books){try{strip119(books)}catch{}const o={abbr,name,books};ls.set("tp_bv_"+abbr,o);BVC[abbr]=o;const l=bvList().filter(x=>x.abbr!==abbr);l.push({abbr,name});ls.set("tp_bv_list",l)}
 function bvRemove(abbr){ls.set("tp_bv_"+abbr,undefined);delete BVC[abbr];ls.set("tp_bv_list",bvList().filter(x=>x.abbr!==abbr));if(ls.get("tp_bv_main","")===abbr)ls.set("tp_bv_main","")}
 function bvHas(abbr){return !!bvList().find(x=>x.abbr===abbr)&&!!bvGet(abbr)}
 function bvChapter(abbr,b,c){const o=bvGet(abbr);return (o&&o.books[b]&&o.books[b][2][c-1])||null}
@@ -846,8 +885,14 @@ async function applyBible(ab){
   buildAliases();
 }
 async function setMainVersion(ab){ls.set("tp_bv_main",ab);await applyBible(ab)}
+const RE119=/\s+(Álef|Alef|Bet|Guímel|Dálet|Dalet|He|Vav|Vau|Zain|Záyin|Zayin|Chet|Jet|Het|Tet|Yod|Caf|Kaf|Lámed|Lamed|Mem|Nun|Sámec|Samec|Sámej|Ayin|Pe|Tsade|Sade|Cof|Qof|Resh|Sin|Shin|Tau|Tav)\.?$/;
+function strip119(books){const ch=books&&books[18]&&books[18][2]&&books[18][2][118];if(!ch)return 0;let n=0;for(let i=7;i<ch.length;i+=8){if(typeof ch[i]==="string"&&RE119.test(ch[i])){ch[i]=ch[i].replace(RE119,"");n++}}return n}
+function fix119(){if(ls.get("tp_fix119",0))return;
+  for(const x of bvList()){const o=bvGet(x.abbr);if(o&&strip119(o.books))ls.set("tp_bv_"+x.abbr,o)}
+  ls.set("tp_fix119",1)}
 async function loadBible(){
   try{const u=ls.get("tp_biblia_user",null);if(u&&Array.isArray(u.data)&&u.data.length===66){const ab=u.abbr||"RVR1960";if(!bvHas(ab))bvInstall(ab,u.name||ab,u.data);if(!ls.get("tp_bv_main",""))ls.set("tp_bv_main",ab);ls.set("tp_biblia_user",undefined)}}catch{}
+  try{fix119()}catch{}
   let main=ls.get("tp_bv_main","");
   if(!main||!bvGet(main))main=bvGet("RVR1960")?"RVR1960":(bvList().find(x=>bvGet(x.abbr))?.abbr||"RV1909");
   await applyBible(main);
@@ -979,7 +1024,7 @@ const BG_BOOKS=["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua",
 const VERSIONES=[["RVR1960","Reina-Valera 1960"],["NTV","Nueva Traducción Viviente"],["NVI","Nueva Versión Internacional"],["DHH","Dios Habla Hoy"],["LBLA","La Biblia de las Américas"],["NBLA","Nueva Biblia de las Américas"],["RVC","Reina Valera Contemporánea"],["TLA","Traducción en Lenguaje Actual"],["PDT","Palabra de Dios para Todos"],["RVA-2015","Reina Valera Actualizada"]];
 function bgRef(r){const b=BG_BOOKS[r.b]||"";return r.v1?`${b} ${r.c}:${r.v1}${r.v2&&r.v2!==r.v1?"-"+r.v2:""}`:`${b} ${r.c}`}
 function bgUrl(r,vers){return "https://www.biblegateway.com/passage/?search="+encodeURIComponent(bgRef(r))+"&version="+encodeURIComponent(vers.join(";"))}
-function versionLinks(r){const own=bvList().filter(x=>bvGet(x.abbr)).map(x=>x.abbr.toUpperCase());const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]).filter(k=>!own.includes(k));const VERS=VERSIONES.filter(([k])=>!own.includes(k));
+function versionLinks(r){return "";const own=bvList().filter(x=>bvGet(x.abbr)).map(x=>x.abbr.toUpperCase());const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]).filter(k=>!own.includes(k));const VERS=VERSIONES.filter(([k])=>!own.includes(k));
   return `<div class="verlinks"><span class="label">Otras versiones (necesitan internet)</span><div class="row" style="gap:6px;margin-top:6px">${VERS.map(([k,n])=>`<a class="btn small" href="${bgUrl(r,[k])}" target="_blank" rel="noopener" title="${esc(n)}">${k}</a>`).join("")}<a class="btn small primary" href="${bgUrl(r,cmp)}" target="_blank" rel="noopener">Comparar ${cmp.join(" · ")}</a></div><p class="muted" style="font-size:12px;margin:6px 0 0">Se abren en BibleGateway, con el texto completo de cada versión.</p></div>`}
 function closeSheet(){const sh=$("#sheet");sh.hidden=true;sh.innerHTML=""}
 
@@ -1206,20 +1251,31 @@ Un párrafo y 2 frases de impacto.
 };
 
 /* ============ navegación ============ */
+const ICO={
+ inicio:'<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/>',
+ sermones:'<path d="M6 3.5h9l3.5 3.5v13.5H6z"/><path d="M15 3.5V7h3.5"/><path d="M9 11h6M9 14.5h6M9 18h4"/>',
+ biblia:'<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M12 6.5v7M9.5 9h5"/>',
+ estudio:'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5.5 5.5"/>',
+ diapositivas:'<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 16v4M8 20.5h8"/>',
+ ajustes:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+ nueva:'<path d="M12 5v14M5 12h14"/>',
+ concordancia:'<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="m20 19 2 2"/>',
+ consulta:'<path d="M4 5h16v11H9l-5 4z"/>'};
+const icon=(k,c)=>`<svg class="${c||"ico"}" viewBox="0 0 24 24" aria-hidden="true">${ICO[k]||""}</svg>`;
+const TABS=[["inicio","Inicio"],["sermones","Enseñanzas"],["biblia","Biblia"],["estudio","Estudio"],["diapositivas","Diapositivas"]];
+function tabOf(id){if(["biblia","concordancia"].includes(id))return "biblia";if(["sermones","armar","biblioteca"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
 const NAV=[
   {grupo:"",items:[["inicio","Inicio"]]},
   {grupo:"Escritura",items:[["biblia","Biblia"],["concordancia","Concordancia"]]},
   {grupo:"Estudio",items:[["palabras","Palabras originales"],["diccionario","Diccionario bíblico"],["geografia","Geografía bíblica"],["personajes","Personajes"],["temas","Biblia temática"],["paralelos","Referencias cruzadas"]]},
   {grupo:"Preparación",items:[["comentario","Comentario bíblico"],["bosquejo","Exégesis y homilética"],["consulta","Consulta libre"]]},
   {grupo:"Mis enseñanzas",items:[["sermones","Mis enseñanzas"]]},
-  {grupo:"",items:[["ajustes","Ajustes"]]},
 ];
 let CURRENT="inicio";
 function renderNav(){
   const side=NAV.map(g=>`<div class="navgroup">${g.grupo?`<h6>${g.grupo}</h6>`:""}${g.items.map(([id,n])=>`<button class="nav" data-go="${id}" ${id===CURRENT?'aria-current="page"':""}>${n}</button>`).join("")}</div>`).join("");
-  $("#sidenav").innerHTML=side;
-  $("#tabnav").innerHTML=NAV.flatMap(g=>g.items).map(([id,n])=>`<button class="nav" data-go="${id}" ${id===CURRENT?'aria-current="page"':""}>${n}</button>`).join("");
-  const cur=$('#tabnav [aria-current="page"]');cur?.scrollIntoView({inline:"center",block:"nearest"});
+  $("#sidenav").innerHTML=side;const t=tabOf(CURRENT);
+  $("#tabnav").innerHTML=TABS.map(([id,n])=>id==="diapositivas"?`<a class="nav" href="diapositivas.html">${icon(id,"")}${n}</a>`:`<button class="nav" data-go="${id}" ${id===t?'aria-current="page"':""}>${icon(id,"")}${n}</button>`).join("");
 }
 document.addEventListener("click",e=>{const nv=e.target.closest("#nvb,#nvf");if(nv){navStep(nv.id==="nvb"?-1:1);return}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b){if(b.dataset.go==="armarnuevo"){LSTATE.openNew=true;LSTATE.item=null;go("sermones");return}go(b.dataset.go)}});
@@ -1228,6 +1284,7 @@ function _go(id,opts={}){
   renderNav();hideActionbar();window.scrollTo({top:0});
   const v=$("#view");
   if(id==="inicio")return viewInicio(v);
+  if(id==="estudio")return viewEstudio(v);
   if(id==="biblia")return viewBiblia(v,opts);
   if(id==="concordancia")return viewConcordancia(v,opts);
   if(id==="consulta")return viewConsulta(v,opts);
@@ -1276,19 +1333,36 @@ function go(id,opts={}){const y0=window.scrollY;_go(id,opts);navRecord(opts,y0)}
 
 /* ============ Inicio ============ */
 function viewInicio(v){
-  const tools=[["armarnuevo","Armar mi sermón","Un croquis con su formato para escribir la enseñanza usted mismo, viendo cómo queda en Word."],["sermones","Mis enseñanzas","Su archivo y lo que prepare aquí, en sus mismas carpetas y con un solo buscador."],["biblia","Biblia",BVER.name+" completa, para leer y marcar versículos."],["concordancia","Concordancia","Busque cualquier palabra en toda la Biblia, con conteo por libro."],...Object.entries(TOOLS).map(([id,t])=>[id,t.nombre,t.desc]),["consulta","Consulta libre","Pregunte lo que necesite para su preparación."]];
-  v.innerHTML=`<h1>Su mesa de estudio</h1>
-  <p class="lede">Todo lo que necesita para preparar un sermón en un solo lugar: el texto, la concordancia, el estudio de palabras, el contexto y el bosquejo. Lo que encuentre lo puede guardar en el sermón que está preparando.</p>
+  const h=new Date().getHours();const sal=h<12?"Buenos días":h<19?"Buenas tardes":"Buenas noches";
+  const hoy=new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
+  const bk=BIBLE&&BIBLE[BSTATE.b]?`${BIBLE[BSTATE.b].name} ${BSTATE.c}`:"";
+  v.innerHTML=`<div class="hello"><div><p class="label" style="margin:0 0 4px">Taller del Predicador</p><h1>${sal}, Pastor</h1></div><span class="date">${esc(hoy.charAt(0).toUpperCase()+hoy.slice(1))}</span></div>
+  <div class="acts">
+    <button class="act main" data-go="armarnuevo">${icon("nueva")}<b>Nueva enseñanza</b><span>Escriba el tema y el pasaje; Claude la prepara con su modelo, o la arma usted mismo.</span></button>
+    <button class="act" data-go="sermones">${icon("sermones")}<b>Mis enseñanzas</b><span>Lo que ha preparado y todo su archivo, por carpetas.</span></button>
+    <button class="act" data-go="biblia">${icon("biblia")}<b>Biblia</b><span>${bk?"Seguir en "+esc(bk)+" · ":""}${esc(BVER.abbr)}, sin internet.</span></button>
+    <a class="act" href="diapositivas.html">${icon("diapositivas")}<b>Diapositivas</b><span>Convierta una enseñanza en presentación y proyéctela.</span></a>
+  </div>
   <form class="bigsearch" id="homeq" role="search"><input type="search" id="hq" placeholder="Buscar en sus enseñanzas: un tema, un personaje, un pasaje…" aria-label="Buscar en sus enseñanzas"></form>
-  <div class="section-head"><h2>Herramientas</h2></div>
-  <div class="grid2">${tools.map(([id,n,d])=>`<button class="tool-card" data-go="${id}"><b>${esc(n)}</b><span>${esc(d)}</span></button>`).join("")}</div>
-  <p class="notice">Texto bíblico de la app: ${BVER.propia?BVER.name+", cargada por usted en este equipo":"Reina-Valera 1909 (dominio público)"}. Las herramientas de estudio las responde Claude con su propio conocimiento: son un punto de partida para su estudio y conviene confirmar las referencias y los datos históricos antes de predicar. Toque cualquier referencia en verde para ver el texto.</p>
-  <p style="margin-top:6px"><button class="btn small ghost" id="bkp">Copia de seguridad de mis enseñanzas</button></p>`;
-  $("#bkp").onclick=backupData;
+  <div class="section-head"><h2>Continuar donde quedó</h2></div>
+  <div id="recent" style="margin-top:6px"></div>
+  <div class="section-head" style="margin-top:26px"><h2>Para estudiar</h2></div>
+  <div class="grid2" style="margin-top:12px">
+    <button class="tool-card" data-go="estudio"><b>Herramientas de estudio</b><span>Palabras originales, diccionario, personajes, comentario, exégesis y más.</span></button>
+    <button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque una palabra o frase en toda la Biblia.</span></button>
+  </div>`;
+  renderRecent();
   $("#homeq").onsubmit=e=>{e.preventDefault();LSTATE.q=$("#hq").value.trim();LSTATE.c=null;LSTATE.f="todas";go("sermones")};
 }
-function renderRecent(){const el=$("#recent");if(!el)return;const act=SERMONS.filter(s=>s.estado!=="predicado").slice(0,4);
-  el.innerHTML=act.length?act.map(sItem).join(""):`<div class="card"><p style="margin:0 0 10px">Aquí aparecerán los sermones que esté preparando, con sus notas y todo lo que guarde desde las herramientas.</p><button class="btn primary" data-go="sermones">Empezar un sermón</button></div>`}
+function viewEstudio(v){
+  const groups={};for(const [id,t] of Object.entries(TOOLS)){(groups[t.grupo]=groups[t.grupo]||[]).push([id,t.nombre,t.desc])}
+  (groups["Preparación"]=groups["Preparación"]||[]).push(["consulta","Consulta libre","Pregunte lo que necesite para su preparación."]);
+  v.innerHTML=`<h1>Estudio</h1><p class="lede">Herramientas para estudiar el pasaje antes de predicar. Las responde Claude (necesitan internet y su clave de la IA); lo que encuentre lo puede guardar en la enseñanza que está preparando.</p>
+  ${Object.entries(groups).map(([g,items])=>`<div class="section-head tgroup"><h2>${esc(g)}</h2></div><div class="grid2" style="margin-top:12px">${items.map(([id,n,d])=>`<button class="tool-card" data-go="${id}"><b>${esc(n)}</b><span>${esc(d)}</span></button>`).join("")}</div>`).join("")}
+  <div class="section-head tgroup"><h2>En la Biblia, sin internet</h2></div><div class="grid2" style="margin-top:12px"><button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque cualquier palabra en toda la Biblia, con conteo por libro.</span></button></div>`;
+}
+function renderRecent(){const el=$("#recent");if(!el)return;const act=[...SERMONS].sort((a,b)=>(b.actualizado||"").localeCompare(a.actualizado||"")).slice(0,4);
+  el.innerHTML=act.length?act.map(sItem).join(""):`<div class="card"><p style="margin:0">Aquí aparecerán las enseñanzas que esté preparando.</p></div>`}
 function sItem(s){return `<button class="sitem" data-sermon="${esc(s.id)}"><b>${esc(s.titulo||"Sin título")}</b>${s.reemplaza?`<span class="tag ready">Mejorada</span>`:s.ensenanza?`<span class="tag ready">Enseñanza lista</span>`:"<span></span>"}<span class="pill ${esc(s.estado||"idea")}">${esc(ESTADOS[s.estado||"idea"])}</span><small>${esc([catLabel(s.categoria),s.texto,s.enserie&&s.serie&&("Serie: "+s.serie),s.fecha&&("para el "+fmtDate(s.fecha))].filter(Boolean).join(" · "))}</small></button>`}
 const CATS=[["01","💜","Cultos de Oración y Adoración"],["02","❤️","Evangelísticas y Campañas"],["03","💙","Doctrinales"],["04","🟨","El Tabernáculo"],["05","🟫","El Arca"],["06","🖤","Escatológicas"],["07","💛","Cultos Especiales"],["08","💚","Renovación"],["09","🧡","Personajes Bíblicos"],["10","🩵","Vida Cristiana"],["11","🟦","Servicio y Ministerio"],["12","🟪","Fe en la Prueba"],["13","🟩","Dinámicas"],["14","🟧","Enseñanzas Especiales"],["15","🎞️","Talleres en diapositivas"],["16","📘","Escuela Dominical"],["17","🕯️","Cultos de semana"],["18","🔥","Cultos especiales y campañas"],["19","💰","Mayordomía"]];
 const CATMAP=Object.fromEntries(CATS.map(c=>[c[0],c]));
@@ -1308,14 +1382,14 @@ function viewBiblia(v,opts){
   if(!opts.keepSel)SEL=[];
   if(!BIBLE){v.innerHTML=`<div class="thinking"><span class="dot"></span>Cargando la Biblia…</div>`;return}
   const {b,c}=BSTATE;const book=BIBLE[b];ls.set("tp_biblia",BSTATE);
-  v.innerHTML=`<div class="reader-bar">
+  v.innerHTML=`<div class="seg2" role="tablist"><button data-go="biblia" ${CURRENT==="biblia"?'aria-current="page"':""}>Leer</button><button data-go="concordancia" ${CURRENT==="concordancia"?'aria-current="page"':""}>Buscar palabras</button></div><div class="reader-bar">
     ${vselHTML()}<select id="bsel" aria-label="Libro">${BIBLE.map((x,i)=>`${i===0?'<optgroup label="Antiguo Testamento">':""}${i===NT_START?'</optgroup><optgroup label="Nuevo Testamento">':""}<option value="${i}" ${i===b?"selected":""}>${esc(x.name)}</option>`).join("")}</optgroup></select>
     <select id="csel" aria-label="Capítulo">${book.chs.map((_,i)=>`<option value="${i+1}" ${i+1===c?"selected":""}>Capítulo ${i+1}</option>`).join("")}</select>
     <button class="btn" id="prev" aria-label="Capítulo anterior">‹ Anterior</button><button class="btn" id="next" aria-label="Capítulo siguiente">Siguiente ›</button>
     <span class="muted" style="font-size:13px">Toque los versículos para marcarlos.</span></div>
   <article class="chapter"><h2>${esc(book.name)} ${c}</h2>${book.chs[c-1].map((t,i)=>t?`<span class="vs${SEL.includes(i+1)?" sel":""}" data-v="${i+1}" tabindex="0"><sup>${i+1}</sup>${esc(t)}</span> `:"").join("")}</article>
   ${versionLinks({b,c})}
-  <p class="notice">Texto de la app: ${BVER.propia?BVER.name+", cargada por usted en este equipo":"Reina-Valera 1909 (dominio público)"}. Cambie de versión con el selector de arriba (las que usted cargó en Ajustes funcionan sin internet). Las demás se abren en BibleGateway, en este mismo capítulo.</p>`;
+`;
   $("#vsel").onchange=async e=>{await setMainVersion(e.target.value);go("biblia",{keepSel:true})};
   $("#bsel").onchange=e=>{BSTATE={b:+e.target.value,c:1};go("biblia")};
   $("#csel").onchange=e=>{BSTATE.c=+e.target.value;go("biblia")};
@@ -1326,7 +1400,12 @@ function viewBiblia(v,opts){
   updateActionbar();
   if(SEL.length){$(`.vs[data-v="${SEL[0]}"]`)?.scrollIntoView({block:"center"})}
 }
-function vselHTML(){const l=bvList().filter(x=>bvGet(x.abbr));return `<select id="vsel" aria-label="Versión de la Biblia"><option value="RV1909" ${BVER.abbr==="RV1909"?"selected":""}>RV1909</option>${l.map(x=>`<option value="${esc(x.abbr)}" ${x.abbr===BVER.abbr?"selected":""}>${esc(x.abbr)}</option>`).join("")}</select>`}
+function vselHTML(){const l=bvList().filter(x=>bvGet(x.abbr));return `<select id="vsel" aria-label="Versión de la Biblia">${l.length&&BVER.abbr!=="RV1909"?"":`<option value="RV1909" ${BVER.abbr==="RV1909"?"selected":""}>RV1909</option>`}${l.map(x=>`<option value="${esc(x.abbr)}" ${x.abbr===BVER.abbr?"selected":""}>${esc(x.abbr)}</option>`).join("")}</select>`}
+function compareVersions(r){
+  const list=bvList().filter(x=>bvGet(x.abbr)).sort((x,y)=>(y.abbr===BVER.abbr)-(x.abbr===BVER.abbr));const sh=$("#sheet");
+  const rows=list.length?list.map(x=>{const ch=bvChapter(x.abbr,r.b,r.c)||[];const vs=[];for(let n=r.v1||1;n<=(r.v2||r.v1||ch.length);n++)if(ch[n-1])vs.push(`<sup>${n}</sup>${esc(ch[n-1])}`);return `<div class="vrow"><b>${esc(x.abbr)} · ${esc(x.name)}</b>${vs.join(" ")||'<span class="muted">No está en esta versión</span>'}</div>`}).join(""):`<p>Cargue sus Biblias en Ajustes → Texto bíblico para compararlas aquí, sin internet.</p>`;
+  sh.innerHTML=`<div class="sheet cmpv" role="dialog" aria-modal="true"><div class="row" style="justify-content:space-between"><h2>${esc(refLabel(r))}</h2><button class="btn ghost" data-x>Cerrar</button></div>${rows}</div>`;
+  sh.hidden=false;sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))closeSheet()}}
 function selRef(){const {b,c}=BSTATE;const a=Math.min(...SEL),z=Math.max(...SEL);return {b,c,v1:a,v2:z}}
 function selLabel(){const {b,c}=BSTATE;return `${BIBLE[b].name} ${c}:${compress(SEL)}`}
 function compress(arr){const out=[];let s=arr[0],p=arr[0];for(let i=1;i<=arr.length;i++){const x=arr[i];if(x===p+1){p=x;continue}out.push(s===p?`${s}`:`${s}-${p}`);s=p=x}return out.join(",")}
@@ -1337,12 +1416,13 @@ function updateActionbar(){
   bar.innerHTML=`<span class="ref">${esc(label)}</span>
    <button class="btn small" data-a="copy">Copiar</button><button class="btn small" data-a="add">Añadir a un sermón</button>
    <button class="btn small" data-a="comentario">Comentario</button><button class="btn small" data-a="bosquejo">Exégesis y homilética</button><button class="btn small" data-a="paralelos">Referencias cruzadas</button>
-   <a class="btn small" href="${bgUrl(r,ls.get("tp_cmpv",["RVR1960","NTV","NVI"]))}" target="_blank" rel="noopener">Comparar versiones</a>
+   <button class="btn small" data-a="cmpv">Comparar versiones</button>
    <button class="btn small ghost" data-a="clear">Quitar marcas</button>`;
   bar.hidden=false;
   bar.onclick=e=>{const a=e.target.closest("[data-a]")?.dataset.a;if(!a)return;const {b,c}=BSTATE;const ch=BIBLE[b].chs[c-1];const txt=SEL.map(n=>`${n} ${ch[n-1]}`).join("\n");
     if(a==="copy")copyText(`${label} (${BVER.abbr})\n${txt}`);
     if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:label+" ("+BVER.abbr+")",texto:SEL.map(n=>`**${n}** ${ch[n-1]}`).join(" ")}));
+    if(a==="cmpv")return compareVersions(r);
     if(a==="clear"){SEL=[];document.querySelectorAll(".vs.sel").forEach(x=>x.classList.remove("sel"));updateActionbar()}
     if(["comentario","bosquejo","paralelos"].includes(a))go(a,{prefill:{pasaje:rangeLabel}});
   };
@@ -1352,7 +1432,7 @@ function updateActionbar(){
 let CONC={q:"",modo:"palabra",test:"todo",libro:"",shown:100};
 function viewConcordancia(v,opts){
   if(opts.q!=null){CONC.q=opts.q;CONC.libro="";CONC.shown=100}
-  v.innerHTML=`<h1>Concordancia</h1><p class="lede">Busque palabras o frases en toda la ${BVER.name}. Varias palabras encuentran los versículos que las contienen todas; use comillas para una frase exacta. No importan las tildes ni las mayúsculas.</p>
+  v.innerHTML=`<div class="seg2" role="tablist"><button data-go="biblia" ${CURRENT==="biblia"?'aria-current="page"':""}>Leer</button><button data-go="concordancia" ${CURRENT==="concordancia"?'aria-current="page"':""}>Buscar palabras</button></div><h1>Concordancia</h1><p class="lede">Busque palabras o frases en toda la ${BVER.name}. Varias palabras encuentran los versículos que las contienen todas; use comillas para una frase exacta. No importan las tildes ni las mayúsculas.</p>
   <form class="row" id="cform" autocomplete="off"><input type="search" id="cq" value="${esc(CONC.q)}" placeholder="fe, “no temas”, misericordia…" style="flex:1;min-width:200px" aria-label="Buscar en la Biblia"><button class="btn primary">Buscar</button></form>
   <div class="row" style="margin:10px 0 18px">
     <select id="cmodo" style="width:auto" aria-label="Modo"><option value="palabra">Palabra completa</option><option value="contiene">Contiene (raíz)</option></select>
@@ -2187,7 +2267,7 @@ function renderEns(id){
     body=`${ui.mode==="view"?designPicker("ens"):""}${ui.mode==="view"?pageHTML(txt,curStyle()):`<div class="md paper">${md(txt)}</div>`}${ui.mode==="rev"?`<div class="thinking" style="margin-top:8px"><span class="dot"></span>Aplicando el cambio…</div>`:""}`;
   }
   const tools=ui.mode==="view"?`<div class="askbox"><label for="ens_ask" class="label">Pedirle un cambio a Claude</label><div class="row" style="margin-top:6px"><input type="text" id="ens_ask" placeholder="Ej.: quite el punto III · añada el ejemplo de Ana · haga la conclusión más corta" style="flex:1;min-width:220px"><button class="btn" data-e="ask">Aplicar</button></div></div>
-  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
+  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="slides">Hacer diapositivas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">El Word se descarga tal como se ve aquí. Las citas se comparan con su Reina-Valera 1960 al crear la enseñanza; toque "Verificar citas" para revisarlas o para añadir otra versión.</p>`:ui.mode==="rev"?`<div class="out-actions"><button class="btn" data-e="revstop">Detener</button></div>`:"";
   const pend=ui.mode==="pending"?`<div class="decide"><p style="margin:0 0 4px"><b>Hay una versión nueva de esta enseñanza.</b> Revísela y decida qué hacer con ella.</p>
     <div class="row" style="margin:8px 0 2px;gap:6px"><span class="seg"><button class="btn small ${ui.show!=="old"?"on":""}" data-e="shownew">Ver la nueva</button><button class="btn small ${ui.show==="old"?"on":""}" data-e="showold">Ver la que tenía</button></span></div>
@@ -2199,6 +2279,7 @@ function renderEns(id){
   box.onclick=e=>{const a=e.target.closest("[data-e],[data-p]");if(!a)return;const k=a.dataset.e||a.dataset.p;
     if(k.startsWith("w_")){const [,kind,style]=k.split("_");return exportWord(kind==="hoja"?st.hoja:OPEN.ensenanza,style,kind==="hoja"?"Hoja para la congregación":"")}
     if(k==="verif")return verifyUI(id);
+    if(k==="slides"){saveOpen().then(()=>{location.href="diapositivas.html?ens="+encodeURIComponent(id)});return}
     if(k==="edit"){ui.mode="edit";renderEns(id);$("#ens_ta")?.focus();return}
     if(k==="ecancel"){ui.mode="view";renderEns(id);return}
     if(k==="esave"){const t=$("#ens_ta").value;if(t!==OPEN.ensenanza){OPEN.ensanterior=OPEN.ensenanza;OPEN.ensenanza=t;saveOpen();toast("Cambios guardados")}ui.mode="view";renderEns(id);return}
