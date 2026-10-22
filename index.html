@@ -851,7 +851,7 @@ function openSheet(r){
   const sh=$("#sheet");const vs=passageVerses(r);
   sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(refLabel(r))}">
     <div class="row" style="justify-content:space-between"><h2>${esc(refLabel(r))}</h2><button class="btn ghost" data-x>Cerrar</button></div>
-    <p class="label" style="margin:4px 0 10px">${BVER.name}</p>
+    <p class="label" style="margin:4px 0 10px">${BVER.name} · dentro de la app, sin internet</p>
     <div class="chapter">${vs.length?vs.map(([v,t])=>`<span><sup>${v}</sup>${esc(t)} </span>`).join(""):"<p class='muted'>No se encontró ese pasaje.</p>"}</div>
     <div class="out-actions"><button class="btn primary" data-open>Abrir en la Biblia</button><button class="btn" data-copy>Copiar</button><button class="btn" data-add>Añadir a un sermón</button></div>
     ${versionLinks(r)}
@@ -866,8 +866,8 @@ const BG_BOOKS=["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua",
 const VERSIONES=[["RVR1960","Reina-Valera 1960"],["NTV","Nueva Traducción Viviente"],["NVI","Nueva Versión Internacional"],["DHH","Dios Habla Hoy"],["LBLA","La Biblia de las Américas"],["NBLA","Nueva Biblia de las Américas"],["RVC","Reina Valera Contemporánea"],["TLA","Traducción en Lenguaje Actual"],["PDT","Palabra de Dios para Todos"],["RVA-2015","Reina Valera Actualizada"]];
 function bgRef(r){const b=BG_BOOKS[r.b]||"";return r.v1?`${b} ${r.c}:${r.v1}${r.v2&&r.v2!==r.v1?"-"+r.v2:""}`:`${b} ${r.c}`}
 function bgUrl(r,vers){return "https://www.biblegateway.com/passage/?search="+encodeURIComponent(bgRef(r))+"&version="+encodeURIComponent(vers.join(";"))}
-function versionLinks(r){const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]);
-  return `<div class="verlinks"><span class="label">Otras versiones</span><div class="row" style="gap:6px;margin-top:6px">${VERSIONES.map(([k,n])=>`<a class="btn small" href="${bgUrl(r,[k])}" target="_blank" rel="noopener" title="${esc(n)}">${k}</a>`).join("")}<a class="btn small primary" href="${bgUrl(r,cmp)}" target="_blank" rel="noopener">Comparar ${cmp.join(" · ")}</a></div><p class="muted" style="font-size:12px;margin:6px 0 0">Se abren en BibleGateway, con el texto completo de cada versión.</p></div>`}
+function versionLinks(r){const own=BVER.propia?BVER.abbr.toUpperCase():"";const cmp=ls.get("tp_cmpv",["RVR1960","NTV","NVI"]).filter(k=>k!==own);const VERS=VERSIONES.filter(([k])=>k!==own);
+  return `<div class="verlinks"><span class="label">Otras versiones (necesitan internet)</span><div class="row" style="gap:6px;margin-top:6px">${VERS.map(([k,n])=>`<a class="btn small" href="${bgUrl(r,[k])}" target="_blank" rel="noopener" title="${esc(n)}">${k}</a>`).join("")}<a class="btn small primary" href="${bgUrl(r,cmp)}" target="_blank" rel="noopener">Comparar ${cmp.join(" · ")}</a></div><p class="muted" style="font-size:12px;margin:6px 0 0">Se abren en BibleGateway, con el texto completo de cada versión.</p></div>`}
 function closeSheet(){const sh=$("#sheet");sh.hidden=true;sh.innerHTML=""}
 
 /* ============ almacenamiento de sermones ============ */
