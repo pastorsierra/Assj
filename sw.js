@@ -1,5 +1,5 @@
-const V="tp-f6472651";
-const CORE=["./","index.html","shim.js","docx.js","rv1909.json","biblioteca.json","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","diapositivas.html","html2canvas.min.js","jspdf.umd.min.js","pptxgen.bundle.js"];
+const V="tp-3730b32f";
+const CORE=["./","index.html","shim.js","docx.js","rv1909.json","biblioteca.json","biblioteca-nueva.json","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","diapositivas.html","html2canvas.min.js","jspdf.umd.min.js","pptxgen.bundle.js"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("tp-")&&k!==V&&k!=="tp-fonts").map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener("fetch",e=>{

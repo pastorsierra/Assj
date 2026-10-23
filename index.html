@@ -366,6 +366,16 @@ html.pu-open .app,html.pu-open #actionbar,html.pu-open #sheet{visibility:hidden}
 .pu-doc ul,.pu-doc ol{padding-left:1.1em;margin:0 0 .9em}
 .pu-doc li{margin:0 0 .55em}
 .pu-doc li::marker{color:var(--pmut)}
+.pu .reflink{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--pq);text-decoration-thickness:2px;text-underline-offset:4px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pu-bib{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;background:var(--pbg);color:var(--pfg)}
+.pu-bbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--pline);background:var(--pbg);font-family:var(--f-ui)}
+.pu-bbar .pu-bt{flex:1;min-width:0;text-align:center;font-weight:700;color:var(--pacc);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pu-bbar [data-u=bibback]{font-weight:700;border-color:var(--pacc);color:var(--pacc)}
+.pu-bscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 max(20px,env(safe-area-inset-right,0px)) 30vh max(20px,env(safe-area-inset-left,0px))}
+.pu-bib .pu-doc sup{font-size:.6em;color:var(--pmut);margin-right:.15em}
+.pu-bib .pu-doc .bsel{background:var(--phl);border-radius:3px}
+@media (max-width:560px){.pu-bbar .pu-bt{flex-basis:100%;order:-1;font-size:17px}.pu-bbar [data-u=bibback]{flex:1}}
+.pu-bib .pu-bver{font-family:var(--f-ui);font-size:13px;color:var(--pmut);text-align:center;margin:.6em 0 0}
 .pu-doc .pb{font-weight:700;color:var(--pfg)}
 .pu-doc .phl{background:var(--phl);border-radius:2px;padding:0 .1em}
 .pu-doc .pq{color:var(--pq);font-style:italic}.pu-doc .pov{color:var(--pov);font-style:italic}
@@ -437,6 +447,14 @@ code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
 .bubble{border-radius:4px}
 .sheet{border-radius:6px 6px 0 0}
 
+
+/* ===== Versiones nuevas ===== */
+.vnbanner{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--azul);border-left-width:5px;border-radius:14px;padding:14px 16px;margin:0 0 14px;cursor:pointer;color:inherit;font:inherit}
+.vnbanner b{font-size:16px}.vnbanner span{grid-column:1;font-size:14px;opacity:.8}.vnbanner i{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-size:26px;opacity:.6}
+.vncmp{margin:14px 0}.vncmp.vn-lado{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.vncmp.vn-orig .vncol:last-child,.vncmp.vn-nueva .vncol:first-child{display:none}
+.vnlab{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px;opacity:.7}.vnlab.new{color:var(--azul);opacity:1}
+.vnnote{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 /* ===== Navegación: barra inferior de 5 botones (iPad e iPhone) ===== */
 .app{grid-template-columns:minmax(0,1fr)!important}
 .side{display:none!important}
@@ -1263,7 +1281,7 @@ const ICO={
  consulta:'<path d="M4 5h16v11H9l-5 4z"/>'};
 const icon=(k,c)=>`<svg class="${c||"ico"}" viewBox="0 0 24 24" aria-hidden="true">${ICO[k]||""}</svg>`;
 const TABS=[["inicio","Inicio"],["sermones","Enseñanzas"],["biblia","Biblia"],["estudio","Estudio"],["diapositivas","Diapositivas"]];
-function tabOf(id){if(["biblia","concordancia"].includes(id))return "biblia";if(["sermones","armar","biblioteca"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
+function tabOf(id){if(["biblia","concordancia"].includes(id))return "biblia";if(["sermones","armar","biblioteca","nuevas","nuevacmp"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
 const NAV=[
   {grupo:"",items:[["inicio","Inicio"]]},
   {grupo:"Escritura",items:[["biblia","Biblia"],["concordancia","Concordancia"]]},
@@ -1291,6 +1309,8 @@ function _go(id,opts={}){
   if(id==="sermones")return viewSermones(v,opts);
   if(id==="armar")return viewArmar(v,opts);
   if(id==="ajustes")return viewAjustes(v);
+  if(id==="nuevas")return viewNuevas(v,opts);
+  if(id==="nuevacmp")return viewNuevaCmp(v,opts);
   if(id==="biblioteca"){CURRENT="sermones";renderNav();return viewBiblioteca(v,opts)}
   if(TOOLS[id])return viewTool(v,id,opts);
   viewInicio(v);
@@ -1298,7 +1318,7 @@ function _go(id,opts={}){
 
 /* ============ atrás y adelante ============ */
 let NAVH=[],NAVI=-1,NAVSKIP=false,NAVPOP=0;
-function navSnap(opts){const o={};["open","q","item","keepSel"].forEach(k=>{if(opts&&opts[k]!=null)o[k]=opts[k]});
+function navSnap(opts){const o={};["open","q","item","keepSel","vn"].forEach(k=>{if(opts&&opts[k]!=null)o[k]=opts[k]});
   return {id:CURRENT,opts:o,ls:{c:LSTATE.c,q:LSTATE.q,f:LSTATE.f,item:LSTATE.item},bs:{...BSTATE},sel:[...SEL],y:0}}
 function navSig(e){return JSON.stringify([e.id,e.opts,e.ls,e.bs,e.sel])}
 function navButtons(){const b=$("#nvb"),f=$("#nvf");if(b)b.disabled=NAVI<=0;if(f)f.disabled=NAVI>=NAVH.length-1}
@@ -1343,6 +1363,7 @@ function viewInicio(v){
     <button class="act" data-go="biblia">${icon("biblia")}<b>Biblia</b><span>${bk?"Seguir en "+esc(bk)+" · ":""}${esc(BVER.abbr)}, sin internet.</span></button>
     <a class="act" href="diapositivas.html">${icon("diapositivas")}<b>Diapositivas</b><span>Convierta una enseñanza en presentación y proyéctela.</span></a>
   </div>
+  <div id="vnhome"></div>
   <form class="bigsearch" id="homeq" role="search"><input type="search" id="hq" placeholder="Buscar en sus enseñanzas: un tema, un personaje, un pasaje…" aria-label="Buscar en sus enseñanzas"></form>
   <div class="section-head"><h2>Continuar donde quedó</h2></div>
   <div id="recent" style="margin-top:6px"></div>
@@ -1352,6 +1373,8 @@ function viewInicio(v){
     <button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque una palabra o frase en toda la Biblia.</span></button>
   </div>`;
   renderRecent();
+  Promise.all([loadLib(),loadVN()]).then(()=>{const el=$("#vnhome");if(!el)return;const ids=vnIds();const p=ids.filter(i=>vnStatus(i)==="pend").length;
+    if(p)el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas por revisar: ${p}</b><span>Sus enseñanzas del archivo pasadas al modelo nuevo. Compare cada una con la original.</span><i>›</i></button>`}).catch(()=>{});
   $("#homeq").onsubmit=e=>{e.preventDefault();LSTATE.q=$("#hq").value.trim();LSTATE.c=null;LSTATE.f="todas";go("sermones")};
 }
 function viewEstudio(v){
@@ -1622,6 +1645,7 @@ function viewBiblioteca(v,opts){
   v.innerHTML=`<p class="label" style="margin:0 0 4px">Mis enseñanzas</p><h1>Mis enseñanzas</h1>
   <p class="lede" id="llede"></p>
   <div class="row" style="margin:0 0 12px;gap:8px"><div class="bigsearch" style="flex:1;min-width:240px;margin:0"><input type="search" id="lq" value="${esc(LSTATE.q)}" placeholder="Buscar: Elías, diezmo, Juan 3:16, avivamiento…" aria-label="Buscar en mis enseñanzas"></div><button class="btn primary" id="newbtn" style="padding:12px 16px">Nueva enseñanza</button></div>
+  <div id="vnbanner"></div>
   <form class="card" id="newform" autocomplete="off" hidden style="margin-bottom:16px"><div class="row"><input type="text" id="nt" placeholder="Título" style="flex:2;min-width:200px" aria-label="Título"><input type="text" id="ntx" placeholder="Texto clave (opcional)" style="flex:1;min-width:150px" aria-label="Texto clave"><select id="ncat" style="flex:1;min-width:180px" aria-label="Carpeta">${catOptions(LSTATE.c!=null&&LSTATE.c!=="sin"?CATS[LSTATE.c]?.[0]:"")}</select><button class="btn primary" type="submit" data-mode="open">Crear</button><button class="btn" type="submit" data-mode="armar">Crear y armarla yo mismo</button></div></form>
   <div class="cat-grid" id="lcats"></div>
   <div class="row" style="margin-bottom:6px"><select id="fest" style="width:auto" aria-label="Mostrar">${Object.entries(MOSTRAR).map(([k,l])=>`<option value="${k}" ${LSTATE.f===k?"selected":""}>${l}</option>`).join("")}</select><span class="savestate">${Store.mode==="nube"?"Las que prepare aquí se guardan en su cuenta de Claude.":"Las que prepare aquí se guardan solo en este dispositivo."}</span></div>
@@ -1657,6 +1681,9 @@ function viewBiblioteca(v,opts){
   $("#newform").onsubmit=async e=>{e.preventDefault();const mode=e.submitter?.dataset.mode||"open";const t=$("#nt").value.trim();if(!t){$("#nt").focus();return}const id=await Store.saveSermon({titulo:t,texto:$("#ntx").value.trim(),categoria:$("#ncat").value,culto:"dominical",estado:"idea",fecha:"",notas:"",enserie:false,serie:""});mode==="armar"?go("armar",{id}):go("sermones",{open:id})};
   if(LSTATE.openNew){LSTATE.openNew=false;$("#newform").hidden=false;$("#nt").focus()}
   viewSermones.draw=draw;draw();
+  const vnb=()=>{const el=$("#vnbanner");if(!el||!VN)return;const ids=vnIds();if(!ids.length)return;const p=ids.filter(i=>vnStatus(i)==="pend").length;
+    el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas</b><span>${p?`${p} de ${ids.length} enseñanzas de su archivo, pasadas al modelo nuevo, esperan su revisión.`:`Revisó las ${ids.length} versiones nuevas.`}</span><i>›</i></button>`};
+  if(VN)vnb();else loadVN().then(vnb).catch(()=>{});
   if(LSTATE.flash){const el=$(`#lres [data-sermon="${CSS.escape(LSTATE.flash)}"]`);LSTATE.flash=null;if(el){el.classList.add("flash");setTimeout(()=>el.scrollIntoView({block:"center",behavior:"smooth"}),100)}}
 }
 function libToMd(it){const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
@@ -1672,11 +1699,74 @@ function libToMd(it){const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
     if(k==="i"){L.push("",`**${t.replace(/\*/g,"")}**`,"");continue}
     L.push(t,"")}
   return L.join("\n")}
+
+/* ============ Versiones nuevas: el archivo pasado al modelo nuevo ============ */
+let VN=null,VN_P=null;const VNS={f:"pend",q:"",c:"",m:""};
+function loadVN(){if(VN)return Promise.resolve(VN);if(VN_P)return VN_P;
+  VN_P=fetch("biblioteca-nueva.json").then(r=>{if(!r.ok)throw new Error("vn");return r.json()}).then(d=>{VN=d.items||{};return VN}).catch(e=>{VN_P=null;throw e});return VN_P}
+loadVN().catch(()=>{});
+function vnState(){return ls.get("tp_vn",{})||{}}
+function vnSet(i,st){const o={...vnState()};if(st)o[i]=st;else delete o[i];ls.set("tp_vn",o)}
+function vnUsed(i){return SERMONS.find(s=>s.vnueva&&s.origen!=null&&+s.origen===+i)}
+function vnStatus(i){return vnUsed(i)?"ok":(vnState()[i]==="no"?"no":"pend")}
+const VNF={pend:"Por revisar",ok:"Aceptadas",no:"Descartadas",todas:"Todas"};
+const VNTAG={pend:"",ok:'<span class="tag ready">Aceptada</span>',no:'<span class="tag">Descartada</span>'};
+function vnIds(){return VN?Object.keys(VN).map(Number).filter(i=>LIB&&LIB.items[i]).sort((a,b)=>a-b):[]}
+function vnWait(v,cb){v.innerHTML=`<div class="thinking"><span class="dot"></span>Abriendo las versiones nuevas…</div>`;
+  Promise.all([loadLib(),loadVN()]).then(cb).catch(()=>{v.innerHTML=`<div class="card">No se pudo abrir el archivo de versiones nuevas. Cierre la app, ábrala con internet una vez e intente de nuevo. <button class="btn small" data-go="nuevas">Reintentar</button></div>`})}
+function viewNuevas(v,opts){
+  if(!LIB||!VN)return vnWait(v,()=>{if(CURRENT==="nuevas")viewNuevas($("#view"),opts)});
+  const ids=vnIds();const cnt={pend:0,ok:0,no:0};ids.forEach(i=>cnt[vnStatus(i)]++);cnt.todas=ids.length;
+  v.innerHTML=`<button class="btn ghost small" data-go="sermones">‹ Mis enseñanzas</button>
+  <h1 style="margin-top:10px">Versiones nuevas</h1>
+  <p class="lede">Sus ${ids.length} enseñanzas del archivo, pasadas al modelo nuevo: menos puntos y más hondos, citas revisadas con su Biblia, viñetas con la idea en negrita y pocas frases de impacto. <b>Las originales no se han tocado.</b> Abra cada una, compárela con la original y decida si la usa.</p>
+  <div class="seg2" id="vnf" style="flex-wrap:wrap" role="tablist">${Object.entries(VNF).map(([k,l])=>`<button data-f="${k}" ${VNS.f===k?'aria-current="page"':""}>${l} <span class="muted">${cnt[k]}</span></button>`).join("")}</div>
+  <div class="row" style="margin:12px 0;gap:8px"><div class="bigsearch" style="flex:2;min-width:220px;margin:0"><input type="search" id="vnq" value="${esc(VNS.q)}" placeholder="Buscar por título, pasaje o tema" aria-label="Buscar"></div>
+  <select id="vnc" style="flex:1;min-width:180px" aria-label="Carpeta"><option value="">Todas las carpetas</option>${LIB.carpetas.map((c,i)=>ids.some(x=>LIB.items[x].c===i)?`<option value="${i}" ${String(VNS.c)===String(i)?"selected":""}>${esc(c.n+" · "+c.t)}</option>`:"").join("")}</select></div>
+  <div id="vnres"></div>`;
+  const draw=()=>{const q=norm(VNS.q=$("#vnq").value.trim());VNS.c=$("#vnc").value;
+    const L=ids.filter(i=>(VNS.f==="todas"||vnStatus(i)===VNS.f)&&(VNS.c===""||LIB.items[i].c===+VNS.c)&&(!q||LIB.items[i]._t.includes(q)||norm(VN[i]).includes(q)));
+    $("#vnres").innerHTML=L.length?`<div class="sermon-list">${L.slice(0,200).map(i=>{const it=LIB.items[i];const st=vnStatus(i);
+      return `<button class="sitem" data-vn="${i}"><b>${esc(it.t)}</b>${VNTAG[st]||"<span></span>"}<span></span><small>${esc([libFolder(it),it.r].filter(Boolean).join(" · "))}</small></button>`}).join("")}</div>${L.length>200?`<p class="muted">Mostrando 200 de ${L.length}. Escriba algo más específico o elija una carpeta.</p>`:""}`
+      :`<div class="card muted">${VNS.f==="pend"&&!q&&VNS.c===""?"¡Ya revisó todas! No quedan versiones nuevas por revisar.":"No hay enseñanzas con ese filtro."}</div>`};
+  $("#vnf").onclick=e=>{const b=e.target.closest("[data-f]");if(!b)return;VNS.f=b.dataset.f;[...$("#vnf").children].forEach(x=>x===b?x.setAttribute("aria-current","page"):x.removeAttribute("aria-current"));draw()};
+  let tm;$("#vnq").oninput=()=>{clearTimeout(tm);tm=setTimeout(draw,180)};$("#vnc").onchange=draw;
+  $("#vnres").onclick=e=>{const b=e.target.closest("[data-vn]");if(b)go("nuevacmp",{vn:+b.dataset.vn})};
+  draw();
+}
+function vnNext(i){const ids=vnIds();const k=ids.indexOf(+i);for(const j of [...ids.slice(k+1),...ids.slice(0,k)])if(vnStatus(j)==="pend")return j;return null}
+function viewNuevaCmp(v,opts){
+  if(!LIB||!VN)return vnWait(v,()=>{if(CURRENT==="nuevacmp")viewNuevaCmp($("#view"),opts)});
+  const i=+opts.vn;const it=LIB.items[i];const md=VN[i];if(!it||!md){go("nuevas");return}
+  const orig=autoFix(libToMd(it),true);const wide=window.innerWidth>=1000;
+  let m=VNS.m||(wide?"lado":"nueva");if(m==="lado"&&!wide)m="nueva";
+  const st=vnStatus(i);const used=vnUsed(i);const nx=vnNext(i);
+  const wc=t=>String(t).replace(/^>.*$/gm,"").split(/\s+/).filter(Boolean).length;
+  v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" data-go="nuevas">‹ Versiones nuevas</button>${nx!=null?`<button class="btn ghost small" id="vnnext">Siguiente por revisar ›</button>`:""}</div>
+  <p class="label" style="margin:12px 0 2px">${esc(libFolder(it))}${it.r?" · "+esc(it.r):""}</p><h1 style="margin:0 0 6px">${esc(it.t)}</h1>
+  <p class="muted" style="margin:0 0 12px;font-size:14px">${st==="ok"?"Ya la pasó a Mis enseñanzas.":st==="no"?"La marcó como descartada.":"Por revisar."} Original: ${wc(orig)} palabras · Nueva: ${wc(md)} palabras.</p>
+  <div class="seg2" id="vnm">${wide?`<button data-m="lado" ${m==="lado"?'aria-current="page"':""}>Lado a lado</button>`:""}<button data-m="orig" ${m==="orig"?'aria-current="page"':""}>Original</button><button data-m="nueva" ${m==="nueva"?'aria-current="page"':""}>Nueva</button></div>
+  <div class="vncmp vn-${m}"><div class="vncol"><p class="vnlab">Original · su archivo</p>${pageHTML(orig,curStyle())}</div><div class="vncol"><p class="vnlab new">Nueva · modelo nuevo</p>${pageHTML(md,curStyle())}</div></div>
+  <div class="out-actions">${used?`<button class="btn primary" id="vnopen">Abrir la que está en Mis enseñanzas</button>`:`<button class="btn primary" id="vnuse">Usar la versión nueva</button>`}
+  ${st==="no"?`<button class="btn" id="vnback">Volver a revisar</button>`:used?"":`<button class="btn" id="vnno">Descartar, me quedo con la original</button>`}
+  <button class="btn" id="vnpulpit">Predicar la nueva</button><button class="btn" id="vncopy">Copiar la nueva</button></div>
+  <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Usar la versión nueva» la copia a Mis enseñanzas, en la misma carpeta. Allí puede editarla y decidir si reemplaza a la original o si conserva las dos. Nada se borra.</p>`;
+  $("#vnm").onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;VNS.m=b.dataset.m;viewNuevaCmp(v,opts)};
+  const nb=$("#vnnext");if(nb)nb.onclick=()=>go("nuevacmp",{vn:nx});
+  const use=$("#vnuse");if(use)use.onclick=async()=>{use.disabled=true;const c=LIB.carpetas[it.c];const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
+    const id=await Store.saveSermon({titulo:it.t,texto:it.r||"",categoria:cat,culto:"dominical",estado:"listo",fecha:"",notas:"",enserie:false,serie:"",origen:i,origenTitulo:it.t,vnueva:true,ensenanza:md});
+    vnSet(i,null);go("sermones",{open:id});toast("Copiada a Mis enseñanzas. Ahí decide si reemplaza a la original o conserva las dos.",4200)};
+  const op=$("#vnopen");if(op)op.onclick=()=>go("sermones",{open:used.id});
+  const no=$("#vnno");if(no)no.onclick=()=>{vnSet(i,"no");toast("Descartada. La original sigue igual.");nx!=null?go("nuevacmp",{vn:nx}):viewNuevaCmp(v,opts)};
+  const bk=$("#vnback");if(bk)bk.onclick=()=>{vnSet(i,null);viewNuevaCmp(v,opts)};
+  $("#vnpulpit").onclick=()=>openPulpit(md,it.t);
+  $("#vncopy").onclick=()=>copyText(md.replace(/==/g,"").replace(/\*\*/g,""));
+}
 function libToText(it){return [it.T||it.t,...it.p.map(([k,t])=>k==="li"?"• "+t:t)].join("\n\n")}
 function libRead(v,it){
   const c=LIB.carpetas[it.c];const mdText=autoFix(libToMd(it),true);
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
-  <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.n+" · "+c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p><div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
+  <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.n+" · "+c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
   <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">Predicar</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
@@ -1687,6 +1777,7 @@ function libRead(v,it){
     LSTATE.item=null;go("sermones",{open:id,prepFocus:prep});toast(prep?"Revise las opciones y toque «Preparar enseñanza».":"Copia lista. Toque «Editar» en la vista previa.")};
   $("#lprep").onclick=()=>toSermon(true);$("#lsave").onclick=()=>toSermon(false);
   $("#lcopy").onclick=()=>copyText(libToText(it));
+  const vo=v.querySelector("[data-vnopen]");if(vo)vo.onclick=()=>go("nuevacmp",{vn:it.i});
   $("#lpulpit").onclick=()=>openPulpit(mdText,it.t);
   v.querySelector(".out-actions").addEventListener("click",e=>{const a=e.target.closest("[data-p]")?.dataset.p;if(a==="w_lib_cur")exportWord(mdText,curStyle(),"",{titulo:it.t})});
   $("#libpage").onclick=e=>{const d=e.target.closest("[data-e^='ds_']");if(!d)return;ls.set("tp_wstyle",d.dataset.e.slice(3));$("#libpage").innerHTML=designPicker("lib")+pageHTML(mdText,curStyle());$("#ldl").textContent="Descargar Word · "+WSHORT[curStyle()]};
@@ -2120,14 +2211,14 @@ function pulpitHTML(mdText){
   for(const b of blocks){
     if(b.t!=="li"&&b.t!=="ol")closeList();
     if(b.t==="title"){h+=`<h1 class="pu-t">${esc(b.s)}</h1>`;continue}
-    if(b.t==="subtitle"){h+=`<p class="pu-sub">${pgInline(b.s)}</p>`;continue}
+    if(b.t==="subtitle"){h+=`<p class="pu-sub">${linkRefs(pgInline(b.s))}</p>`;continue}
     if(b.t==="h1"){apoyo=false;const m=b.s.match(ROM);const id="pus"+sec.length;sec.push([id,m?m[1]:b.s,m?m[2]:""]);
       h+=`<h2 class="pu-h" id="${id}">${m?`<span>${m[1]}</span>${esc(m[2])}`:esc(b.s)}</h2>`;continue}
     if(b.t==="h2"){if(/^vers[ií]culo clave$/i.test(b.s.trim()))continue;apoyo=/textos de apoyo/i.test(b.s);h+=`<h3 class="pu-h2">${esc(b.s)}</h3>`;continue}
-    if(b.t==="quote"){h+=`<blockquote class="pu-q${b.ver?" ov":""}">${pgInline(b.s)}${b.ref||b.ver?`<cite>${esc(b.ver||b.ref)}${b.ver?"":" · RVR1960"}</cite>`:""}</blockquote>`;continue}
+    if(b.t==="quote"){h+=`<blockquote class="pu-q${b.ver?" ov":""}">${linkRefs(pgInline(b.s))}${b.ref||b.ver?`<cite>${esc(b.ver||b.ref)}${b.ver?"":" · RVR1960"}</cite>`:""}</blockquote>`;continue}
     if(b.t==="impact"){h+=`<p class="pu-imp">${esc(b.s)}</p>`;continue}
-    if(b.t==="li"||b.t==="ol"){const tag=b.t==="ol"?"ol":"ul";if(list!==tag){closeList();h+=`<${tag}>`;list=tag}h+=`<li>${pgInline(b.s)}</li>`;continue}
-    if(b.t==="p"){h+=`<p${apoyo?' class="pu-apoyo"':""}>${pgInline(b.s)}</p>`}
+    if(b.t==="li"||b.t==="ol"){const tag=b.t==="ol"?"ol":"ul";if(list!==tag){closeList();h+=`<${tag}>`;list=tag}h+=`<li>${linkRefs(pgInline(b.s))}</li>`;continue}
+    if(b.t==="p"){h+=`<p${apoyo?' class="pu-apoyo"':""}>${linkRefs(pgInline(b.s))}</p>`}
   }
   closeList();return {h,sec};
 }
@@ -2184,27 +2275,67 @@ function openPulpit(mdText,titulo){
   const goto=i=>{const hs=heads();if(i<0){sc.scrollTo({top:0,behavior:"smooth"});return}if(hs[i]){PUL.prog=true;clearTimeout(PUL.pt);PUL.pt=setTimeout(()=>{PUL.prog=false},1000);sc.scrollTo({top:hs[i].offsetTop-(mq.matches?barH()+10:70),behavior:"smooth"})}};
   sc.onscroll=()=>{const max=sc.scrollHeight-sc.clientHeight;bar.style.width=(max>0?sc.scrollTop/max*100:0)+"%";const k=curIdx();sel.value=k<0?"top":sec[k][0];
     if(mq.matches){const y=sc.scrollTop,d=y-lastY;if(!PUL.prog){if(d>10&&y>80)m.classList.add("nobar");else if(d<-10||y<40)m.classList.remove("nobar")}lastY=y}};
-  sc.addEventListener("click",e=>{if(!mq.matches||e.target.closest("a,button,select"))return;if(String(window.getSelection&&window.getSelection()).trim())return;m.classList.toggle("nobar")});
+  sc.addEventListener("click",e=>{if(!mq.matches||e.target.closest("a,button,select,.reflink"))return;if(String(window.getSelection&&window.getSelection()).trim())return;m.classList.toggle("nobar")});
   sel.onchange=()=>{if(sel.value==="top")goto(-1);else goto(sec.findIndex(x=>x[0]===sel.value))};
   const save=()=>ls.set("tp_pulpit",pref);
   const themes=["claro","sepia","noche"];
   let press;
   tm.onpointerdown=()=>{press=setTimeout(()=>{PUL.acc=0;PUL.t0=Date.now();press=null;drawT();toast("Tiempo reiniciado")},700)};
   tm.onpointerup=()=>{if(press){clearTimeout(press);press=null;if(PUL.run){PUL.acc+=Date.now()-PUL.t0;PUL.run=false}else{PUL.t0=Date.now();PUL.run=true}drawT()}};
-  m.onclick=e=>{const a=e.target.closest("[data-u]")?.dataset.u;if(!a||a==="timer")return;
+  m.onclick=e=>{const rl=e.target.closest(".reflink");
+    if(rl&&!e.target.closest(".pu-bib")){e.stopPropagation();const [b,c,v1,v2]=rl.dataset.ref.split("|");return puBible({b:+b,c:+c,v1:v1?+v1:null,v2:v2?+v2:(v1?+v1:null)})}
+    const a=e.target.closest("[data-u]")?.dataset.u;if(!a||a==="timer")return;
+    if(a==="bibback")return puBibleClose(true);
+    if(a==="bibprev"||a==="bibnext")return puBibleStep(a==="bibnext"?1:-1);
     if(a==="exit")return closePulpit();
     if(a==="prev")return goto(curIdx()-1);
     if(a==="next")return goto(curIdx()+1);
     if(a==="bigger"||a==="smaller"){const y=sc.scrollTop/(sc.scrollHeight||1);pref.size=Math.max(14,Math.min(44,pref.size+(a==="bigger"?2:-2)));m.style.setProperty("--ps",pref.size+"px");sc.scrollTop=y*sc.scrollHeight;save();return}
     if(a==="theme"){pref.theme=themes[(themes.indexOf(pref.theme)+1)%themes.length];m.className="pu pu-"+pref.theme+(m.classList.contains("nobar")?" nobar":"");puChrome(pref.theme);save();return}
   };
-  PUL.key=e=>{if(m.hidden)return;if(e.key==="Escape")closePulpit();if(e.key==="ArrowRight"||e.key==="PageDown")goto(curIdx()+1);if(e.key==="ArrowLeft"||e.key==="PageUp")goto(curIdx()-1)};
+  PUL.key=e=>{if(m.hidden)return;if($(".pu-bib",m)){if(e.key==="Escape"||e.key==="Backspace")puBibleClose(true);return}if(e.key==="Escape")closePulpit();if(e.key==="ArrowRight"||e.key==="PageDown")goto(curIdx()+1);if(e.key==="ArrowLeft"||e.key==="PageUp")goto(curIdx()-1)};
   document.addEventListener("keydown",PUL.key);
   document.addEventListener("visibilitychange",PUL.vis=()=>{if(!m.hidden&&document.visibilityState==="visible")keepAwake(true)});
 }
-function closePulpit(){const m=$("#pulpit");if(!m)return;m.hidden=true;m.innerHTML="";m.classList.remove("nobar");try{window.removeEventListener("resize",PUL.rs)}catch{}puChromeOff();document.body.style.overflow="";clearInterval(PUL.tick);keepAwake(false);
+function closePulpit(){const m=$("#pulpit");if(!m)return;if(PUL.bib){window.removeEventListener("popstate",PUL.bibPop);PUL.bib=null}m.hidden=true;m.innerHTML="";m.classList.remove("nobar");try{window.removeEventListener("resize",PUL.rs)}catch{}puChromeOff();document.body.style.overflow="";clearInterval(PUL.tick);keepAwake(false);
   document.removeEventListener("keydown",PUL.key);document.removeEventListener("visibilitychange",PUL.vis);
   try{const d=document;if(d.fullscreenElement||d.webkitFullscreenElement)(d.exitFullscreen||d.webkitExitFullscreen).call(d)}catch{}}
+
+/* Biblia desde el modo predicar: abre el capítulo y vuelve al mismo punto de la enseñanza */
+function puBibleRender(){
+  const m=$("#pulpit"),r=PUL.bib&&PUL.bib.r;if(!m||!r)return;
+  const book=BIBLE[r.b],ch=book.chs[r.c-1]||[];const a=r.v1||0,z=r.v2||r.v1||0;
+  let ov=$(".pu-bib",m);if(!ov){ov=document.createElement("div");ov.className="pu-bib";m.append(ov)}
+  const lab=r.v1?refLabel(r):`${book.name} ${r.c}`;
+  ov.innerHTML=`<header class="pu-bbar"><button class="pu-b" data-u="bibback" aria-label="Volver a la enseñanza">‹ Volver a la enseñanza</button>
+    <span class="pu-bt">${esc(lab)}</span>
+    <button class="pu-b" data-u="bibprev" aria-label="Capítulo anterior">‹ Cap.</button><button class="pu-b" data-u="bibnext" aria-label="Capítulo siguiente">Cap. ›</button></header>
+    <main class="pu-bscroll"><article class="pu-doc"><h2 class="pu-h" style="border-top:0">${esc(book.name)} ${r.c}</h2>
+    <p>${ch.map((t,i)=>t?`<span class="${a&&i+1>=a&&i+1<=z?"bsel":""}" data-bv="${i+1}"><sup>${i+1}</sup>${esc(t)}</span> `:"").join("")}</p>
+    <p class="pu-bver">${esc(BVER.name||BVER.abbr||"")}</p></article></main>`;
+  const sc=$(".pu-bscroll",ov);sc.scrollTop=0;
+  const first=a?$(`[data-bv="${a}"]`,ov):null;if(first)setTimeout(()=>{sc.scrollTop=Math.max(0,first.offsetTop-sc.clientHeight*0.22)},30);
+}
+function puBible(r){
+  if(!BIBLE){toast("La Biblia todavía se está cargando");return}
+  if(!BIBLE[r.b]||!BIBLE[r.b].chs[r.c-1]){toast("No encontré ese pasaje");return}
+  const first=!PUL.bib;PUL.bib={r:{...r},pushed:PUL.bib?PUL.bib.pushed:false};
+  if(first){try{history.pushState({pubib:1},"",location.href);PUL.bib.pushed=true}catch{}
+    PUL.bibPop=()=>{if(PUL.bib){PUL.bib.pushed=false;puBibleClose(false)}};window.addEventListener("popstate",PUL.bibPop)}
+  puBibleRender();
+}
+function puBibleStep(d){
+  const r=PUL.bib&&PUL.bib.r;if(!r)return;let b=r.b,c=r.c+d;
+  if(c<1){if(b>0){b--;c=BIBLE[b].chs.length}else c=1}
+  else if(c>BIBLE[b].chs.length){if(b<BIBLE.length-1){b++;c=1}else c=BIBLE[b].chs.length}
+  PUL.bib.r={b,c,v1:null,v2:null};puBibleRender();
+}
+function puBibleClose(useHistory){
+  const m=$("#pulpit");const st=PUL.bib;if(!st)return;
+  window.removeEventListener("popstate",PUL.bibPop);PUL.bib=null;
+  $(".pu-bib",m)?.remove();
+  if(useHistory&&st.pushed){NAVPOP=1;setTimeout(()=>{NAVPOP=0},400);try{history.back()}catch{NAVPOP=0}}
+}
 
 let ENSUI={};
 function openCompare(lt,lmd,rt,rmd,note){
