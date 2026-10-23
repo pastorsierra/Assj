@@ -848,6 +848,8 @@ function viewAjustes(v){
     <div class="row" style="gap:8px"><button class="btn primary" id="bkout">Descargar copia</button><button class="btn" id="bkin">Restaurar desde una copia</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
   </div>
 
+  ${lockSection()}
+
   ${syncSection()}
 
   <div class="section-head"><h2>Texto bíblico</h2></div>
@@ -896,6 +898,7 @@ function viewAjustes(v){
     if(ns)Store.localSave(all);
     bm(ns?`Se corrigieron ${nf} citas en ${ns} enseñanzas.`+(nb?` Quedan ${nb} para revisar una por una con "Verificar citas".`:""):(nb?`Todo coincide, salvo ${nb} citas para revisar una por una con "Verificar citas".`:"Todas las citas coinciden con la RVR1960."))};
   syncWire(v);
+  lockWire(v);
   $("#bkout").onclick=backupData;
   $("#bkin").onclick=()=>$("#bkfile").click();
   $("#bkfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
@@ -928,7 +931,7 @@ function syncCfg(){try{return JSON.parse(TP.kv.get("sync_cfg")||"null")}catch{re
 function syncSaveCfg(c){if(c){const t=JSON.stringify(c);TP.kv.set("sync_cfg",t);TP.put("sync_cfg",t)}else TP.del("sync_cfg")}
 function syncMeta(){try{return JSON.parse(TP.kv.get("sync_meta")||"null")||{s:{},del:{},kv:{}}}catch{return {s:{},del:{},kv:{}}}}
 function syncSaveMeta(m){const t=JSON.stringify(m);TP.kv.set("sync_meta",t);TP.put("sync_meta",t)}
-const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_cfg"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
+const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_cfg"||k==="tp_lock"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
 /* registrar cada cambio local con su hora */
 function syncInit(){const orig=ls.set.bind(ls);
   ls.set=function(k,v){
@@ -1055,6 +1058,96 @@ function syncWire(v){const st=document.getElementById("syst");if(!st)return;sync
     catch(e){msg(e.message,true);on.disabled=false}};
   const nw=v.querySelector("#synow");if(nw)nw.onclick=async()=>{nw.disabled=true;await syncNow();nw.disabled=false};
   const off=v.querySelector("#syoff");if(off)off.onclick=()=>{if(!confirm("¿Desconectar este equipo? Sus datos quedan aquí y en el repositorio; solo deja de sincronizar."))return;syncSaveCfg(null);clearInterval(SYNC.poll);SYNC.err="";toast("Sincronización apagada en este equipo");viewAjustes(v)}}
+
+/* ============ Bloqueo de la app: contraseña + Face ID / huella ============
+   Protege la app si el iPad queda desbloqueado. Se pide la contraseña (o Face ID / huella)
+   al abrir la app y al volver después de 2 minutos fuera de ella.
+   La contraseña nunca se guarda: solo un resumen (PBKDF2). Esta clave tampoco viaja a GitHub. */
+const LOCK={idle:120000,hiddenAt:0,el:null,iters:200000};
+const lkB64=u=>{let s="";const a=new Uint8Array(u);for(let i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s)};
+const lkUnB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+function lockCfg(){try{return JSON.parse(TP.kv.get("tp_lock")||"null")}catch{return null}}
+function lockSave(c){if(c){const t=JSON.stringify(c);TP.kv.set("tp_lock",t);TP.put("tp_lock",t)}else TP.del("tp_lock")}
+async function lkHash(pw,salt,iters){const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:iters,hash:"SHA-256"},k,256);return lkB64(bits)}
+async function lockSetPass(pw){const salt=crypto.getRandomValues(new Uint8Array(16));const h=await lkHash(pw,salt,LOCK.iters);
+  lockSave({...(lockCfg()||{}),s:lkB64(salt),h,it:LOCK.iters})}
+async function lockCheck(pw){const c=lockCfg();if(!c)return true;return (await lkHash(pw,lkUnB64(c.s),c.it||LOCK.iters))===c.h}
+/* Face ID / huella: una llave del propio equipo que solo se usa si el sensor confirma que es usted */
+async function bioSetup(){if(!window.PublicKeyCredential)throw new Error("Este navegador no ofrece Face ID o huella.");
+  const cred=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
+    rp:{name:"Taller del Predicador",id:location.hostname},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:"pastor",displayName:"Pastor Antonio Sierra J."},
+    pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
+  lockSave({...(lockCfg()||{}),cred:lkB64(cred.rawId)})}
+async function bioUnlock(){const c=lockCfg();if(!c||!c.cred)return false;
+  try{const a=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,
+    allowCredentials:[{type:"public-key",id:lkUnB64(c.cred)}],userVerification:"required",timeout:60000}});return !!a}catch(e){return false}}
+
+function lockStyle(){if(document.getElementById("lkstyle"))return;const s=document.createElement("style");s.id="lkstyle";
+  s.textContent="#lockscr{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg,#F2F6F7);font-family:var(--f-text,system-ui)}"+
+  "#lockscr .lk-box{width:min(360px,100%);display:grid;gap:14px;justify-items:center;text-align:center}"+
+  "#lockscr h2{margin:0;font-size:22px;color:var(--azul,#1F4E78);font-weight:600}"+
+  "#lockscr input{width:100%;box-sizing:border-box;font-size:18px;padding:12px 14px;border-radius:12px;border:1px solid var(--line,#C9D6DC);background:#fff;color:#111}"+
+  "#lockscr .lk-err{min-height:20px;margin:0;color:#A33;font-size:14px}"+
+  "#lockscr .lk-row{display:flex;gap:8px;width:100%}"+
+  "#lockscr .lk-row input{flex:1}"+
+  "@media (prefers-color-scheme:dark){#lockscr{background:#111418;color:#E9EEF1}#lockscr h2{color:#9DB9C9}#lockscr input{background:#1b2026;color:#E9EEF1;border-color:#2e3740}}";
+  document.head.appendChild(s)}
+
+function lockShow(){if(LOCK.el||!lockCfg())return;lockStyle();const c=lockCfg();
+  const el=document.createElement("div");el.id="lockscr";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");
+  el.innerHTML=`<div class="lk-box"><h2>Taller del Predicador</h2><p class="muted" style="margin:0">Pastor Antonio Sierra J. · App bloqueada</p>
+    <form class="lk-row" id="lkf" autocomplete="off"><input type="password" id="lkp" placeholder="Contraseña" aria-label="Contraseña" autocapitalize="off" autocomplete="current-password"><button class="btn primary" type="submit">Entrar</button></form>
+    ${c.cred?'<button class="btn" id="lkb" type="button">Usar Face ID o huella</button>':""}
+    <p class="lk-err" id="lke" role="alert"></p>
+    <button class="btn ghost small" id="lkr" type="button">Olvidé la contraseña</button>
+    <div id="lkrec" hidden style="display:grid;gap:8px;width:100%"><p class="muted" style="margin:0;font-size:14px">Para quitar el bloqueo, escriba la clave de GitHub de la sincronización.</p>
+      <form class="lk-row" id="lkrf" autocomplete="off"><input type="password" id="lkt" placeholder="github_pat_…" aria-label="Clave de GitHub" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">Quitar bloqueo</button></form></div>
+  </div>`;
+  document.body.appendChild(el);LOCK.el=el;
+  const err=t=>{el.querySelector("#lke").textContent=t};
+  const ok=()=>{el.remove();LOCK.el=null;LOCK.hiddenAt=0};
+  el.querySelector("#lkf").onsubmit=async e=>{e.preventDefault();const inp=el.querySelector("#lkp");const pw=inp.value;inp.value="";
+    if(await lockCheck(pw))return ok();err("Contraseña incorrecta.");await new Promise(r=>setTimeout(r,800));inp.focus()};
+  const bio=el.querySelector("#lkb");if(bio)bio.onclick=async()=>{if(await bioUnlock())return ok();err("No se pudo confirmar con Face ID o huella. Escriba la contraseña.")};
+  el.querySelector("#lkr").onclick=()=>{el.querySelector("#lkrec").hidden=false;el.querySelector("#lkt").focus()};
+  el.querySelector("#lkrf").onsubmit=e=>{e.preventDefault();const t=el.querySelector("#lkt").value.trim();const sc=(typeof syncCfg==="function"&&syncCfg())||null;
+    if(sc&&sc.token&&t===sc.token){lockSave(null);return ok()}
+    err(sc?"Esa clave no coincide con la de GitHub.":"Sin la clave de GitHub no se puede quitar el bloqueo. Escriba la contraseña.")};
+  inp0=el.querySelector("#lkp");setTimeout(()=>{if(bio)bio.click();else inp0.focus()},250)}
+let inp0=null;
+
+document.addEventListener("visibilitychange",()=>{if(!lockCfg())return;
+  if(document.visibilityState==="hidden")LOCK.hiddenAt=Date.now();
+  else if(LOCK.hiddenAt&&Date.now()-LOCK.hiddenAt>LOCK.idle){LOCK.hiddenAt=0;lockShow()}});
+setTimeout(lockShow,0);
+
+/* Sección en Ajustes */
+function lockSection(){const c=lockCfg();
+  return `<div class="section-head"><h2>Seguridad de la app</h2></div>
+  <div class="card" style="display:grid;gap:12px" id="lkcard">
+    <p class="muted" style="margin:0">${c?"La app está protegida. Al abrirla, o al volver después de 2 minutos fuera de ella, pide la contraseña o Face ID / huella.":"Sin protección. Cree una contraseña para que nadie entre a sus enseñanzas si deja el iPad desbloqueado."}</p>
+    ${c?`<div class="row" style="gap:8px">${c.cred?'<button class="btn" id="lkoffbio">Quitar Face ID / huella</button>':'<button class="btn primary" id="lkonbio">Activar Face ID o huella</button>'}<button class="btn" id="lkchg">Cambiar contraseña</button><button class="btn" id="lkdel">Quitar protección</button></div>`
+    :`<div class="field"><label for="lkn1">Nueva contraseña (mínimo 6 caracteres)</label><input type="password" id="lkn1" autocomplete="new-password"></div>
+      <div class="field"><label for="lkn2">Repita la contraseña</label><input type="password" id="lkn2" autocomplete="new-password"></div>
+      <div class="row"><button class="btn primary" id="lkset">Proteger la app</button></div>`}
+    <p id="lkmsg" class="muted" style="margin:0;font-size:14px"></p>
+  </div>`}
+function lockWire(v){const m=t=>{const e=document.getElementById("lkmsg");if(e)e.textContent=t};
+  const again=()=>{if(typeof viewAjustes==="function")viewAjustes(document.getElementById("view"))};
+  const pedir=(q)=>prompt(q)||"";
+  const set=document.getElementById("lkset");if(set)set.onclick=async()=>{const a=document.getElementById("lkn1").value,b=document.getElementById("lkn2").value;
+    if(a.length<6)return m("Use al menos 6 caracteres.");if(a!==b)return m("Las dos contraseñas no coinciden.");
+    await lockSetPass(a);toast("Protección activada.");again()};
+  const chg=document.getElementById("lkchg");if(chg)chg.onclick=async()=>{const cur=pedir("Contraseña actual:");if(!(await lockCheck(cur)))return m("La contraseña actual no coincide.");
+    const nw=pedir("Nueva contraseña (mínimo 6 caracteres):");if(nw.length<6)return m("Use al menos 6 caracteres.");await lockSetPass(nw);toast("Contraseña cambiada.");again()};
+  const del=document.getElementById("lkdel");if(del)del.onclick=async()=>{const cur=pedir("Contraseña actual para quitar la protección:");if(!(await lockCheck(cur)))return m("La contraseña no coincide.");
+    lockSave(null);toast("Protección quitada.");again()};
+  const onb=document.getElementById("lkonbio");if(onb)onb.onclick=async()=>{try{await bioSetup();toast("Face ID o huella activados.");again()}catch(e){m("No se pudo activar: "+(e&&e.message||"revise el equipo."))}};
+  const offb=document.getElementById("lkoffbio");if(offb)offb.onclick=()=>{const c=lockCfg()||{};delete c.cred;lockSave(c);again()};
+}
 
 </script>
 <script type="text/app">
