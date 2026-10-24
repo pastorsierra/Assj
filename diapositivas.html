@@ -259,7 +259,7 @@ const SLIDE_CSS = `
 .sl .wm{background-position:center;background-repeat:no-repeat;background-size:auto 64%;opacity:var(--wmo,.1)}
 .sl .frm{inset:2.4u;border:.18u solid var(--ac);opacity:.55}
 .sl .in{position:absolute;inset:0;padding:6u 8.5u 8.5u;display:flex;flex-direction:column;justify-content:center;gap:2.4u;z-index:2}
-.sl .ft{position:absolute;left:4.8u;right:4.8u;bottom:2.8u;display:flex;justify-content:space-between;gap:2u;font-size:1.3u;letter-spacing:.05em;color:var(--mut);z-index:3}
+.sl .ft{position:absolute;left:6.4u;right:6.4u;bottom:4.4u;display:flex;justify-content:space-between;gap:2u;font-size:1.45u;letter-spacing:.05em;color:var(--fg);opacity:.82;text-shadow:0 0 .5u var(--bg1),0 0 .25u var(--bg1);z-index:4}
 .sl .h{font-family:var(--fd);font-weight:var(--tw);text-transform:var(--tt);letter-spacing:var(--ls);line-height:1.08;margin:0;font-size:calc(6u*var(--hm,1));color:var(--hc,var(--fg))}
 .sl .sub{font-size:calc(2.7u*var(--bm,1));color:var(--mut);line-height:1.35}
 .sl .k{font-size:1.9u;letter-spacing:.22em;text-transform:uppercase;color:var(--ac);font-weight:700}
@@ -767,7 +767,7 @@ function startPresent(mode){
   pdraw(true);tick();clearInterval(P.tm);P.tm=setInterval(tick,1000);
   try{if(mode==='p'&&el.requestFullscreen)el.requestFullscreen().catch(()=>{})}catch(e){}
   try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>P.lock=l).catch(()=>{})}catch(e){}
-  if(mode==='p')showHud()}
+  if(mode==='p'){showHud();toast('Toque la parte de arriba de la pantalla para ver los botones (cerrar, anterior, siguiente).',3800)}}
 function pclose(){P.on=false;clearInterval(P.tm);const el=$('#pres');el.className='';el.innerHTML='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}try{P.lock&&P.lock.release()}catch(e){}P.lock=null;refreshAll()}
 function showHud(){const h=$('#phud');if(!h||P.mode==='s')return;h.classList.remove('hide');clearTimeout(P.hudT);P.hudT=setTimeout(()=>h.classList.add('hide'),4500)}
 function pdraw(full){const d=curDeck(),s=d.slides[P.i],n=d.slides.length;
@@ -787,7 +787,7 @@ function tick(){if(!P.on)return;const d=curDeck(),t=$('#tmT'),sc=$('#tmS');if(!t
   el.addEventListener('pointerdown',e=>{px=e.clientX;py=e.clientY});
   el.addEventListener('pointerup',e=>{if(!P.on||e.target.closest('.hud,.side,[data-act]'))return;const dx=e.clientX-px,dy=e.clientY-py;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){dx<0?pnext():pprev();return}
-    if(Math.abs(dx)<12&&Math.abs(dy)<12){const w=el.querySelector('.pstage').getBoundingClientRect().width;(e.clientX<w*.28)?pprev():pnext()}});
+    if(Math.abs(dx)<12&&Math.abs(dy)<12){const r=el.getBoundingClientRect();if(e.clientY<r.height*.22){showHud();return}const w=el.querySelector('.pstage').getBoundingClientRect().width;(e.clientX<w*.28)?pprev():pnext();showHud()}});
   document.addEventListener('keydown',e=>{if(!P.on)return;const k=e.key;
     if(k==='ArrowRight'||k===' '||k==='PageDown'||k==='Enter'){e.preventDefault();pnext()}
     else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pprev()}

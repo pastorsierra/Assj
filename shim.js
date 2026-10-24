@@ -2,16 +2,18 @@
    Reemplaza lo que daba Claude: la IA (API de Anthropic con su clave), las descargas y el almacenamiento en el equipo. */
 (function(){
 "use strict";
-const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"e06bce9b"};
+const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"0b485257"};
 /* ---------- almacenamiento: IndexedDB con copia en memoria ---------- */
 let idb=null;
 function openDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open("taller-predicador",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+const tmo=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("timeout"),{tmo:1})),ms))]);
 async function hydrate(){
   try{
-    idb=await openDB();
-    await new Promise((res,rej)=>{const tx=idb.transaction("kv","readonly"),st=tx.objectStore("kv"),rq=st.openCursor();
-      rq.onsuccess=()=>{const c=rq.result;if(c){TP.kv.set(c.key,c.value);c.continue()}else res()};rq.onerror=()=>rej(rq.error)});
-  }catch(e){idb=null;console.warn("IndexedDB no disponible, se usa localStorage",e);try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("tp_"))TP.kv.set(k,localStorage.getItem(k))}}catch{}}
+    idb=await tmo(openDB(),6000);
+    await tmo(new Promise((res,rej)=>{const tx=idb.transaction("kv","readonly"),st=tx.objectStore("kv"),rq=st.openCursor();
+      rq.onsuccess=()=>{const c=rq.result;if(c){TP.kv.set(c.key,c.value);c.continue()}else res()};rq.onerror=()=>rej(rq.error)}),10000);
+    try{sessionStorage.removeItem("tp_rl")}catch{}
+  }catch(e){if(e&&e.tmo){TP.stuck=true;return}idb=null;console.warn("IndexedDB no disponible, se usa localStorage",e);try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("tp_"))TP.kv.set(k,localStorage.getItem(k))}}catch{}}
   try{navigator.storage?.persist?.()}catch{}
 }
 TP.put=function(k,v){
@@ -91,6 +93,11 @@ window.claude={use:async name=>name==="sample"?sample:name==="downloads"?{save}:
 /* ---------- arranque: cargar datos y luego la app ---------- */
 async function boot(){
   await hydrate();
+  if(TP.stuck){let again=false;try{again=!!sessionStorage.getItem("tp_rl");sessionStorage.setItem("tp_rl","1")}catch{}
+    if(!again){location.reload();return}
+    const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;z-index:200000;background:#F2F6F7;display:grid;place-items:center;padding:24px;font-family:system-ui;text-align:center;color:#1B2230";
+    d.innerHTML='<div style="max-width:360px;display:grid;gap:14px"><b style="font-size:20px">La app no pudo abrir sus datos</b><span>Sus enseñanzas están a salvo. Cierre la app por completo (deslícela hacia arriba) y vuelva a abrirla.</span><button style="font:inherit;font-weight:600;padding:12px;border-radius:12px;border:0;background:#1F4E78;color:#fff" onclick="try{sessionStorage.removeItem(\'tp_rl\')}catch(e){}location.reload()">Intentar de nuevo</button></div>';
+    document.body.appendChild(d);return}
   for(const s of document.querySelectorAll('script[type="text/app"]')){const n=document.createElement("script");n.textContent=s.textContent;document.body.appendChild(n)}
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
