@@ -895,7 +895,7 @@ let ENSCACHE=null,LIBCACHE=null,ENSQ='',ENSTAB='mias';
 async function myEns(){if(ENSCACHE)return ENSCACHE;let a=[];try{const r=await kvGet('tp_sermones');a=(typeof r==='string'?JSON.parse(r):r)||[]}catch(e){}
   ENSCACHE=a.filter(x=>x&&x.ensenanza&&x.ensenanza.trim()).sort((x,y)=>(y.actualizado||'').localeCompare(x.actualizado||''));return ENSCACHE}
 async function libItems(){if(LIBCACHE)return LIBCACHE;try{const r=await fetch('biblioteca.json');const d=await r.json();LIBCACHE=d.items.map((it,i)=>Object.assign(it,{i}))}catch(e){LIBCACHE=[]}return LIBCACHE}
-function libMd(it){const L=['# '+(it.T||it.t)];let i=0;const P=it.p;
+function libMd(it){if(it.md)return it.md;const L=['# '+(it.T||it.t)];let i=0;const P=it.p;
   if(P[0]&&P[0][0]==='p'&&P[0][1]===it.S){L.push('*'+it.S+'*');i=1}
   for(;i<P.length;i++){const [k,t]=P[i];
     if(k==='h'&&/^vers[ií]culo clave$/i.test(t.replace(/:$/,'')))continue;
@@ -929,7 +929,7 @@ function shortIdea(t){let x=mdClean(t);const m=String(t).match(/^\*\*(.+?)\*\*/)
 function deckFromMd(md,meta){
   const L=String(md).replace(/\r/g,'').split('\n');const slides=[];let title=meta.titulo||'Enseñanza',sub='',mainRef='',sec=null,buf=[],inConc=false,skip=false,nf=0;const conc=[];
   const flush=()=>{if(!sec||!buf.length){buf=[];return}
-    for(let k=0;k<buf.length;k+=5){const part=buf.slice(k,k+5);const sl=blank('punto',{title:sec.title,items:part.map(b=>b.idea).join('\n')});
+    const per=Math.ceil(buf.length/Math.ceil(buf.length/5));for(let k=0;k<buf.length;k+=per){const part=buf.slice(k,k+per);const sl=blank('punto',{title:sec.title,items:part.map(b=>b.idea).join('\n')});
       sl.notes=part.map(b=>'• '+b.full).join('\n\n');sl.min=Math.max(3,Math.min(10,part.length*2));slides.push(sl)}buf=[]};
   for(let i=0;i<L.length;i++){const l=L[i].trim();if(!l)continue;let m;
     if((m=l.match(/^# (.+)/))){title=mdClean(m[1]);continue}
@@ -970,7 +970,7 @@ Object.assign(window.ACT2,{fromens:()=>fromEnsSheet(),enstab:e=>{ENSTAB=e.datase
   for(const k of await kvKeys()){if(typeof k==='string'&&k.startsWith('deck:')){const d=await kvGet(k);if(d&&d.id&&Array.isArray(d.slides))S.decks[d.id]=d}}
   await loadAllImgs();await loadBibles();
   render();
-  try{const q=new URLSearchParams(location.search).get('ens');if(q){history.replaceState(null,'',location.pathname);await createFromEns(q)}}catch(e){console.error(e)}
+  try{const q=new URLSearchParams(location.search).get('ens');if(q){history.replaceState(null,'',location.pathname);await createFromEns(q)}const l=new URLSearchParams(location.search).get('lib');if(l!=null){history.replaceState(null,'',location.pathname);const it=(await libItems()).find(x=>x.i===+l);if(it)await makeDeck(libMd(it),{titulo:it.t});else toast('No encontré esa enseñanza')}}catch(e){console.error(e)}
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&curDeck())saveDeck(curDeck())});
 })();
 </script>

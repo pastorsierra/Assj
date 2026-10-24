@@ -450,6 +450,7 @@ code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
 
 /* ===== Versiones nuevas ===== */
 .vnbanner{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--azul);border-left-width:5px;border-radius:14px;padding:14px 16px;margin:0 0 14px;cursor:pointer;color:inherit;font:inherit}
+.disbanner{margin-top:10px;border-color:var(--oro,#C0802B)}
 .vnbanner b{font-size:16px}.vnbanner span{grid-column:1;font-size:14px;opacity:.8}.vnbanner i{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-size:26px;opacity:.6}
 .vncmp{margin:14px 0}.vncmp.vn-lado{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
 .vncmp.vn-orig .vncol:last-child,.vncmp.vn-nueva .vncol:first-child{display:none}
@@ -1677,6 +1678,7 @@ function viewInicio(v){
     <a class="act" href="diapositivas.html">${icon("diapositivas")}<b>Diapositivas</b><span>Convierta una enseñanza en presentación y proyéctela.</span></a>
   </div>
   <div id="vnhome"></div>
+  <div id="dishome"></div>
   <form class="bigsearch" id="homeq" role="search"><input type="search" id="hq" placeholder="Buscar en sus enseñanzas: un tema, un personaje, un pasaje…" aria-label="Buscar en sus enseñanzas"></form>
   <div class="section-head"><h2>Continuar donde quedó</h2></div>
   <div id="recent" style="margin-top:6px"></div>
@@ -1687,6 +1689,9 @@ function viewInicio(v){
   </div>`;
   renderRecent();
   Promise.all([loadLib(),loadVN()]).then(()=>{const el=$("#vnhome");if(!el)return;const ids=vnIds();const p=ids.filter(i=>vnStatus(i)==="pend").length;
+    const dh=$("#dishome");const dc=LIB.carpetas.findIndex(c=>c.t==="Las Dispensaciones");
+    if(dh&&dc>=0){const nd=LIB.items.filter(x=>x.c===dc).length;dh.innerHTML=`<button class="vnbanner disbanner" id="disgo"><b>📜 Las Dispensaciones</b><span>De la Inocencia al Reino: ${nd} enseñanzas. Ábralas, predíquelas o proyéctelas en diapositivas.</span><i>›</i></button>`;
+      $("#disgo").onclick=()=>{LSTATE.item=null;LSTATE.q="";LSTATE.c=dc;go("biblioteca")}}
     if(p)el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas por revisar: ${p}</b><span>Sus enseñanzas del archivo pasadas al modelo nuevo. Compare cada una con la original.</span><i>›</i></button>`}).catch(()=>{});
   $("#homeq").onsubmit=e=>{e.preventDefault();LSTATE.q=$("#hq").value.trim();LSTATE.c=null;LSTATE.f="todas";go("sermones")};
 }
@@ -2001,7 +2006,7 @@ function viewBiblioteca(v,opts){
   if(VN)vnb();else loadVN().then(vnb).catch(()=>{});
   if(LSTATE.flash){const el=$(`#lres [data-sermon="${CSS.escape(LSTATE.flash)}"]`);LSTATE.flash=null;if(el){el.classList.add("flash");setTimeout(()=>el.scrollIntoView({block:"center",behavior:"smooth"}),100)}}
 }
-function libToMd(it){const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
+function libToMd(it){if(it.md)return it.md;const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
   if(P[0]&&P[0][0]==="p"&&P[0][1]===it.S){L.push(`*${it.S}*`);i=1}
   let lastLi=false;
   for(;i<P.length;i++){const [k,t]=P[i];
@@ -2097,13 +2102,13 @@ function viewNuevaCmp(v,opts){
   $("#vnpulpitorig").onclick=()=>openPulpit(orig,it.t);
   $("#vncopy").onclick=()=>copyText(md.replace(/==/g,"").replace(/\*\*/g,""));
 }
-function libToText(it){return [it.T||it.t,...it.p.map(([k,t])=>k==="li"?"• "+t:t)].join("\n\n")}
+function libToText(it){if(it.md)return it.md.replace(/^#+\s*/gm,"").replace(/==|\*\*/g,"").replace(/^> /gm,"");return [it.T||it.t,...it.p.map(([k,t])=>k==="li"?"• "+t:t)].join("\n\n")}
 function libRead(v,it){
   const c=LIB.carpetas[it.c];const mdText=autoFix(libToMd(it),true);
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
   <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.n+" · "+c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
-  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">Predicar la original</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
+  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
   $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
@@ -2114,6 +2119,7 @@ function libRead(v,it){
   $("#lcopy").onclick=()=>copyText(libToText(it));
   const vo=v.querySelector("[data-vnopen]");if(vo)vo.onclick=()=>go("nuevacmp",{vn:it.i});
   $("#lpulpit").onclick=()=>openPulpit(mdText,it.t);
+  $("#lslides").onclick=()=>{location.href="diapositivas.html?lib="+it.i};
   v.querySelector(".out-actions").addEventListener("click",e=>{const a=e.target.closest("[data-p]")?.dataset.p;if(a==="w_lib_cur")exportWord(mdText,curStyle(),"",{titulo:it.t})});
   $("#libpage").onclick=e=>{const d=e.target.closest("[data-e^='ds_']");if(!d)return;ls.set("tp_wstyle",d.dataset.e.slice(3));$("#libpage").innerHTML=designPicker("lib")+pageHTML(mdText,curStyle());$("#ldl").textContent="Descargar Word · "+WSHORT[curStyle()]};
 }
