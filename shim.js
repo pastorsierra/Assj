@@ -2,7 +2,7 @@
    Reemplaza lo que daba Claude: la IA (API de Anthropic con su clave), las descargas y el almacenamiento en el equipo. */
 (function(){
 "use strict";
-const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"0b485257"};
+const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"ea17eb6c"};
 /* ---------- almacenamiento: IndexedDB con copia en memoria ---------- */
 let idb=null;
 function openDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open("taller-predicador",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}

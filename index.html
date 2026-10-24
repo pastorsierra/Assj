@@ -848,6 +848,8 @@ function viewAjustes(v){
   <div class="card" style="display:grid;gap:12px">
     <p class="muted" style="margin:0">Hoy tiene <b>${nd}</b> ${nd===1?"enseñanza guardada":"enseñanzas guardadas"} en este equipo, sin contar las de su archivo. Descargue una copia de vez en cuando y guárdela en Archivos o iCloud. Con ese archivo puede recuperar todo en otro equipo o si se borran los datos.</p>
     <div class="row" style="gap:8px"><button class="btn primary" id="bkout">Descargar copia</button><button class="btn" id="bkin">Restaurar desde una copia</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
+    <div class="row" style="gap:8px;margin-top:4px"><button class="btn primary" id="imcl">Importar enseñanzas de Claude</button><input type="file" id="imfile" accept=".json,application/json" hidden></div>
+    <p class="muted" style="margin:0;font-size:13px">Prepare la enseñanza en la versión de Claude, toque allí «Pasar a la app del iPad» y luego elija aquí ese archivo (queda en Archivos → Descargas). Se agregan sin borrar nada de lo que ya tiene.</p>
   </div>
 
   ${lockSection()}
@@ -902,6 +904,20 @@ function viewAjustes(v){
   syncWire(v);
   lockWire(v);
   $("#bkout").onclick=backupData;
+  $("#imcl").onclick=()=>$("#imfile").click();
+  $("#imfile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+    try{
+      const d=JSON.parse(await f.text());
+      if(d.app!=="taller-del-predicador"||!Array.isArray(d.sermones))throw new Error("formato");
+      const cur=Store.localAll();const byId=new Map(cur.map(s=>[s.id,s]));let nu=0,up=0,eq=0;
+      for(const s of d.sermones){if(!s||!s.id)continue;const o=byId.get(s.id);
+        if(!o){byId.set(s.id,s);nu++}else if((s.actualizado||"")>(o.actualizado||"")){byId.set(s.id,Object.assign({},o,s));up++}else eq++}
+      if(!nu&&!up){toast(eq?"Ya tenía esas enseñanzas, no había nada nuevo":"El archivo no trae enseñanzas");return}
+      Store.localSave([...byId.values()]);
+      toast((nu?nu+(nu===1?" enseñanza nueva":" enseñanzas nuevas"):"")+(nu&&up?" y ":"")+(up?up+(up===1?" actualizada":" actualizadas"):"")+". Ya están en Mis enseñanzas.",4500);
+      setTimeout(()=>location.reload(),1600);
+    }catch{toast("Ese archivo no viene de la versión de Claude del Taller")}
+  };
   $("#bkin").onclick=()=>$("#bkfile").click();
   $("#bkfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
     try{
