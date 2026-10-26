@@ -2,14 +2,21 @@
    Reemplaza lo que daba Claude: la IA (API de Anthropic con su clave), las descargas y el almacenamiento en el equipo. */
 (function(){
 "use strict";
-const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"49cead68"};
+const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"1b3fb06e"};
 /* ---------- almacenamiento: IndexedDB con copia en memoria ---------- */
 let idb=null;
-function openDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open("taller-predicador",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+/* Safari en iPad/iPhone a veces deja «dormido» IndexedDB al pasar de una página a otra (por ejemplo, al volver
+   de Diapositivas): indexedDB.open() no responde nunca. Se despierta llamando a indexedDB.databases() mientras se abre,
+   y si aun así no responde se reintenta. */
+function openDB(){return new Promise((res,rej)=>{let kick=null;try{
+  if(indexedDB.databases){const k=()=>{try{indexedDB.databases().catch(()=>{})}catch(e){}};k();kick=setInterval(k,120)}
+  const r=indexedDB.open("taller-predicador",1);const end=()=>{if(kick)clearInterval(kick)};
+  r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{end();const d=r.result;d.onversionchange=()=>{try{d.close()}catch(e){}};res(d)};r.onerror=()=>{end();rej(r.error)};r.onblocked=()=>{}}catch(e){if(kick)clearInterval(kick);rej(e)}})}
 const tmo=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("timeout"),{tmo:1})),ms))]);
+async function openRetry(){let last;for(let i=0;i<4;i++){try{return await tmo(openDB(),2500)}catch(e){last=e;if(!(e&&e.tmo))throw e}}throw last}
 async function hydrate(){
   try{
-    idb=await tmo(openDB(),6000);
+    idb=await openRetry();
     await tmo(new Promise((res,rej)=>{const tx=idb.transaction("kv","readonly"),st=tx.objectStore("kv"),rq=st.openCursor();
       rq.onsuccess=()=>{const c=rq.result;if(c){TP.kv.set(c.key,c.value);c.continue()}else res()};rq.onerror=()=>rej(rq.error)}),10000);
     try{sessionStorage.removeItem("tp_rl")}catch{}
@@ -101,6 +108,9 @@ async function boot(){
   for(const s of document.querySelectorAll('script[type="text/app"]')){const n=document.createElement("script");n.textContent=s.textContent;document.body.appendChild(n)}
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
+/* ---------- al salir de la página: soltar la base de datos; si Safari la devuelve congelada, recargar ---------- */
+window.addEventListener("pagehide",()=>{try{if(idb){idb.close();idb=null;TP.closed=true}}catch(e){}});
+window.addEventListener("pageshow",e=>{if(e.persisted||TP.closed)location.reload()});
 /* ---------- sin conexión ---------- */
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;

@@ -382,7 +382,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ===== Almacenamiento: IndexedDB local + respaldo en db ===== */
 let IDBX=null; const MEM={};
-function idbOpen(){return new Promise(res=>{try{const r=indexedDB.open('taller-predicador',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null)}catch(e){res(null)}})}
+function idbOpen1(){return new Promise(res=>{let kick=null;const end=v=>{if(kick)clearInterval(kick);res(v)};try{if(indexedDB.databases){const k=()=>{try{indexedDB.databases().catch(()=>{})}catch(e){}};k();kick=setInterval(k,120)}const r=indexedDB.open('taller-predicador',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>end(r.result);r.onerror=()=>end(null);setTimeout(()=>end(undefined),2500)}catch(e){end(null)}})}
+async function idbOpen(){for(let i=0;i<4;i++){const d=await idbOpen1();if(d!==undefined)return d}return null}
 function kvGet(k){return new Promise(res=>{if(!IDBX)return res(MEM[k]);try{const q=IDBX.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(MEM[k])}catch(e){res(MEM[k])}})}
 function kvSet(k,v){MEM[k]=v;return new Promise(res=>{if(!IDBX)return res();try{const t=IDBX.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>res()}catch(e){res()}})}
 function kvDel(k){delete MEM[k];return new Promise(res=>{if(!IDBX)return res();try{const t=IDBX.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=()=>res();t.onerror=()=>res()}catch(e){res()}})}
@@ -975,5 +976,12 @@ Object.assign(window.ACT2,{fromens:()=>fromEnsSheet(),enstab:e=>{ENSTAB=e.datase
 })();
 </script>
 
+<script>
+window.addEventListener("pagehide",function(){try{if(IDBX){IDBX.close();IDBX=null;window.__idbc=1}}catch(e){}try{P.lock&&P.lock.release();P.lock=null}catch(e){}try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}try{sessionStorage.setItem("tp_seen",String(Date.now()))}catch(e){}});
+window.addEventListener("pageshow",function(e){if(e.persisted||window.__idbc)location.reload()});
+document.addEventListener("visibilitychange",function(){try{sessionStorage.setItem("tp_seen",String(Date.now()))}catch(e){}});
+setInterval(function(){if(document.visibilityState==="visible")try{sessionStorage.setItem("tp_seen",String(Date.now()))}catch(e){}},20000);
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href="index.html"]');if(a){e.preventDefault();try{if(IDBX){IDBX.close();IDBX=null}}catch(x){}location.replace("index.html")}},true);
+</script>
 <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 </body></html>

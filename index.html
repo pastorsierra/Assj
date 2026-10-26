@@ -228,7 +228,8 @@ input[type=text],input[type=search],input[type=date],select,textarea{border-radi
 .cat-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 22px;border-top:1px solid var(--line);margin-bottom:22px}
 .cat-tile{flex-direction:row;align-items:baseline;gap:10px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:10px 2px;min-height:0}
 .cat-tile:hover{border-color:var(--line);color:var(--azul)}
-.cat-tile i{font-style:normal;font-family:var(--f-text);font-size:16px;color:var(--oro);min-width:20px;font-variant-numeric:tabular-nums}
+.cat-tile i{font-style:normal;font-family:var(--f-text);font-size:12.5px;color:var(--oro);min-width:20px;font-variant-numeric:tabular-nums}
+.cat-tile{align-items:center}.cat-tile i{display:inline-flex;align-items:center;min-width:22px}.fico{width:19px;height:19px;fill:none;stroke:var(--oro);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}.cat-tile[aria-pressed=true] .fico{stroke:var(--azul)}
 .cat-tile b{flex:1;font-weight:500;font-size:14px}
 .cat-tile span{font-variant-numeric:tabular-nums}
 .cat-tile[aria-pressed=true]{background:transparent;box-shadow:inset 0 -2px 0 var(--azul);border-color:var(--line)}
@@ -451,6 +452,7 @@ code{font-size:12.5px;background:var(--sunk);padding:1px 4px;border-radius:2px}
 /* ===== Versiones nuevas ===== */
 .vnbanner{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--azul);border-left-width:5px;border-radius:14px;padding:14px 16px;margin:0 0 14px;cursor:pointer;color:inherit;font:inherit}
 .disbanner{margin-top:10px;border-color:var(--oro,#C0802B)}
+.accgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 12px}.accb{border-color:var(--oro,#C0802B)}
 .vnbanner b{font-size:16px}.vnbanner span{grid-column:1;font-size:14px;opacity:.8}.vnbanner i{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-size:26px;opacity:.6}
 .vncmp{margin:14px 0}.vncmp.vn-lado{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
 .vncmp.vn-orig .vncol:last-child,.vncmp.vn-nueva .vncol:first-child{display:none}
@@ -547,6 +549,30 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 .sitem:hover,.cat-tile:hover{border-color:var(--hoja)}
 </style>
 
+<style id="temas">
+/* ============ Apariencia: tres temas ============ */
+:root[data-skin="noche"]{--bg:#0E1622;--surface:#141F2E;--sunk:#1A2738;--ink:#E9EDF2;--muted:#93A1B4;--line:#26354A;--azul:#D8B66A;--azul-ink:#16120A;--oro:#D4AF5F;--oro-soft:#2A2416;--verde:#82C9B4;--mark:#4D4020;--danger:#E59088;--hoja:#D4AF5F;color-scheme:dark}
+:root[data-skin="noche"] .wl{--wl-bg1:#12202F;--wl-bg2:#0B121C;--wl-ink:#EEF2F6;--wl-mut:#94A6B8;--wl-acc:#D4AF5F;--wl-line:#3B5068;--wl-btn:#D4AF5F;--wl-btnink:#111A26}
+:root[data-skin="noche"] body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'%3E%3Cg fill='none' stroke='%23C9A866' stroke-width='1.2' stroke-linecap='round' opacity='.22'%3E%3Cpath d='M-20 130 C 200 70, 380 190, 620 120 S 1000 70, 1240 140'/%3E%3Cpath d='M-20 180 C 240 130, 420 230, 700 170 S 1050 130, 1240 200'/%3E%3Cpath d='M-20 690 C 260 630, 460 750, 760 680 S 1080 630, 1240 700'/%3E%3C/g%3E%3Cg fill='%23D4AF5F' opacity='.16'%3E%3Cpath transform='translate(1070 60) rotate(25) scale(1.7)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3Cpath transform='translate(1140 170) rotate(-30) scale(.9)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3Cpath transform='translate(50 720) rotate(-15) scale(1.3)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center top;background-size:max(1200px,100vw) auto;background-attachment:fixed}
+:root[data-skin="pergamino"]{--bg:#F5F0E6;--surface:#FFFCF6;--sunk:#EEE6D7;--ink:#2A241D;--muted:#76695A;--line:#E3D8C5;--azul:#23395B;--azul-ink:#FFFFFF;--oro:#93692A;--oro-soft:#F4EAD4;--verde:#3D6B4F;--mark:#F1DFA8;--danger:#A23B32;--hoja:#A97A2E;color-scheme:light}
+:root[data-skin="pergamino"] .wl{--wl-bg1:#F3EBDC;--wl-bg2:#FCF9F2;--wl-ink:#2A241D;--wl-mut:#7A6C5B;--wl-acc:#A97A2E;--wl-line:#CDBB94;--wl-btn:#23395B;--wl-btnink:#fff}
+:root[data-skin="pergamino"] body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'%3E%3Cg fill='none' stroke='%23CDBB94' stroke-width='1.2' stroke-linecap='round' opacity='.4'%3E%3Cpath d='M-20 130 C 200 70, 380 190, 620 120 S 1000 70, 1240 140'/%3E%3Cpath d='M-20 180 C 240 130, 420 230, 700 170 S 1050 130, 1240 200'/%3E%3Cpath d='M-20 690 C 260 630, 460 750, 760 680 S 1080 630, 1240 700'/%3E%3C/g%3E%3Cg fill='%23A97A2E' opacity='.16'%3E%3Cpath transform='translate(1070 60) rotate(25) scale(1.7)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3Cpath transform='translate(1140 170) rotate(-30) scale(.9)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3Cpath transform='translate(50 720) rotate(-15) scale(1.3)' d='M12 2 L13.4 6 L16 4.6 L15.4 8.4 L19.6 7.4 L18 10.6 L21.6 12 L17.4 13.8 L18.4 16.2 L13.2 15.4 L12.8 21.8 L11.2 21.8 L10.8 15.4 L5.6 16.2 L6.6 13.8 L2.4 12 L6 10.6 L4.4 7.4 L8.6 8.4 L8 4.6 L10.6 6 Z'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center top;background-size:max(1200px,100vw) auto;background-attachment:fixed}
+:root[data-foto] .brand b::before,:root[data-foto] .top .mbrand::before{background-image:var(--foto)!important;background-size:cover!important;background-position:center!important}
+.brand b,.top .mbrand{cursor:pointer}
+.skins{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.skin{all:unset;cursor:pointer;display:grid;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface)}
+.skin[aria-pressed=true]{border-color:var(--azul);box-shadow:inset 0 0 0 1px var(--azul)}
+.skin:focus-visible{outline:2px solid var(--oro)}
+.skin .pv{height:78px;border-radius:8px;border:1px solid rgba(0,0,0,.06);display:grid;grid-template-columns:30% 1fr;overflow:hidden}
+.skin .pv i{display:block}.skin .pv u{display:grid;align-content:start;gap:6px;padding:10px;text-decoration:none}
+.skin .pv b{display:block;height:7px;border-radius:4px}.skin .pv em{display:block;height:5px;border-radius:3px;width:70%}
+.skin strong{font-size:14px}.skin small{font-size:12px;color:var(--muted)}
+.fotobox{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fotobox img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--oro)}
+</style>
+<script>(function(){try{var A=((document.querySelector('meta[name="apple-mobile-web-app-title"]')||{}).content==="Armador")?"ar_":"tp_";window.__AP=A;var k=localStorage.getItem(A+"skin"),r=document.documentElement;
+if(k==="noche"){r.setAttribute("data-skin","noche");r.setAttribute("data-theme","dark")}else if(k==="pergamino"){r.setAttribute("data-skin","pergamino");r.setAttribute("data-theme","light")}else if(k==="hojas"){r.setAttribute("data-theme","light")}
+var f=localStorage.getItem(A+"foto");if(f){r.setAttribute("data-foto","1");r.style.setProperty("--foto",'url("'+f+'")');document.addEventListener("DOMContentLoaded",function(){var im=document.querySelector(".wl-photo img");if(im)im.src=f})}}catch(e){}})();</script>
 </head>
 <body>
 <div class="app">
@@ -563,7 +589,7 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
   <p class="wl-sub">Taller del Predicador</p>
  </div>
 </div>
-<script>window.addEventListener("pageshow",function(e){if(e.persisted){var v=document.getElementById("view");if(!v||!v.children.length)location.reload()}});</script>
+
 <script id="wljs">(function(){var V=[["Josué 1:9", "Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas."], ["Isaías 40:31", "pero los que esperan a Jehová tendrán nuevas fuerzas; levantarán alas como las águilas; correrán, y no se cansarán; caminarán, y no se fatigarán."], ["Salmo 46:1", "Dios es nuestro amparo y fortaleza, Nuestro pronto auxilio en las tribulaciones."], ["Lamentaciones 3:22-23", "Por la misericordia de Jehová no hemos sido consumidos, porque nunca decayeron sus misericordias. Nuevas son cada mañana; grande es tu fidelidad."], ["Filipenses 4:13", "Todo lo puedo en Cristo que me fortalece."], ["2 Timoteo 4:2", "que prediques la palabra; que instes a tiempo y fuera de tiempo; redarguye, reprende, exhorta con toda paciencia y doctrina."], ["Salmo 119:105", "Lámpara es a mis pies tu palabra, Y lumbrera a mi camino."], ["Isaías 41:10", "No temas, porque yo estoy contigo; no desmayes, porque yo soy tu Dios que te esfuerzo; siempre te ayudaré, siempre te sustentaré con la diestra de mi justicia."], ["Jeremías 33:3", "Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces."], ["Proverbios 3:5-6", "Fíate de Jehová de todo tu corazón, Y no te apoyes en tu propia prudencia. Reconócelo en todos tus caminos, Y él enderezará tus veredas."], ["Romanos 8:28", "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien, esto es, a los que conforme a su propósito son llamados."], ["1 Corintios 15:58", "Así que, hermanos míos amados, estad firmes y constantes, creciendo en la obra del Señor siempre, sabiendo que vuestro trabajo en el Señor no es en vano."], ["Salmo 37:5", "Encomienda a Jehová tu camino, Y confía en él; y él hará."], ["Mateo 6:33", "Mas buscad primeramente el reino de Dios y su justicia, y todas estas cosas os serán añadidas."], ["Hebreos 13:8", "Jesucristo es el mismo ayer, y hoy, y por los siglos."], ["Isaías 55:11", "así será mi palabra que sale de mi boca; no volverá a mí vacía, sino que hará lo que yo quiero, y será prosperada en aquello para que la envié."], ["Salmo 121:1-2", "Alzaré mis ojos a los montes; ¿De dónde vendrá mi socorro? Mi socorro viene de Jehová, Que hizo los cielos y la tierra."], ["Romanos 1:16", "Porque no me avergüenzo del evangelio, porque es poder de Dios para salvación a todo aquel que cree; al judío primeramente, y también al griego."], ["Zacarías 4:6", "No con ejército, ni con fuerza, sino con mi Espíritu, ha dicho Jehová de los ejércitos."], ["Salmo 27:1", "Jehová es mi luz y mi salvación; ¿de quién temeré? Jehová es la fortaleza de mi vida; ¿de quién he de atemorizarme?"], ["Juan 15:5", "Yo soy la vid, vosotros los pámpanos; el que permanece en mí, y yo en él, este lleva mucho fruto; porque separados de mí nada podéis hacer."], ["Gálatas 6:9", "No nos cansemos, pues, de hacer bien; porque a su tiempo segaremos, si no desmayamos."], ["Salmo 23:1", "Jehová es mi pastor; nada me faltará."], ["Hechos 1:8", "pero recibiréis poder, cuando haya venido sobre vosotros el Espíritu Santo, y me seréis testigos en Jerusalén, en toda Judea, en Samaria, y hasta lo último de la tierra."]];
 var w=document.getElementById("bienvenida");if(!w)return;try{if(sessionStorage.getItem("tp_wl")){w.parentNode.removeChild(w);return}}catch(e){}var d=new Date();
 try{var t=d.toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long",year:"numeric"});document.getElementById("wldate").textContent=t.charAt(0).toUpperCase()+t.slice(1)}catch(e){}
@@ -831,6 +857,8 @@ function viewAjustes(v){
   v.innerHTML=`<h1>Ajustes</h1>
   <p class="lede">Aquí conecta la inteligencia artificial y cuida sus enseñanzas. Todo se guarda solo en este equipo.</p>
 
+  ${aparienciaSection()}
+
   <div class="section-head"><h2>Inteligencia artificial</h2></div>
   <div class="card" style="display:grid;gap:12px">
     <p class="muted" style="margin:0">Preparar enseñanzas, mejorarlas, las herramientas de estudio y la Consulta libre usan Claude a través de una clave de la API de Anthropic. Se paga por uso (no es una suscripción). Si no la pone, todo lo demás funciona igual.</p>
@@ -902,6 +930,7 @@ function viewAjustes(v){
     if(ns)Store.localSave(all);
     bm(ns?`Se corrigieron ${nf} citas en ${ns} enseñanzas.`+(nb?` Quedan ${nb} para revisar una por una con "Verificar citas".`:""):(nb?`Todo coincide, salvo ${nb} citas para revisar una por una con "Verificar citas".`:"Todas las citas coinciden con la RVR1960."))};
   syncWire(v);
+  aparienciaWire(v);
   lockWire(v);
   $("#bkout").onclick=backupData;
   $("#imcl").onclick=()=>$("#imfile").click();
@@ -1099,9 +1128,15 @@ async function bioSetup(){if(!window.PublicKeyCredential)throw new Error("Este n
     pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
     authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
   lockSave({...(lockCfg()||{}),cred:lkB64(cred.rawId)})}
-async function bioUnlock(){const c=lockCfg();if(!c||!c.cred)return false;
+let BIO_BUSY=false;
+async function bioUnlock(){const c=lockCfg();if(!c||!c.cred||BIO_BUSY)return false;BIO_BUSY=true;
   try{const a=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,
-    allowCredentials:[{type:"public-key",id:lkUnB64(c.cred)}],userVerification:"required",timeout:60000}});return !!a}catch(e){return false}}
+    allowCredentials:[{type:"public-key",id:lkUnB64(c.cred)}],userVerification:"required",timeout:60000}});return !!a}catch(e){return false}finally{BIO_BUSY=false}}
+/* La app queda abierta durante la sesión: al ir a Diapositivas y volver no vuelve a pedir nada,
+   salvo que haya estado fuera más de 2 minutos. */
+const lkSS={get(k){try{return +sessionStorage.getItem(k)||0}catch{return 0}},set(k,v){try{sessionStorage.setItem(k,String(v))}catch{}}};
+function lockSeen(){lkSS.set("tp_seen",Date.now())}
+function lockNeeded(){if(!lockCfg())return false;const u=lkSS.get("tp_unl"),seen=lkSS.get("tp_seen");return !(u&&seen&&Date.now()-seen<LOCK.idle)}
 
 function lockStyle(){if(document.getElementById("lkstyle"))return;const s=document.createElement("style");s.id="lkstyle";
   s.textContent="#lockscr{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg,#F2F6F7);font-family:var(--f-text,system-ui)}"+
@@ -1117,8 +1152,8 @@ function lockStyle(){if(document.getElementById("lkstyle"))return;const s=docume
 function lockShow(){if(LOCK.el||!lockCfg())return;lockStyle();const c=lockCfg();
   const el=document.createElement("div");el.id="lockscr";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");
   el.innerHTML=`<div class="lk-box"><h2>Taller del Predicador</h2><p class="muted" style="margin:0">Pastor Antonio Sierra J. · App bloqueada</p>
-    <form class="lk-row" id="lkf" autocomplete="off"><input type="password" id="lkp" placeholder="Contraseña" aria-label="Contraseña" autocapitalize="off" autocomplete="current-password"><button class="btn primary" type="submit">Entrar</button></form>
-    ${c.cred?'<button class="btn" id="lkb" type="button">Usar Face ID o huella</button>':""}
+    ${c.cred?'<button class="btn primary" id="lkb" type="button" style="width:100%;padding:13px">Desbloquear con Face ID o huella</button><p class="muted" style="margin:0;font-size:13px">o escriba su contraseña</p>':""}
+    <form class="lk-row" id="lkf" autocomplete="off"><input type="password" id="lkp" placeholder="Contraseña" aria-label="Contraseña" autocapitalize="off" autocomplete="current-password"><button class="btn" type="submit">Entrar</button></form>
     <p class="lk-err" id="lke" role="alert"></p>
     <button class="btn ghost small" id="lkr" type="button">Olvidé la contraseña</button>
     <div id="lkrec" hidden style="display:grid;gap:8px;width:100%"><p class="muted" style="margin:0;font-size:14px">Para quitar el bloqueo, escriba la clave de GitHub de la sincronización.</p>
@@ -1126,21 +1161,23 @@ function lockShow(){if(LOCK.el||!lockCfg())return;lockStyle();const c=lockCfg();
   </div>`;
   document.body.appendChild(el);LOCK.el=el;
   const err=t=>{el.querySelector("#lke").textContent=t};
-  const ok=()=>{el.remove();LOCK.el=null;LOCK.hiddenAt=0};
+  const ok=()=>{el.remove();LOCK.el=null;LOCK.hiddenAt=0;lkSS.set("tp_unl",Date.now());lockSeen()};
   el.querySelector("#lkf").onsubmit=async e=>{e.preventDefault();const inp=el.querySelector("#lkp");const pw=inp.value;inp.value="";
     if(await lockCheck(pw))return ok();err("Contraseña incorrecta.");await new Promise(r=>setTimeout(r,800));inp.focus()};
-  const bio=el.querySelector("#lkb");if(bio)bio.onclick=async()=>{if(await bioUnlock())return ok();err("No se pudo confirmar con Face ID o huella. Escriba la contraseña.")};
+  const bio=el.querySelector("#lkb");if(bio)bio.onclick=async()=>{if(BIO_BUSY)return;bio.disabled=true;err("");const r=await bioUnlock();bio.disabled=false;if(r)return ok();err("No se confirmó. Toque el botón otra vez o escriba la contraseña.")};
   el.querySelector("#lkr").onclick=()=>{el.querySelector("#lkrec").hidden=false;el.querySelector("#lkt").focus()};
   el.querySelector("#lkrf").onsubmit=e=>{e.preventDefault();const t=el.querySelector("#lkt").value.trim();const sc=(typeof syncCfg==="function"&&syncCfg())||null;
     if(sc&&sc.token&&t===sc.token){lockSave(null);return ok()}
     err(sc?"Esa clave no coincide con la de GitHub.":"Sin la clave de GitHub no se puede quitar el bloqueo. Escriba la contraseña.")};
-  inp0=el.querySelector("#lkp");setTimeout(()=>{if(bio)bio.click();else inp0.focus()},250)}
+  inp0=el.querySelector("#lkp");if(!bio)setTimeout(()=>inp0.focus(),250)}
 let inp0=null;
 
 document.addEventListener("visibilitychange",()=>{if(!lockCfg())return;
-  if(document.visibilityState==="hidden")LOCK.hiddenAt=Date.now();
-  else if(LOCK.hiddenAt&&Date.now()-LOCK.hiddenAt>LOCK.idle){LOCK.hiddenAt=0;lockShow()}});
-setTimeout(lockShow,0);
+  if(document.visibilityState==="hidden"){if(!LOCK.el){LOCK.hiddenAt=Date.now();lockSeen()}}
+  else if(!LOCK.el&&!BIO_BUSY&&LOCK.hiddenAt&&Date.now()-LOCK.hiddenAt>LOCK.idle){LOCK.hiddenAt=0;lkSS.set("tp_unl",0);lockShow()}});
+window.addEventListener("pagehide",()=>{if(!LOCK.el)lockSeen()});
+setInterval(()=>{if(!LOCK.el&&document.visibilityState==="visible")lockSeen()},20000);
+setTimeout(()=>{if(lockNeeded())lockShow();else if(lockCfg())lockSeen()},0);
 
 /* Sección en Ajustes */
 function lockSection(){const c=lockCfg();
@@ -1158,7 +1195,7 @@ function lockWire(v){const m=t=>{const e=document.getElementById("lkmsg");if(e)e
   const pedir=(q)=>prompt(q)||"";
   const set=document.getElementById("lkset");if(set)set.onclick=async()=>{const a=document.getElementById("lkn1").value,b=document.getElementById("lkn2").value;
     if(a.length<6)return m("Use al menos 6 caracteres.");if(a!==b)return m("Las dos contraseñas no coinciden.");
-    await lockSetPass(a);toast("Protección activada.");again()};
+    await lockSetPass(a);lkSS.set("tp_unl",Date.now());lockSeen();toast("Protección activada.");again()};
   const chg=document.getElementById("lkchg");if(chg)chg.onclick=async()=>{const cur=pedir("Contraseña actual:");if(!(await lockCheck(cur)))return m("La contraseña actual no coincide.");
     const nw=pedir("Nueva contraseña (mínimo 6 caracteres):");if(nw.length<6)return m("Use al menos 6 caracteres.");await lockSetPass(nw);toast("Contraseña cambiada.");again()};
   const del=document.getElementById("lkdel");if(del)del.onclick=async()=>{const cur=pedir("Contraseña actual para quitar la protección:");if(!(await lockCheck(cur)))return m("La contraseña no coincide.");
@@ -1166,6 +1203,66 @@ function lockWire(v){const m=t=>{const e=document.getElementById("lkmsg");if(e)e
   const onb=document.getElementById("lkonbio");if(onb)onb.onclick=async()=>{try{await bioSetup();toast("Face ID o huella activados.");again()}catch(e){m("No se pudo activar: "+(e&&e.message||"revise el equipo."))}};
   const offb=document.getElementById("lkoffbio");if(offb)offb.onclick=()=>{const c=lockCfg()||{};delete c.cred;lockSave(c);again()};
 }
+
+/* ============ Apariencia: tema de la app y foto del encabezado ============ */
+const SKINS=[
+  {id:"hojas",n:"Hojas y viento",d:"Claro, azul y dorado. El de siempre.",c:["#F2F6F7","#FFFFFF","#1D3557","#8C6D2E"]},
+  {id:"noche",n:"Noche dorada",d:"Oscuro y sereno, con detalles en oro.",c:["#0E1622","#141F2E","#D8B66A","#93A1B4"]},
+  {id:"pergamino",n:"Pergamino",d:"Cálido y suave, como papel antiguo.",c:["#F5F0E6","#FFFCF6","#23395B","#93692A"]},
+];
+const apKey=k=>(window.__AP||"tp_")+k;
+const apGet=k=>{try{return localStorage.getItem(apKey(k))}catch{return null}};
+const apSet=(k,v)=>{try{v==null?localStorage.removeItem(apKey(k)):localStorage.setItem(apKey(k),v)}catch{toast("No se pudo guardar en este equipo.")}};
+function skinNow(){return apGet("skin")||"hojas"}
+function skinApply(id){const r=document.documentElement;r.removeAttribute("data-skin");
+  if(id==="noche"){r.setAttribute("data-skin","noche");r.setAttribute("data-theme","dark")}
+  else if(id==="pergamino"){r.setAttribute("data-skin","pergamino");r.setAttribute("data-theme","light")}
+  else r.setAttribute("data-theme","light")}
+function fotoNow(){return apGet("foto")}
+function fotoApply(src){const r=document.documentElement;
+  if(src){r.setAttribute("data-foto","1");r.style.setProperty("--foto",`url("${src}")`)}else{r.removeAttribute("data-foto");r.style.removeProperty("--foto")}
+  const im=document.querySelector(".wl-photo img");if(im&&src)im.src=src}
+function fotoDefault(){const el=document.querySelector(".brand b");if(!el)return "";const bg=getComputedStyle(el,"::before").backgroundImage||"";const m=bg.match(/url\("?(.*?)"?\)$/);return m?m[1]:""}
+async function fotoLeer(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+    const S=360,cv=document.createElement("canvas");cv.width=cv.height=S;const x=cv.getContext("2d");
+    const m=Math.min(img.naturalWidth,img.naturalHeight);
+    x.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2*0.6,m,m,0,0,S,S);
+    return cv.toDataURL("image/jpeg",0.86)}
+  finally{URL.revokeObjectURL(url)}}
+function fotoElegir(done){const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+  inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;
+    try{const d=await fotoLeer(f);apSet("foto",d);fotoApply(d);toast("Foto cambiada.");done&&done()}catch(e){toast("No se pudo leer esa imagen. Pruebe con otra.")}};
+  inp.click()}
+function fotoQuitar(done){apSet("foto",null);fotoApply(null);toast("Volvió la foto original.");done&&done()}
+
+function aparienciaSection(){const cur=skinNow();const f=fotoNow()||fotoDefault();
+  return `<div class="section-head"><h2>Apariencia</h2></div>
+  <div class="card" style="display:grid;gap:16px">
+    <div class="skins" id="skins">${SKINS.map(k=>`<button class="skin" data-skin="${k.id}" aria-pressed="${cur===k.id}">
+      <span class="pv" style="background:${k.c[0]}"><i style="background:${k.c[1]};border-right:1px solid rgba(0,0,0,.06)"></i><u><b style="background:${k.c[2]};width:58%"></b><em style="background:${k.c[3]}"></em><em style="background:${k.c[3]};opacity:.45;width:48%"></em></u></span>
+      <strong>${k.n}</strong><small>${k.d}</small></button>`).join("")}</div>
+    <div class="fotobox">${f?`<img src="${f}" alt="Su foto">`:""}<div style="display:grid;gap:6px"><b style="font-size:14px">Foto del encabezado</b>
+      <div class="row" style="gap:8px"><button class="btn" id="fotocam">Cambiar foto</button>${fotoNow()?'<button class="btn ghost" id="fotodef">Usar la original</button>':""}</div></div></div>
+    <p class="muted" style="margin:0;font-size:13px">También puede cambiar la foto tocándola arriba, junto a su nombre. El tema y la foto quedan guardados en este equipo.</p>
+  </div>`}
+function aparienciaWire(v){const again=()=>{if(typeof viewAjustes==="function")viewAjustes(document.getElementById("view"))};
+  const sk=document.getElementById("skins");if(sk)sk.onclick=e=>{const b=e.target.closest("[data-skin]");if(!b)return;apSet("skin",b.dataset.skin);skinApply(b.dataset.skin);
+    sk.querySelectorAll("[data-skin]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))};
+  const c=document.getElementById("fotocam");if(c)c.onclick=()=>fotoElegir(again);
+  const d=document.getElementById("fotodef");if(d)d.onclick=()=>fotoQuitar(again)}
+
+/* tocar la foto (junto al nombre) para cambiarla */
+function fotoSheet(){const sh=document.getElementById("sheet");if(!sh)return fotoElegir();const f=fotoNow()||fotoDefault();
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Foto del encabezado"><h2>Su foto</h2>
+    <div class="fotobox" style="margin:12px 0">${f?`<img src="${f}" alt="">`:""}<span class="muted">Elija una foto de su galería. Se recorta en círculo automáticamente.</span></div>
+    <div class="row" style="gap:8px"><button class="btn primary" id="fsnew">Elegir otra foto</button>${fotoNow()?'<button class="btn" id="fsdef">Usar la original</button>':""}<button class="btn ghost" id="fsno">Cerrar</button></div></div>`;
+  sh.hidden=false;const close=()=>{sh.hidden=true;sh.innerHTML=""};
+  sh.querySelector("#fsno").onclick=close;
+  sh.querySelector("#fsnew").onclick=()=>fotoElegir(()=>{close();if(CURRENT==="ajustes")viewAjustes(document.getElementById("view"))});
+  const dd=sh.querySelector("#fsdef");if(dd)dd.onclick=()=>{fotoQuitar();close();if(CURRENT==="ajustes")viewAjustes(document.getElementById("view"))}}
+document.addEventListener("click",e=>{const t=e.target.closest(".brand b,.top .mbrand");if(t){e.preventDefault();e.stopPropagation();fotoSheet()}},true);
 
 </script>
 <script type="text/app">
@@ -1694,9 +1791,6 @@ function viewInicio(v){
     <button class="act" data-go="biblia">${icon("biblia")}<b>Biblia</b><span>${bk?"Seguir en "+esc(bk)+" · ":""}${esc(BVER.abbr)}, sin internet.</span></button>
     <a class="act" href="diapositivas.html">${icon("diapositivas")}<b>Diapositivas</b><span>Convierta una enseñanza en presentación y proyéctela.</span></a>
   </div>
-  <div id="vnhome"></div>
-  <div id="dishome"></div>
-  <div id="pulhome"></div>
   <form class="bigsearch" id="homeq" role="search"><input type="search" id="hq" placeholder="Buscar en sus enseñanzas: un tema, un personaje, un pasaje…" aria-label="Buscar en sus enseñanzas"></form>
   <div class="section-head"><h2>Continuar donde quedó</h2></div>
   <div id="recent" style="margin-top:6px"></div>
@@ -1706,14 +1800,6 @@ function viewInicio(v){
     <button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque una palabra o frase en toda la Biblia.</span></button>
   </div>`;
   renderRecent();
-  Promise.all([loadLib(),loadVN()]).then(()=>{const el=$("#vnhome");if(!el)return;const ids=vnIds();const p=ids.filter(i=>vnStatus(i)==="pend").length;
-    const dh=$("#dishome");const dc=LIB.carpetas.findIndex(c=>c.t==="Las Dispensaciones");
-    if(dh&&dc>=0){const nd=LIB.items.filter(x=>x.c===dc).length;dh.innerHTML=`<button class="vnbanner disbanner" id="disgo"><b>📜 Las Dispensaciones</b><span>De la Inocencia al Reino: ${nd} enseñanzas. Ábralas, predíquelas o proyéctelas en diapositivas.</span><i>›</i></button>`;
-      $("#disgo").onclick=()=>{LSTATE.item=null;LSTATE.q="";LSTATE.c=dc;go("biblioteca")}}
-    const ph=$("#pulhome");const pc=LIB.carpetas.findIndex(c=>c.t==="Mensajes para el Púlpito");
-    if(ph&&pc>=0){const its=LIB.items.filter(x=>x.c===pc);const np=its.filter(x=>!predHas("L"+x.i)).length;ph.innerHTML=`<button class="vnbanner disbanner" id="pulgo"><b>📖 Mensajes para el Púlpito</b><span>${its.length} mensajes nuevos de personajes y pasajes de toda la Biblia${np<its.length?` · ${np} sin predicar`:""}.</span><i>›</i></button>`;
-      $("#pulgo").onclick=()=>{LSTATE.item=null;LSTATE.q="";LSTATE.c=pc;go("biblioteca")}}
-    if(p)el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas por revisar: ${p}</b><span>Sus enseñanzas del archivo pasadas al modelo nuevo. Compare cada una con la original.</span><i>›</i></button>`}).catch(()=>{});
   $("#homeq").onsubmit=e=>{e.preventDefault();LSTATE.q=$("#hq").value.trim();LSTATE.c=null;LSTATE.f="todas";go("sermones")};
 }
 function viewEstudio(v){
@@ -1728,6 +1814,8 @@ function renderRecent(){const el=$("#recent");if(!el)return;const act=[...SERMON
 function sItem(s){return `<button class="sitem" data-sermon="${esc(s.id)}"><b>${esc(s.titulo||"Sin título")}${predTag("S"+s.id)}</b>${s.reemplaza?`<span class="tag ready">Mejorada</span>`:s.ensenanza?`<span class="tag ready">Enseñanza lista</span>`:"<span></span>"}<span class="pill ${esc(s.estado||"idea")}">${esc(ESTADOS[s.estado||"idea"])}</span><small>${esc([catLabel(s.categoria),s.texto,s.enserie&&s.serie&&("Serie: "+s.serie),s.fecha&&("para el "+fmtDate(s.fecha))].filter(Boolean).join(" · "))}</small></button>`}
 const CATS=[["01","💜","Oración y Adoración"],["02","❤️","Evangelísticas"],["03","💙","Doctrinales"],["04","🟨","El Tabernáculo y el Arca"],["05","🟫","El Arca",1],["06","🖤","Profecía y Escatología"],["07","💛","Fechas y Ocasiones Especiales"],["08","💚","Renovación"],["09","🧡","Personajes Bíblicos"],["10","🩵","Vida Cristiana"],["11","🟦","Servicio y Ministerio"],["12","🟪","Fe en la Prueba"],["13","🟩","Dinámicas",1],["14","🟧","Enseñanzas Especiales",1],["15","🎞️","Talleres y Dinámicas"],["16","📘","Estudios Bíblicos"],["17","🕯️","Mensajes Breves"],["18","🔥","Avivamiento, Milagros y Campañas"],["19","💰","Mayordomía"],["20","🏠","Enseñanzas para la Familia"],["21","📜","Las Dispensaciones"],["22","✝️","La Pasión y la Gloria de Cristo"],["23","📖","Mensajes para el Púlpito"]];
 const CATORD=()=>{let L=null;try{L=LIB}catch(e){}const o=i=>(L&&L.carpetas&&L.carpetas[i]&&L.carpetas[i].o)||i+100;return CATS.map((c,i)=>i).sort((a,b)=>o(a)-o(b))};
+const FOLDER_ICO={"Todas": "<path d=\"M4 6.5h16M4 12h16M4 17.5h16\"/>", "Oración y Adoración": "<path d=\"M12 3.2c1.9 2.2 1.9 3.9 0 5.3-1.9-1.4-1.9-3.1 0-5.3z\"/><rect x=\"9\" y=\"10.5\" width=\"6\" height=\"10\" rx=\"1\"/><path d=\"M7 20.5h10\"/>", "Evangelísticas": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17\"/>", "Avivamiento, Milagros y Campañas": "<path d=\"M12 3.5c3.4 3.2 5.5 6.3 5.5 9.8a5.5 5.5 0 0 1-11 0c0-2 .9-3.6 2.4-5 .1 1.9.9 3 2 3.4-.3-2.6.1-5.3 1.1-8.2z\"/>", "Renovación": "<path d=\"M12 20.5v-8\"/><path d=\"M12 12.5c0-4 2.8-6.6 7-6.6 0 4-2.8 6.6-7 6.6z\"/><path d=\"M12 14.5c0-3-2.2-5-5.5-5 0 3 2.2 5 5.5 5z\"/>", "Doctrinales": "<path d=\"M3.5 9.5 12 4l8.5 5.5z\"/><path d=\"M6 12v6M10 12v6M14 12v6M18 12v6M4 20.5h16\"/>", "Las Dispensaciones": "<path d=\"M6.5 3.5h11M6.5 20.5h11\"/><path d=\"M8 3.5c0 4.5 8 4.5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 4.5-8 8.5s8 4 8 8.5\"/>", "Profecía y Escatología": "<path d=\"M3.5 17h17M7 17a5 5 0 0 1 10 0\"/><path d=\"M12 6.5V4M6.3 9.3 4.6 7.6M17.7 9.3l1.7-1.7M5 20.5h14\"/>", "El Tabernáculo y el Arca": "<path d=\"M3.5 19.5 12 5l8.5 14.5z\"/><path d=\"M9.5 19.5 12 15l2.5 4.5\"/>", "La Pasión y la Gloria de Cristo": "<path d=\"M12 3v18M7.5 8h9\"/>", "Mensajes para el Púlpito": "<path d=\"M5 8.5h14l-1.8 4H6.8z\"/><path d=\"M12 12.5v8M8.5 20.5h7M9 6l3-2.5L15 6\"/>", "Personajes Bíblicos": "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20.5c.8-4 3.6-6 7-6s6.2 2 7 6\"/>", "Estudios Bíblicos": "<path d=\"M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z\"/><path d=\"M12 6.5v13\"/>", "Vida Cristiana": "<path d=\"M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z\"/>", "Fe en la Prueba": "<circle cx=\"12\" cy=\"5.5\" r=\"2\"/><path d=\"M12 7.5v13M8.5 11h7M4.5 14a7.5 7.5 0 0 0 15 0\"/>", "Servicio y Ministerio": "<path d=\"M3.5 12.5h17a8.5 7 0 0 1-17 0z\"/><path d=\"M9.5 9c0-1.8 1.2-3 2.5-5 1.3 2 2.5 3.2 2.5 5a2.5 2.5 0 0 1-5 0z\"/>", "Mayordomía": "<path d=\"M12 21V11\"/><path d=\"M12 11c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM12 13.5c0-2.8-2-4.8-5-4.8 0 2.8 2 4.8 5 4.8z\"/><path d=\"M7 21h10\"/>", "Enseñanzas para la Familia": "<path d=\"M3.5 11 12 4l8.5 7\"/><path d=\"M5.5 9.5V20h13V9.5\"/><path d=\"M12 17.2s-2.6-1.5-2.6-3.2a1.3 1.3 0 0 1 2.6-.5 1.3 1.3 0 0 1 2.6.5c0 1.7-2.6 3.2-2.6 3.2z\"/>", "Fechas y Ocasiones Especiales": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 9.5h17M8 3v4M16 3v4M12 12.5l.9 1.9 2.1.3-1.5 1.4.4 2-1.9-1-1.9 1 .4-2-1.5-1.4 2.1-.3z\"/>", "Mensajes Breves": "<path d=\"M4.5 5.5h15v10h-8.5l-4.5 3.5v-3.5h-2z\"/><path d=\"M8.5 10.5h7\"/>", "Talleres y Dinámicas": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M12 16v4M8 20.5h8\"/>"};
+const folderIco=t=>`<svg class="fico" viewBox="0 0 24 24" aria-hidden="true">${FOLDER_ICO[t]||'<circle cx="12" cy="12" r="2"/>'}</svg>`;
 const CATMAP=Object.fromEntries(CATS.map(c=>[c[0],c]));
 function catLabel(k){const c=CATMAP[k];return c?c[2]:""}
 function catOptions(sel){return `<option value="">Sin carpeta</option>${CATORD().map(i=>CATS[i]).filter(c=>!c[3]||sel===c[0]).map(c=>`<option value="${c[0]}" ${sel===c[0]?"selected":""}>${esc(c[2])}</option>`).join("")}`}
@@ -1986,6 +2074,7 @@ function viewBiblioteca(v,opts){
   <p class="lede" id="llede"></p>
   <div class="row" style="margin:0 0 12px;gap:8px"><div class="bigsearch" style="flex:1;min-width:240px;margin:0"><input type="search" id="lq" value="${esc(LSTATE.q)}" placeholder="Buscar: Elías, diezmo, Juan 3:16, avivamiento…" aria-label="Buscar en mis enseñanzas"></div><button class="btn primary" id="newbtn" style="padding:12px 16px">Nueva enseñanza</button></div>
   <div id="vnbanner"></div>
+  <div id="accbanner" class="accgrid"></div>
   <form class="card" id="newform" autocomplete="off" hidden style="margin-bottom:16px"><div class="row"><input type="text" id="nt" placeholder="Título" style="flex:2;min-width:200px" aria-label="Título"><input type="text" id="ntx" placeholder="Texto clave (opcional)" style="flex:1;min-width:150px" aria-label="Texto clave"><select id="ncat" style="flex:1;min-width:180px" aria-label="Carpeta">${catOptions(LSTATE.c!=null&&LSTATE.c!=="sin"?CATS[LSTATE.c]?.[0]:"")}</select><button class="btn primary" type="submit" data-mode="open">Crear</button><button class="btn" type="submit" data-mode="armar">Crear y armarla yo mismo</button></div></form>
   <div class="cat-grid" id="lcats"></div>
   <div class="row" style="margin-bottom:6px"><select id="fest" style="width:auto" aria-label="Mostrar">${Object.entries(MOSTRAR).map(([k,l])=>`<option value="${k}" ${LSTATE.f===k?"selected":""}>${l}</option>`).join("")}</select><span class="savestate">${Store.mode==="nube"?"Las que prepare aquí se guardan en su cuenta de Claude.":"Las que prepare aquí se guardan solo en este dispositivo."}</span></div>
@@ -2002,7 +2091,7 @@ function viewBiblioteca(v,opts){
     const TOTC={};libAll.forEach(it=>TOTC[it.c]=1);SERMONS.forEach(x=>{const k=catIdx(x.categoria);if(k!=null)TOTC[k]=1});
     const cnt={};S1.forEach(s=>{const k=catIdx(s.categoria);const key=k==null?"sin":k;cnt[key]=(cnt[key]||0)+1});L1.forEach(it=>cnt[it.c]=(cnt[it.c]||0)+1);
     const npred=libAll.filter(isPL).length+SERMONS.filter(isPredS).length;$("#llede").textContent=`${libAll.length+SERMONS.length} enseñanzas en total: ${SERMONS.length} preparadas en la app y ${libAll.length} de su archivo. Todas en sus mismas carpetas.`+(npred?` Ya predicó ${npred}.`:"");
-    $("#lcats").innerHTML=`<button class="cat-tile" data-lc="" aria-pressed="${LSTATE.c==null}"><i>—</i><b>Todas</b><span>${S1.length+L1.length}</span></button>`+LIB.carpetas.map((c,i)=>i).sort((a,b)=>(LIB.carpetas[a].o||a+100)-(LIB.carpetas[b].o||b+100)).filter(i=>LSTATE.c===i||cnt[i]||TOTC[i]).map(i=>{const c=LIB.carpetas[i];return `<button class="cat-tile" data-lc="${i}" aria-pressed="${LSTATE.c===i}"><i>${c.e||c.n}</i><b>${esc(c.t)}</b><span>${cnt[i]||0}</span></button>`}).join("")+(cnt.sin?`<button class="cat-tile" data-lc="sin" aria-pressed="${LSTATE.c==="sin"}"><i>—</i><b>Sin carpeta</b><span>${cnt.sin}</span></button>`:"");
+    $("#lcats").innerHTML=`<button class="cat-tile" data-lc="" aria-pressed="${LSTATE.c==null}"><i>${folderIco("Todas")}</i><b>Todas</b><span>${S1.length+L1.length}</span></button>`+LIB.carpetas.map((c,i)=>i).sort((a,b)=>(LIB.carpetas[a].o||a+100)-(LIB.carpetas[b].o||b+100)).filter(i=>LSTATE.c===i||cnt[i]||TOTC[i]).map(i=>{const c=LIB.carpetas[i];return `<button class="cat-tile" data-lc="${i}" aria-pressed="${LSTATE.c===i}"><i>${folderIco(c.t)}</i><b>${esc(c.t)}</b><span>${cnt[i]||0}</span></button>`}).join("")+(cnt.sin?`<button class="cat-tile" data-lc="sin" aria-pressed="${LSTATE.c==="sin"}"><i>${folderIco("")}</i><b>Sin carpeta</b><span>${cnt.sin}</span></button>`:"");
     const inC=k=>LSTATE.c==null||(LSTATE.c==="sin"?k==null:k===LSTATE.c);
     let S2=S1.filter(s=>inC(catIdx(s.categoria))),L2=L1.filter(it=>inC(it.c));
     if(f==="predicado"){const P=predAll();const dd=k=>P[k]||"";S2.sort((a,b)=>dd("S"+b.id).localeCompare(dd("S"+a.id)));L2.sort((a,b)=>dd("L"+b.i).localeCompare(dd("L"+a.i)))}
@@ -2027,6 +2116,7 @@ function viewBiblioteca(v,opts){
   const vnb=()=>{const el=$("#vnbanner");if(!el||!VN)return;const ids=vnIds();if(!ids.length)return;const p=ids.filter(i=>vnStatus(i)==="pend").length;
     el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas</b><span>${p?`${p} de ${ids.length} enseñanzas de su archivo, pasadas al modelo nuevo, esperan su revisión.`:`Revisó las ${ids.length} versiones nuevas.`}</span><i>›</i></button>`};
   if(VN)vnb();else loadVN().then(vnb).catch(()=>{});
+  {const ab=$("#accbanner");if(ab&&LIB){const acc=[["Las Dispensaciones","De la Inocencia al Reino, en orden. Ábralas, predíquelas o proyéctelas en diapositivas."],["Mensajes para el Púlpito","Personajes y pasajes de toda la Biblia, listos para predicar."]].map(([t,d])=>{const i=LIB.carpetas.findIndex(c=>c.t===t);if(i<0)return"";const n=LIB.items.filter(x=>x.c===i).length;return `<button class="vnbanner accb" data-acc="${i}"><b>${esc(t)}</b><span>${n} enseñanzas. ${esc(d)}</span><i>›</i></button>`}).join("");ab.innerHTML=acc;ab.onclick=e=>{const b=e.target.closest("[data-acc]");if(!b)return;LSTATE.c=+b.dataset.acc;LSTATE.item=null;$("#lq").value="";draw();navRecord({},window.scrollY);$("#lres").scrollIntoView({block:"start",behavior:"smooth"})}}}
   if(LSTATE.flash){const el=$(`#lres [data-sermon="${CSS.escape(LSTATE.flash)}"]`);LSTATE.flash=null;if(el){el.classList.add("flash");setTimeout(()=>el.scrollIntoView({block:"center",behavior:"smooth"}),100)}}
 }
 function libToMd(it){if(it.md)return it.md;const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
@@ -2084,7 +2174,7 @@ function viewNuevas(v,opts){
   <p class="lede">Sus ${ids.length} enseñanzas del archivo, pasadas al modelo nuevo: menos puntos y más hondos, citas revisadas con su Biblia, viñetas con la idea en negrita y pocas frases de impacto. <b>Las originales no se han tocado.</b> Abra cada una, compárela con la original y decida si la usa.</p>
   <div class="seg2" id="vnf" style="flex-wrap:wrap" role="tablist">${Object.entries(VNF).map(([k,l])=>`<button data-f="${k}" ${VNS.f===k?'aria-current="page"':""}>${l} <span class="muted">${cnt[k]}</span></button>`).join("")}</div>
   <div class="row" style="margin:12px 0;gap:8px"><div class="bigsearch" style="flex:2;min-width:220px;margin:0"><input type="search" id="vnq" value="${esc(VNS.q)}" placeholder="Buscar por título, pasaje o tema" aria-label="Buscar"></div>
-  <select id="vnc" style="flex:1;min-width:180px" aria-label="Carpeta"><option value="">Todas las carpetas</option>${LIB.carpetas.map((c,i)=>ids.some(x=>LIB.items[x].c===i)?`<option value="${i}" ${String(VNS.c)===String(i)?"selected":""}>${esc((c.e||c.n)+" "+c.t)}</option>`:"").join("")}</select></div>
+  <select id="vnc" style="flex:1;min-width:180px" aria-label="Carpeta"><option value="">Todas las carpetas</option>${LIB.carpetas.map((c,i)=>ids.some(x=>LIB.items[x].c===i)?`<option value="${i}" ${String(VNS.c)===String(i)?"selected":""}>${esc(c.t)}</option>`:"").join("")}</select></div>
   <div id="vnres"></div>`;
   const draw=()=>{const q=norm(VNS.q=$("#vnq").value.trim());VNS.c=$("#vnc").value;
     const L=ids.filter(i=>(VNS.f==="todas"||vnStatus(i)===VNS.f)&&(VNS.c===""||LIB.items[i].c===+VNS.c)&&(!q||LIB.items[i]._t.includes(q)||norm(VN[i]).includes(q)));
@@ -2129,7 +2219,7 @@ function libToText(it){if(it.md)return it.md.replace(/^#+\s*/gm,"").replace(/==|
 function libRead(v,it){
   const c=LIB.carpetas[it.c];const mdText=autoFix(libToMd(it),true);
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
-  <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc((c.e||c.n)+" "+c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
+  <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
   <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
