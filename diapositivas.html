@@ -2,7 +2,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Taller"><meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Diapositivas · Taller del Predicador</title>
+<title>Diapositivas · Taller del Predicador</title><script src="libcrypt.js"></script><script>(function(){function ap(){var k="hojas";try{k=localStorage.getItem("tp_skin")||"hojas"}catch(e){}var r=document.documentElement;r.setAttribute("data-skin",k);r.setAttribute("data-theme",k==="noche"?"dark":"light")}ap();addEventListener("storage",function(e){if(e.key==="tp_skin")ap()});addEventListener("pageshow",ap)})();</script>
+<style>
+html:root[data-skin="hojas"]{--bg:#F2F6F7;--panel:#FFFFFF;--ink:#1B2230;--mute:#69707C;--line:#DCE3E6;--brand:#1D3557;--brand-ink:#FFFFFF;--gold:#8C6D2E;--gold-soft:#F3EAD6}
+html:root[data-skin="pergamino"]{--bg:#F5F0E6;--panel:#FFFCF6;--ink:#2A2418;--mute:#776C5A;--line:#E4DAC7;--brand:#23395B;--brand-ink:#FFFCF6;--gold:#93692A;--gold-soft:#F1E4CB;color-scheme:light}
+html:root[data-skin="noche"]{--bg:#0E1622;--panel:#141F2E;--ink:#E9EDF2;--mute:#93A1B4;--line:#26354A;--brand:#D8B66A;--brand-ink:#16120A;--gold:#D4AF5F;--gold-soft:#2A2416;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);color-scheme:dark}
+</style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Mulish:wght@400;600;800&family=IM+Fell+English:ital@0;1&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Anton&family=Barlow:wght@400;600;700&family=Figtree:wght@400;600;800&family=Bricolage+Grotesque:wght@500;800&family=Instrument+Sans:wght@400;600&family=Abril+Fatface&family=Lora:ital,wght@0,400;0,600;1,400&family=Rozha+One&family=Jost:wght@400;500;600&family=Josefin+Sans:wght@400;600&family=Young+Serif&family=Karla:wght@400;600;700&family=Caveat:wght@500;700&family=Patrick+Hand&family=Bowlby+One&family=Poppins:wght@400;600;700&display=swap">
 <style>
 /* Layout: biblioteca de talleres + estudio de tres zonas (diapositivas, escenario, contenido) */
@@ -895,7 +900,7 @@ Object.assign(window.ACT2,{ai:()=>{closeSheet();openSheet(aiHTML())},aimode:e=>{
 let ENSCACHE=null,LIBCACHE=null,ENSQ='',ENSTAB='mias';
 async function myEns(){if(ENSCACHE)return ENSCACHE;let a=[];try{const r=await kvGet('tp_sermones');a=(typeof r==='string'?JSON.parse(r):r)||[]}catch(e){}
   ENSCACHE=a.filter(x=>x&&x.ensenanza&&x.ensenanza.trim()).sort((x,y)=>(y.actualizado||'').localeCompare(x.actualizado||''));return ENSCACHE}
-async function libItems(){if(LIBCACHE)return LIBCACHE;try{const r=await fetch('biblioteca.json');const d=await r.json();LIBCACHE=d.items.map((it,i)=>Object.assign(it,{i}))}catch(e){LIBCACHE=[]}return LIBCACHE}
+async function libItems(){if(LIBCACHE)return LIBCACHE;try{let d=null;try{if(window.parent!==window&&parent.loadLib)d=await parent.loadLib()}catch(e){}if(!d)d=window.libFetch?await libFetch('biblioteca'):await (await fetch('biblioteca.json')).json();LIBCACHE=d.items.map((it,i)=>Object.assign(it,{i}))}catch(e){LIBCACHE=[]}return LIBCACHE}
 function libMd(it){if(it.md)return it.md;const L=['# '+(it.T||it.t)];let i=0;const P=it.p;
   if(P[0]&&P[0][0]==='p'&&P[0][1]===it.S){L.push('*'+it.S+'*');i=1}
   for(;i<P.length;i++){const [k,t]=P[i];
@@ -981,7 +986,7 @@ window.addEventListener("pagehide",function(){try{if(IDBX){IDBX.close();IDBX=nul
 window.addEventListener("pageshow",function(e){if(e.persisted||window.__idbc)location.reload()});
 document.addEventListener("visibilitychange",function(){try{sessionStorage.setItem("tp_seen",String(Date.now()))}catch(e){}});
 setInterval(function(){if(document.visibilityState==="visible")try{sessionStorage.setItem("tp_seen",String(Date.now()))}catch(e){}},20000);
-document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href="index.html"]');if(a){e.preventDefault();try{if(IDBX){IDBX.close();IDBX=null}}catch(x){}location.replace("index.html")}},true);
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href="index.html"]');if(a){e.preventDefault();try{if(window.parent!==window&&parent.closeSlides){parent.closeSlides();return}}catch(x){}try{if(IDBX){IDBX.close();IDBX=null}}catch(x){}location.replace("index.html")}},true);
 </script>
 <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 </body></html>

@@ -12,6 +12,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="shim.js"></script>
+<script src="libcrypt.js"></script>
 <style>input[type=password]{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:9px 11px;width:100%;font:inherit}</style>
 <title>Taller del Predicador</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -549,6 +550,24 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 .sitem:hover,.cat-tile:hover{border-color:var(--hoja)}
 </style>
 
+<style>.refpanel{margin-top:22px}.reflist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.refrow{all:unset;cursor:pointer;display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--oro);border-radius:var(--r);background:var(--surface)}
+.refrow:hover{border-color:var(--azul)}.refrow b{font-size:14px;font-weight:600}.refrow span{font-size:12.5px;color:var(--muted)}
+.chapter .vs.cited sup{color:var(--oro);font-weight:700}.chapter .vs.cited sup::after{content:"•";margin-left:1px}
+.concref{margin:0 0 18px}
+</style>
+<style>.calbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 12px}.calbar .grow{flex:1}.calm{min-width:170px;text-align:center}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cwd{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:4px 6px}
+.cday{all:unset;cursor:pointer;min-height:84px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:5px 6px;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.cday.off{background:transparent;border-color:transparent;cursor:default}.cday:hover{border-color:var(--azul)}
+.cday.today{box-shadow:inset 0 0 0 2px var(--oro)}.cday .cn{font-size:12.5px;font-weight:700;color:var(--muted)}.cday.today .cn{color:var(--oro)}
+.cev{display:block;font-size:11.5px;line-height:1.25;padding:2px 5px;border-radius:4px;background:color-mix(in srgb,var(--azul) 12%,var(--surface));color:var(--azul);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cev.past{background:var(--oro-soft);color:var(--oro)}.cmore{font-size:11px;color:var(--muted)}
+.calrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-left:3px solid var(--oro);border-radius:var(--r);padding:10px 12px;background:var(--surface)}
+.calrow b{display:block;font-size:14px}.calrow span{font-size:12.5px;color:var(--muted)}
+@media (max-width:620px){.cday{min-height:58px;padding:3px}.cev{font-size:0;height:6px;padding:0;border-radius:3px}.cwd{font-size:10px;padding:2px}}
+</style>
 <style id="temas">
 /* ============ Apariencia: tres temas ============ */
 :root[data-skin="noche"]{--bg:#0E1622;--surface:#141F2E;--sunk:#1A2738;--ink:#E9EDF2;--muted:#93A1B4;--line:#26354A;--azul:#D8B66A;--azul-ink:#16120A;--oro:#D4AF5F;--oro-soft:#2A2416;--verde:#82C9B4;--mark:#4D4020;--danger:#E59088;--hoja:#D4AF5F;color-scheme:dark}
@@ -978,7 +997,7 @@ function syncCfg(){try{return JSON.parse(TP.kv.get("sync_cfg")||"null")}catch{re
 function syncSaveCfg(c){if(c){const t=JSON.stringify(c);TP.kv.set("sync_cfg",t);TP.put("sync_cfg",t)}else TP.del("sync_cfg")}
 function syncMeta(){try{return JSON.parse(TP.kv.get("sync_meta")||"null")||{s:{},del:{},kv:{}}}catch{return {s:{},del:{},kv:{}}}}
 function syncSaveMeta(m){const t=JSON.stringify(m);TP.kv.set("sync_meta",t);TP.put("sync_meta",t)}
-const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_cfg"||k==="tp_lock"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
+const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_cfg"||k==="tp_lock"||k==="tp_libkey"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
 /* registrar cada cambio local con su hora */
 function syncInit(){const orig=ls.set.bind(ls);
   ls.set=function(k,v){
@@ -1264,6 +1283,616 @@ function fotoSheet(){const sh=document.getElementById("sheet");if(!sh)return fot
   const dd=sh.querySelector("#fsdef");if(dd)dd.onclick=()=>{fotoQuitar();close();if(CURRENT==="ajustes")viewAjustes(document.getElementById("view"))}}
 document.addEventListener("click",e=>{const t=e.target.closest(".brand b,.top .mbrand");if(t){e.preventDefault();e.stopPropagation();fotoSheet()}},true);
 
+/* ============ Diapositivas dentro del Taller ============
+   Se abren en un marco sobre la app, sin cambiar de página: así Safari nunca deja la app congelada al volver. */
+const SLD={wrap:null,frame:null};
+function openSlides(qs){
+  if(!SLD.wrap){const w=document.createElement("div");w.id="dpwrap";w.hidden=true;
+    w.innerHTML='<iframe id="dpf" title="Diapositivas" allow="fullscreen; screen-wake-lock" allowfullscreen></iframe>';
+    document.body.appendChild(w);SLD.wrap=w;SLD.frame=w.querySelector("iframe")}
+  const q=String(qs||"").replace(/^\?/,"");
+  if(q||!SLD.frame.getAttribute("src"))SLD.frame.src="diapositivas.html"+(q?"?"+q:"");
+  SLD.wrap.hidden=false;document.documentElement.classList.add("dp-open");
+  try{lockSeen&&lockSeen()}catch(e){}
+}
+function closeSlides(){if(!SLD.wrap)return;SLD.wrap.hidden=true;document.documentElement.classList.remove("dp-open");
+  try{const f=SLD.frame.contentWindow;if(f&&f.P&&f.P.on&&f.pclose)f.pclose()}catch(e){}
+  if(typeof CURRENT!=="undefined"&&CURRENT==="sermones"&&viewSermones.draw)try{viewSermones.draw()}catch(e){}}
+window.openSlides=openSlides;window.closeSlides=closeSlides;
+document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest('a[href^="diapositivas.html"]');if(!a)return;
+  e.preventDefault();e.stopPropagation();openSlides((a.getAttribute("href").split("?")[1])||"")},true);
+(function(){const s=document.createElement("style");s.textContent=
+  "#dpwrap{position:fixed;inset:0;z-index:60;background:var(--bg);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}"+
+  "#dpwrap iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}"+
+  "html.dp-open,html.dp-open body{overflow:hidden}";document.head.appendChild(s)})();
+
+/* ============ Compartir una enseñanza en PDF, con su formato ============
+   Borde, marca de agua, colores de las citas, resaltados, firma y fecha, página por página. */
+function pdfLoadLibs(){const need=[];if(!window.html2canvas)need.push("html2canvas.min.js");if(!(window.jspdf&&window.jspdf.jsPDF))need.push("jspdf.umd.min.js");
+  return Promise.all(need.map(src=>new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("lib"));document.head.appendChild(s)})))}
+function pdfName(t){return (String(t||"Enseñanza").replace(/[\\/:*?"<>|]+/g,"").replace(/\s+/g," ").trim().slice(0,80)||"Enseñanza")+" · Pastor Antonio Sierra J..pdf"}
+const PDFW=816,PDFH=1056,PDFMT=80,PDFMB=96;
+async function pdfPagesFor(mdText,st,logo,say,label){
+  const host=document.createElement("div");host.className="pdfhost";
+  try{host.innerHTML=pageHTML(mdText,st);document.body.appendChild(host);
+    const pg=host.querySelector(".pg");const body=pg.querySelector(".pgbody");
+    pg.querySelectorAll(".pfoot,.pwm").forEach(x=>x.remove());pg.classList.add("pdfpg");
+    /* el resaltado que cruza de una línea a otra se dibuja mal: se resalta palabra por palabra */
+    pg.querySelectorAll(".phl").forEach(h=>{const parts=h.textContent.split(/(\s+)/);h.textContent="";h.classList.add("phlx");
+      parts.forEach(t=>{if(!t)return;const sp=document.createElement("span");sp.className="phlw";sp.textContent=t;h.appendChild(sp)})});
+    await new Promise(r=>setTimeout(r,60));
+    const W=PDFW,H=PDFH,MT=PDFMT,CH=H-PDFMT-PDFMB;
+    const top0=pg.getBoundingClientRect().top;
+    const units=[];const push=el=>{const r=el.getBoundingClientRect();units.push({a:r.top-top0,b:r.bottom-top0})};
+    const head=pg.querySelector(".phead");if(head)push(head);
+    for(const el of body.children){if(el.tagName==="UL"||el.tagName==="OL"){for(const li of el.children)push(li)}else push(el)}
+    units.sort((x,y)=>x.a-y.a);
+    const pages=[];let start=units.length?Math.max(0,units[0].a-6):0;let lastEnd=start;
+    for(const u of units){if(u.b-start>CH&&lastEnd>start){pages.push([start,lastEnd]);start=u.a-4}lastEnd=Math.max(lastEnd,u.b+4)}
+    pages.push([start,lastEnd]);
+    const SC=1.6;const rect=pg.getBoundingClientRect();const out=[];
+    for(let n=0;n<pages.length;n++){say((label?label+" · ":"")+`página ${n+1} de ${pages.length}`);
+      const [a,b]=pages[n];const h=Math.ceil(b-a);
+      const shot=await html2canvas(pg,{scale:SC,backgroundColor:null,logging:false,useCORS:true,x:rect.left+window.scrollX,y:rect.top+window.scrollY+a,width:W,height:h,windowWidth:Math.max(W,document.documentElement.clientWidth)});
+      const cv=pdfCanvas(st,logo);const x=cv.getContext("2d");x.drawImage(shot,0,0,shot.width,shot.height,0,MT,W,h);
+      out.push(cv.toDataURL("image/jpeg",0.9))}
+    return out}
+  finally{host.remove()}}
+function pdfCanvas(st,logo){const SC=1.6,W=PDFW,H=PDFH;const cv=document.createElement("canvas");cv.width=W*SC;cv.height=H*SC;const x=cv.getContext("2d");
+  x.fillStyle="#fff";x.fillRect(0,0,cv.width,cv.height);x.scale(SC,SC);
+  if(st==="clasico"){x.strokeStyle="#D9D9D9";x.lineWidth=1;x.strokeRect(45,45,W-90,H-90);
+    if(logo){const lw=460,lh=lw*logo.naturalHeight/logo.naturalWidth;x.globalAlpha=.9;x.drawImage(logo,(W-lw)/2,(H-lh)/2,lw,lh);x.globalAlpha=1}}
+  return cv}
+function pdfWrap(x,t,maxW){const w=String(t).split(/\s+/);const L=[];let cur="";for(const p of w){const tt=cur?cur+" "+p:p;if(x.measureText(tt).width>maxW&&cur){L.push(cur);cur=p}else cur=tt}if(cur)L.push(cur);return L}
+function pdfCover(st,logo,titulo,docs){const cv=pdfCanvas(st,logo);const x=cv.getContext("2d");const W=PDFW;x.textAlign="center";
+  x.fillStyle="#8C6D2E";x.font='600 13px "Helvetica Neue", Arial, sans-serif';x.fillText("SERIE PARA PREDICAR",W/2,250);
+  x.fillStyle="#1D3557";x.font='bold 40px Georgia, "Times New Roman", serif';let y=310;for(const l of pdfWrap(x,titulo.toUpperCase(),W-200)){x.fillText(l,W/2,y);y+=50}
+  y+=20;x.strokeStyle="#C9A866";x.lineWidth=1.2;x.beginPath();x.moveTo(W/2-60,y);x.lineTo(W/2+60,y);x.stroke();y+=50;
+  x.textAlign="left";docs.forEach((d,i)=>{x.fillStyle="#1D3557";x.font='bold 19px Georgia, "Times New Roman", serif';const ls=pdfWrap(x,`${i+1}. ${d.t}`,W-260);ls.forEach((l,k)=>{x.fillText(l,130,y);y+=26});
+    if(d.r){x.fillStyle="#69707C";x.font='italic 15px Georgia, "Times New Roman", serif';x.fillText(d.r,150,y);y+=22}y+=12});
+  x.textAlign="center";x.fillStyle="#1B2230";x.font='600 16px Georgia, "Times New Roman", serif';x.fillText("Pastor Antonio Sierra J.",W/2,940);
+  return cv.toDataURL("image/jpeg",0.9)}
+async function pdfMake(docs,name,serie){
+  const st=(typeof curStyle==="function"?curStyle():"clasico");
+  const veil=document.createElement("div");veil.className="pdfveil";veil.innerHTML='<div><b>Preparando el PDF…</b><span id="pdfst">Un momento</span></div>';document.body.appendChild(veil);
+  const say=t=>{const e=document.getElementById("pdfst");if(e)e.textContent=t};
+  try{
+    await pdfLoadLibs();try{await document.fonts.ready}catch(e){}
+    const logo=(st==="clasico"&&LOGO_B64)?await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src="data:image/png;base64,"+LOGO_B64}):null;
+    const imgs=[];if(serie)imgs.push({u:pdfCover(st,logo,serie,docs),cover:true});
+    for(let i=0;i<docs.length;i++){const u=await pdfPagesFor(docs[i].md,st,logo,say,docs.length>1?`Mensaje ${i+1} de ${docs.length}`:"");u.forEach(x=>imgs.push({u:x}))}
+    const {jsPDF}=window.jspdf;const pdf=new jsPDF({unit:"pt",format:"letter",orientation:"portrait"});const f=fechaHoy();const N=imgs.length;
+    imgs.forEach((p,n)=>{if(n>0)pdf.addPage("letter","portrait");pdf.addImage(p.u,"JPEG",0,0,612,792,undefined,"FAST");
+      if(!p.cover){pdf.setFont("times","normal");pdf.setFontSize(8.25);pdf.setTextColor(85,85,85);pdf.text(`Pastor Antonio Sierra J. · ${f} · Página ${n+1} de ${N}`,306,(PDFH-58)*0.75,{align:"center"})}});
+    say("Listo");
+    const blob=pdf.output("blob");
+    const dl=await window.claude.use("downloads");await dl.save({filename:name,data:new Blob([blob],{type:"application/pdf"})});
+  }catch(e){console.warn(e);toast("No se pudo preparar el PDF. Intente de nuevo.")}
+  finally{veil.remove()}}
+async function sharePDF(mdText,titulo){return pdfMake([{md:mdText,t:titulo}],pdfName(titulo),null)}
+async function sharePDFSerie(nombre,docs){if(!docs.length){toast("Esta serie no tiene mensajes para el PDF");return}return pdfMake(docs,pdfName("Serie "+nombre),nombre)}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("#lpdf");if(a){e.preventDefault();const it=LIB&&LIB.items[LSTATE.item];if(it)sharePDF(autoFix(libToMd(it),true),it.t);return}
+  const b=e.target.closest('[data-e="pdf"]');if(b&&typeof OPEN!=="undefined"&&OPEN){e.preventDefault();e.stopPropagation();sharePDF(OPEN.ensenanza||"",OPEN.titulo)}},true);
+(function(){const s=document.createElement("style");s.textContent=
+  ".pdfhost{position:absolute;left:0;top:0;width:816px;z-index:0;pointer-events:none}.pdfhost .pgwrap{max-width:none;width:816px}"+
+  ".pdfhost .pg.pdfpg{box-shadow:none;background:transparent;outline:none!important}.pdfhost .phl.phlx{background:none!important}.pdfhost .phlw{background:#FFF2B3}"+
+  ".pdfveil{position:fixed;inset:0;z-index:99999;background:var(--bg);display:grid;place-items:center;text-align:center}.pdfveil div{display:grid;gap:6px}.pdfveil b{font-family:var(--f-text);font-size:20px;color:var(--azul)}.pdfveil span{color:var(--muted)}";
+  document.head.appendChild(s)})();
+
+/* ============ Pulido (oct 2026) ============
+   Series para predicar · Su año en el púlpito · copia semanal en el repositorio privado ·
+   modo sin IA · aviso de versiones nuevas que se puede ocultar · foto también en el iPhone. */
+
+/* ---------- utilidades ---------- */
+const PU_PREFIX=(window.__AP==="ar_")?"armador":"taller";
+const puYMD=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const puAdd=(ymd,n)=>{const d=new Date(ymd+"T12:00");d.setDate(d.getDate()+n);return puYMD(d)};
+const puBook=r=>{const m=String(r||"").match(/^((?:[123]\s)?[^\d:;,]+?)\s+\d/);return m?m[1].trim():""};
+function puNextSunday(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7||7));return puYMD(d)}
+
+/* ---------- 1. Modo sin IA ---------- */
+function aiOn(){try{return !!(TP.cfg&&TP.cfg().key)}catch(e){return false}}
+function aiMark(){document.documentElement.toggleAttribute("data-noai",!aiOn())}
+(function(){if(window.TP&&TP.saveCfg){const o=TP.saveCfg;TP.saveCfg=function(c){const r=o.apply(this,arguments);setTimeout(aiMark,0);return r}}aiMark()})();
+function aiNote(){if(!document.documentElement.hasAttribute("data-noai"))return;const v=document.getElementById("view");if(!v||v.querySelector(".noai-note"))return;
+  let tab="";try{tab=tabOf(CURRENT)}catch(e){}
+  if(tab!=="estudio"&&CURRENT!=="armar")return;if(["lugares","cronologia","banco"].includes(CURRENT))return;
+  const d=document.createElement("div");d.className="noai-note";
+  d.innerHTML=`<div><b>Estas herramientas trabajan con la IA</b><span>Para usarlas, pegue su clave en Ajustes → Inteligencia artificial. La Biblia, la concordancia, sus enseñanzas, el calendario, las series y las diapositivas funcionan sin ella.</span></div><button class="btn small" data-go="ajustes">Ir a Ajustes</button>`;
+  v.prepend(d)}
+/* en una enseñanza que pertenece a una serie: anterior y siguiente */
+function serNav(){const v=document.getElementById("view");if(!v||!LIB||LSTATE.item==null||v.querySelector(".sernav"))return;const acts=v.querySelector("#lpulpit");if(!acts)return;
+  const it=LIB.items[LSTATE.item];if(!it||!it.serie)return;const l=LIB.items.filter(x=>x.serie===it.serie).sort((a,b)=>(a.so||0)-(b.so||0));const k=l.indexOf(it);if(k<0)return;
+  const d=document.createElement("div");d.className="sernav";
+  d.innerHTML=`<button class="btn small ghost" data-sn="${k>0?l[k-1].i:""}"${k>0?"":" disabled"}>‹ Anterior</button><button class="sntitle" data-go="series">Serie «${esc(it.serie)}» · ${k+1} de ${l.length}</button><button class="btn small ghost" data-sn="${k<l.length-1?l[k+1].i:""}"${k<l.length-1?"":" disabled"}>Siguiente ›</button>`;
+  d.onclick=e=>{const b=e.target.closest("[data-sn]");if(!b||b.disabled)return;e.stopPropagation();LSTATE.item=+b.dataset.sn;go("biblioteca")};
+  const box=acts.closest(".out-actions")||acts.parentElement;box.parentElement.insertBefore(d,box)}
+new MutationObserver(()=>{aiNote();try{serNav()}catch(e){}try{proxInsert()}catch(e){}}).observe(document.getElementById("view")||document.body,{childList:true});
+
+/* ---------- 2. Series para predicar ---------- */
+function serUser(){const l=ls.get("tp_series",[]);return Array.isArray(l)?l:[]}
+function serSaveUser(l){ls.set("tp_series",l)}
+function serAll(){const out=[];
+  if(LIB){const m=new Map();for(const it of LIB.items){if(!it.serie)continue;if(!m.has(it.serie))m.set(it.serie,[]);m.get(it.serie).push(it)}
+    for(const [n,l] of m){l.sort((a,b)=>(a.so||0)-(b.so||0));out.push({id:"lib:"+n,n,lib:true,refs:l.map(x=>"L"+x.i)})}}
+  for(const s of serUser())out.push({id:s.id,n:s.n||"Serie sin nombre",lib:false,refs:(s.refs||[]).filter(Boolean)});
+  return out}
+function serBooks(s){const b=[];for(const r of s.refs){const inf=calRefInfo(r);const k=inf&&puBook(inf.r);if(k&&!b.includes(k))b.push(k)}return b}
+let SEROPEN=null;
+function viewSeries(v,opts={}){
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Mis enseñanzas</p><h1>Series para predicar</h1><p class="lede">Mensajes que se predican en orden, una semana tras otra. Ábralos uno por uno o agende la serie completa en el calendario.</p><p class="muted">Cargando…</p>`;
+  loadLib().catch(()=>{}).then(()=>{
+  const all=serAll();if(opts.open)SEROPEN=opts.open;
+  const card=s=>{const open=SEROPEN===s.id;const bk=serBooks(s);const done=s.refs.filter(r=>predAll()[r]).length;
+    return `<article class="sercard${open?" open":""}" data-ser="${esc(s.id)}">
+      <button class="serhead" data-sertoggle="${esc(s.id)}" aria-expanded="${open}"><span><b>${esc(s.n)}</b><small>${s.refs.length} mensajes${bk.length?" · "+esc(bk.slice(0,3).join(", ")):""}${done?` · ${done} predicados`:""}${s.lib?"":" · creada por usted"}</small></span><i>${open?"−":"+"}</i></button>
+      ${open?`<ol class="serlist">${s.refs.map((r,k)=>{const inf=calRefInfo(r);const p=predAll()[r];return `<li><button class="serrow" data-serref="${esc(r)}"><span class="sn">${k+1}</span><span><b>${esc(inf?inf.t:"(ya no está disponible)")}</b><small>${esc(inf?inf.r:"")}${p?" · predicada el "+esc(fmtDate(p)):""}</small></span></button></li>`}).join("")}</ol>
+      <div class="row" style="gap:8px;padding:0 14px 14px"><button class="btn primary" data-seragenda="${esc(s.id)}">Agendar la serie</button>${typeof sharePDFSerie==="function"?`<button class="btn" data-serpdf="${esc(s.id)}">PDF de la serie</button>`:""}${s.lib?`<button class="btn" data-sercopy="${esc(s.id)}">Hacer mi versión</button>`:`<button class="btn" data-seredit="${esc(s.id)}">Editar</button><button class="btn ghost danger" data-serdel="${esc(s.id)}">Eliminar</button>`}</div>`:""}
+    </article>`};
+  const libS=all.filter(s=>s.lib),mine=all.filter(s=>!s.lib);
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Mis enseñanzas</p><h1>Series para predicar</h1>
+  <p class="lede">Mensajes que se predican en orden, una semana tras otra. Ábralos uno por uno o agende la serie completa en el calendario.</p>
+  <div class="row" style="gap:8px;margin:0 0 16px"><button class="btn primary" id="sernew">Crear una serie</button><button class="btn" data-go="calendario">Ver el calendario</button></div>
+  ${mine.length?`<div class="section-head"><h2>Mis series</h2></div><div class="serwrap">${mine.map(card).join("")}</div>`:""}
+  <div class="section-head"><h2>Series del archivo</h2><span class="muted" style="font-size:13px">${libS.length} series</span></div>
+  <div class="serwrap">${libS.map(card).join("")||'<p class="muted">No hay series en el archivo.</p>'}</div>`;
+  $("#sernew").onclick=()=>serEdit(null);
+  v.onclick=e=>{const t=e.target.closest("button");if(!t)return;const S=id=>serAll().find(x=>x.id===id);
+    if(t.dataset.sertoggle){SEROPEN=SEROPEN===t.dataset.sertoggle?null:t.dataset.sertoggle;viewSeries(v);return}
+    if(t.dataset.serref){const inf=calRefInfo(t.dataset.serref);inf&&inf.open();return}
+    if(t.dataset.seragenda){serAgenda(S(t.dataset.seragenda));return}
+    if(t.dataset.serpdf){const s=S(t.dataset.serpdf);sharePDFSerie(s.n,s.refs.map(r=>{if(r[0]==="L"){const it=LIB.items[+r.slice(1)];return it?{md:autoFix(libToMd(it),true),t:it.t,r:it.r}:null}const sm=SERMONS.find(x=>"S"+x.id===r);return sm&&sm.ensenanza?{md:sm.ensenanza,t:sm.titulo,r:sm.texto}:null}).filter(Boolean));return}
+    if(t.dataset.seredit){serEdit(serUser().find(x=>x.id===t.dataset.seredit));return}
+    if(t.dataset.sercopy){const s=S(t.dataset.sercopy);serEdit({id:"",n:s.n+" (mi versión)",refs:[...s.refs]});return}
+    if(t.dataset.serdel){if(!confirm("¿Eliminar esta serie? Las enseñanzas no se borran, solo la lista."))return;serSaveUser(serUser().filter(x=>x.id!==t.dataset.serdel));SEROPEN=null;viewSeries(v);toast("Serie eliminada")}};
+  })}
+/* crear o editar una serie propia */
+function serEdit(s){const sh=$("#sheet");const ed=s?{id:s.id||"",n:s.n||"",refs:[...(s.refs||[])]}:{id:"",n:"",refs:[]};let q="";
+  loadLib().catch(()=>{}).then(()=>{
+  const opts=[...SERMONS.map(x=>({k:"S"+x.id,t:x.titulo||"Sin título",f:"Preparada en la app",n:norm((x.titulo||"")+" "+(x.texto||""))})),...(LIB?LIB.items.map(it=>({k:"L"+it.i,t:it.t,f:(LIB.carpetas[it.c]||{}).t||"",n:it._t})):[])];
+  const render=()=>{const nq=norm(q.trim());const res=nq?opts.filter(o=>o.n.includes(nq)&&!ed.refs.includes(o.k)).slice(0,30):[];
+    sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Serie"><div class="row" style="justify-content:space-between"><h2>${ed.id?"Editar serie":"Nueva serie"}</h2><button class="btn ghost" data-x>Cerrar</button></div>
+      <div class="field" style="margin:12px 0"><label for="sern">Nombre de la serie</label><input type="text" id="sern" value="${esc(ed.n)}" placeholder="Ej.: El fruto del Espíritu"></div>
+      <p class="label" style="margin:0 0 6px">Mensajes en orden (${ed.refs.length})</p>
+      <ol class="serlist edit">${ed.refs.map((r,k)=>{const inf=calRefInfo(r);return `<li><span class="sn">${k+1}</span><span class="grow"><b>${esc(inf?inf.t:r)}</b><small>${esc(inf?inf.r:"")}</small></span><button class="btn small ghost" data-up="${k}" aria-label="Subir"${k?"":" disabled"}>↑</button><button class="btn small ghost" data-dn="${k}" aria-label="Bajar"${k<ed.refs.length-1?"":" disabled"}>↓</button><button class="btn small ghost danger" data-rm="${k}" aria-label="Quitar">×</button></li>`}).join("")||'<li class="muted" style="padding:8px 0">Todavía no hay mensajes. Búsquelos abajo y añádalos.</li>'}</ol>
+      <div class="field" style="margin:12px 0 6px"><label for="serq">Añadir mensajes</label><input type="search" id="serq" value="${esc(q)}" placeholder="Busque por título, texto o tema"></div>
+      <div class="reflist" style="max-height:240px;overflow:auto">${res.map(o=>`<button class="refrow" data-addref="${esc(o.k)}"><b>${esc(o.t)}</b><span>${esc(o.f)}</span></button>`).join("")}</div>
+      <div class="row" style="gap:8px;margin-top:14px"><button class="btn primary" data-save>Guardar la serie</button></div></div>`;
+    sh.hidden=false;const qi=$("#serq");qi.oninput=()=>{q=qi.value;const pos=qi.selectionStart;ed.n=$("#sern").value;render();const n2=$("#serq");n2.focus();try{n2.setSelectionRange(pos,pos)}catch(e){}};
+    $("#sern").oninput=e=>{ed.n=e.target.value}};
+  render();
+  sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))return closeSheet();const t=e.target.closest("button");if(!t)return;ed.n=$("#sern").value;
+    if(t.dataset.addref){ed.refs.push(t.dataset.addref);render();return}
+    if(t.dataset.rm){ed.refs.splice(+t.dataset.rm,1);render();return}
+    if(t.dataset.up){const k=+t.dataset.up;[ed.refs[k-1],ed.refs[k]]=[ed.refs[k],ed.refs[k-1]];render();return}
+    if(t.dataset.dn){const k=+t.dataset.dn;[ed.refs[k+1],ed.refs[k]]=[ed.refs[k],ed.refs[k+1]];render();return}
+    if(t.hasAttribute("data-save")){if(!ed.n.trim()){$("#sern").focus();toast("Póngale un nombre a la serie");return}if(!ed.refs.length){toast("Añada al menos un mensaje");return}
+      const l=serUser();if(ed.id){const i=l.findIndex(x=>x.id===ed.id);if(i>=0)l[i]={id:ed.id,n:ed.n.trim(),refs:ed.refs}}else{ed.id="s"+Date.now().toString(36);l.push({id:ed.id,n:ed.n.trim(),refs:ed.refs})}
+      serSaveUser(l);closeSheet();SEROPEN=ed.id;toast("Serie guardada");if(CURRENT==="series")viewSeries($("#view"));else go("series")}};
+  })}
+/* agendar todos los mensajes de una serie en el calendario */
+function serAgenda(s){if(!s)return;const sh=$("#sheet");const st={f:puNextSunday(),cada:7,lugar:""};
+  const fechas=()=>s.refs.map((r,k)=>puAdd(st.f,k*st.cada));
+  const render=()=>{const fs=fechas();
+    sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Agendar serie"><div class="row" style="justify-content:space-between"><h2>Agendar «${esc(s.n)}»</h2><button class="btn ghost" data-x>Cerrar</button></div>
+      <div class="row" style="gap:10px;margin:12px 0;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="min-width:150px"><label for="saf">Primer mensaje</label><input type="date" id="saf" value="${st.f}"></div>
+        <div class="field" style="min-width:150px"><label for="sac">Repetir</label><select id="sac">${[[7,"Cada semana"],[14,"Cada dos semanas"],[1,"Todos los días"],[3,"Cada tres días"]].map(([n,t])=>`<option value="${n}"${st.cada===n?" selected":""}>${t}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:160px"><label for="sal">Lugar (opcional)</label><input type="text" id="sal" value="${esc(st.lugar)}" placeholder="Ej.: Culto dominical"></div></div>
+      <ol class="serlist">${s.refs.map((r,k)=>{const inf=calRefInfo(r);const h=calHist(r).filter(d=>d<fs[k]);const ult=h[h.length-1];const rec=ult&&(new Date(fs[k])-new Date(ult))<365*864e5;
+        return `<li><span class="sn">${k+1}</span><span><b>${esc(fmtDate(fs[k]))}</b><small>${esc(inf?inf.t:r)}${rec?` · <em class="warn">ya la predicó el ${esc(fmtDate(ult))}</em>`:""}</small></span></li>`}).join("")}</ol>
+      <div class="row" style="gap:8px;margin-top:14px"><button class="btn primary" data-ok>Agendar ${s.refs.length} fechas</button></div></div>`;
+    sh.hidden=false;
+    $("#saf").onchange=e=>{if(e.target.value){st.f=e.target.value;render()}};
+    $("#sac").onchange=e=>{st.cada=+e.target.value;render()};
+    $("#sal").oninput=e=>{st.lugar=e.target.value}};
+  render();
+  sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))return closeSheet();const t=e.target.closest("[data-ok]");if(!t)return;
+    const fs=fechas();const l=calAll();const base=Date.now().toString(36);
+    s.refs.forEach((r,k)=>l.push({id:"c"+base+k,fecha:fs[k],ref:r,titulo:"",lugar:st.lugar.trim(),nota:`Serie «${s.n}» · ${k+1} de ${s.refs.length}`}));
+    calSave(l);closeSheet();const [yy,mm]=fs[0].split("-").map(Number);CALM={y:yy,m:mm-1};toast(`Serie agendada: ${s.refs.length} fechas`);go("calendario")}}
+
+/* ---------- 2b. Próximo a predicar ---------- */
+function proxHTML(){const hoy=puYMD(new Date());const l=calAll().filter(e=>e.fecha>=hoy).sort((a,b)=>a.fecha.localeCompare(b.fecha));const e=l[0];if(!e)return "";const inf=calRefInfo(e.ref);
+  const d=Math.round((new Date(e.fecha+"T12:00")-new Date(hoy+"T12:00"))/864e5);const cuando=d===0?"Hoy":d===1?"Mañana":fmtDate(e.fecha);
+  return `<div class="proxcard"><div><span class="label" style="margin:0">Su próxima predicación · ${esc(cuando)}</span><b>${esc(inf?inf.t:(e.titulo||"Sin enseñanza"))}</b><small>${esc([inf&&inf.r,e.lugar,e.nota].filter(Boolean).join(" · "))}</small></div>${inf?`<button class="btn small primary" data-proxref="${esc(e.ref)}">Abrir</button>`:""}</div>`}
+function proxInsert(){const v=document.getElementById("view");if(!v||v.querySelector(".proxcard"))return;let anchor=null;
+  if(CURRENT==="calendario")anchor=v.querySelector(".calbar");else if(v.querySelector("#accbanner"))anchor=v.querySelector("#vnbanner");
+  if(!anchor)return;const h=proxHTML();if(!h)return;const w=document.createElement("div");w.innerHTML=h;const el=w.firstChild;anchor.parentElement.insertBefore(el,CURRENT==="calendario"?anchor:anchor);
+  el.onclick=e=>{const b=e.target.closest("[data-proxref]");if(!b)return;e.stopPropagation();const inf=calRefInfo(b.dataset.proxref);inf&&inf.open()}}
+
+/* ---------- 3. Su año en el púlpito (en el calendario) ---------- */
+function calStats(v){if(CURRENT!=="calendario"||!v||v.querySelector("#calstats"))return;const y=(CALM&&CALM.y)||new Date().getFullYear();
+  const bar=v.querySelector(".calbar");if(bar&&!bar.querySelector("#calser")){const b=document.createElement("button");b.className="btn";b.id="calser";b.textContent="Agendar una serie";b.onclick=()=>go("series");bar.appendChild(b)}
+  const P=Object.entries(predAll()).filter(([k,d])=>d&&d.startsWith(String(y)));
+  const hoy=puYMD(new Date());const fut=calAll().filter(e=>e.fecha.startsWith(String(y))&&e.fecha>hoy).length;
+  const sec=document.createElement("section");sec.id="calstats";
+  if(!P.length){sec.innerHTML=`<div class="section-head"><h2>Su año en el púlpito · ${y}</h2></div><p class="muted" style="margin:0">Cuando marque enseñanzas como predicadas, aquí verá cuántas predicó por mes, de qué libros y de qué carpetas.</p>`;v.appendChild(sec);return}
+  const mes=Array(12).fill(0);const libros={},carp={};
+  for(const [k,d] of P){mes[+d.slice(5,7)-1]++;const inf=calRefInfo(k);if(!inf)continue;const b=puBook(inf.r);if(b)libros[b]=(libros[b]||0)+1;carp[inf.f]=(carp[inf.f]||0)+1}
+  const top=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);const mx=Math.max(...mes,1);
+  const ML=["E","F","M","A","M","J","J","A","S","O","N","D"];
+  /* carpetas que casi no ha usado en los últimos doce meses */
+  const hace=puYMD(new Date(Date.now()-365*864e5));const usadas={};
+  for(const [k,d] of Object.entries(predAll())){if(!d||d<hace||k[0]!=="L"||!LIB)continue;const it=LIB.items[+k.slice(1)];if(it)usadas[it.c]=(usadas[it.c]||0)+1}
+  const poco=LIB?LIB.carpetas.map((c,i)=>({i,t:c.t,n:LIB.items.filter(x=>x.c===i).length,u:usadas[i]||0})).filter(c=>c.n>=5&&c.u===0).sort((a,b)=>b.n-a.n).slice(0,6):[];
+  sec.innerHTML=`<div class="section-head"><h2>Su año en el púlpito · ${y}</h2><span class="muted" style="font-size:13px">${P.length} predicadas${fut?` · ${fut} por venir`:""}</span></div>
+  <div class="statgrid">
+    <div class="card statc"><p class="label">Por mes</p><div class="sbars" role="img" aria-label="Enseñanzas predicadas por mes">${mes.map((n,i)=>`<div class="sbar" title="${n}"><i style="height:${Math.round(n/mx*100)}%"></i><small>${ML[i]}</small></div>`).join("")}</div></div>
+    <div class="card statc"><p class="label">Libros que más predicó</p>${top(libros).slice(0,6).map(([b,n])=>`<div class="srow"><span>${esc(b)}</span><b>${n}</b></div>`).join("")||'<p class="muted" style="margin:0">Sin datos</p>'}</div>
+    <div class="card statc"><p class="label">Por carpeta</p>${top(carp).slice(0,6).map(([c,n])=>`<div class="srow"><span>${esc(c||"Sin carpeta")}</span><b>${n}</b></div>`).join("")}</div>
+  </div>
+  ${poco.length?`<div class="card statc" style="margin-top:12px"><p class="label">Carpetas que no ha usado en el último año</p><div class="chips">${poco.map(c=>`<button class="chip" data-pococ="${c.i}">${esc(c.t)} · ${c.n}</button>`).join("")}</div></div>`:""}`;
+  v.appendChild(sec);
+  sec.onclick=e=>{const b=e.target.closest("[data-pococ]");if(!b)return;e.stopPropagation();LSTATE.c=+b.dataset.pococ;LSTATE.item=null;LSTATE.q="";go("sermones")}}
+/* el calendario está en el último bloque de la app: se envuelve cuando ya cargó todo */
+setTimeout(function(){if(typeof viewCalendario!=="function"||viewCalendario.__pu)return;const o=viewCalendario;
+  viewCalendario=function(v,opts){const r=o.apply(this,arguments);loadLib().catch(()=>{}).then(()=>setTimeout(()=>calStats(v),0));return r};viewCalendario.__pu=1;
+  if(CURRENT==="calendario")loadLib().catch(()=>{}).then(()=>setTimeout(()=>calStats(document.getElementById("view")),50))},0);
+
+/* ---------- 4. Copia semanal en el repositorio privado ---------- */
+const BKW={busy:false,err:""};
+async function bkPayload(){const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user"||k==="tp_libkey"||k.startsWith("tp_bv_"))continue;kv[k]=ls.get(k,null)}
+  return {app:"taller-del-predicador",v:1,fecha:new Date().toISOString(),sermones:await allSermonsForBackup(),kv}}
+async function bkWeekly(force){const c=typeof syncCfg==="function"&&syncCfg();if(!c||BKW.busy||!navigator.onLine)return;
+  const last=+ls.get("tp_bk_last",0)||0;if(!force&&Date.now()-last<7*864e5)return;
+  BKW.busy=true;try{
+    const data=await bkPayload();const path="respaldos/"+PU_PREFIX+"-"+puYMD(new Date())+".json";
+    let sha=null;const g=await fetch(ghUrl(c,"/contents/"+path),{headers:ghHead(c),cache:"no-store"});if(g.ok)sha=(await g.json()).sha;
+    const body={message:"Copia semanal "+puYMD(new Date()),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
+    const r=await fetch(ghUrl(c,"/contents/"+path),{method:"PUT",headers:ghHead(c,{"Content-Type":"application/json"}),body:JSON.stringify(body)});
+    if(!r.ok)throw new Error("GitHub respondió "+r.status);
+    ls.set("tp_bk_last",Date.now());BKW.err="";
+    /* se conservan las doce copias más recientes */
+    try{const l=await fetch(ghUrl(c,"/contents/respaldos"),{headers:ghHead(c),cache:"no-store"});if(l.ok){const files=(await l.json()).filter(f=>f.name.startsWith(PU_PREFIX+"-")).sort((a,b)=>a.name.localeCompare(b.name));
+      for(const f of files.slice(0,Math.max(0,files.length-12)))await fetch(ghUrl(c,"/contents/"+f.path),{method:"DELETE",headers:ghHead(c,{"Content-Type":"application/json"}),body:JSON.stringify({message:"Copia antigua",sha:f.sha})})}}catch(e){}
+    if(force)toast("Copia guardada en su repositorio privado");
+  }catch(e){BKW.err=e.message||"No se pudo";if(force)toast("No se pudo guardar la copia: "+BKW.err)}
+  finally{BKW.busy=false;const el=document.getElementById("bkst");if(el)el.textContent=bkStatus()}}
+function bkStatus(){const last=+ls.get("tp_bk_last",0)||0;if(BKW.err)return "Aviso: "+BKW.err;
+  return last?"Última copia: "+new Date(last).toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"})+". La próxima se hace sola a los siete días.":"Todavía no hay copias. La primera se hace sola en unos segundos."}
+setTimeout(()=>bkWeekly(false),9000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")setTimeout(()=>bkWeekly(false),4000)});
+(function(){if(typeof syncSection!=="function")return;const os=syncSection,ow=syncWire;
+  syncSection=function(){const h=os.apply(this,arguments);if(!syncCfg())return h;
+    return h+`<div class="card" style="display:grid;gap:10px;margin-top:12px"><b>Copia de seguridad semanal</b>
+      <p class="muted" style="margin:0;font-size:14px">Cada semana la app guarda sola una copia completa (enseñanzas, calendario, series, marcas) en la carpeta <b>respaldos</b> de su repositorio privado. Se conservan las doce más recientes. Para recuperar una, descárguela de GitHub y use «Restaurar desde una copia» en esta misma página.</p>
+      <div class="row" style="gap:8px"><button class="btn" id="bknow">Hacer una copia ahora</button></div><p class="muted" style="margin:0;font-size:13px" id="bkst" role="status">${esc(bkStatus())}</p></div>`};
+  syncWire=function(v){const r=ow.apply(this,arguments);const b=v.querySelector("#bknow");if(b)b.onclick=async()=>{b.disabled=true;await bkWeekly(true);b.disabled=false};return r}})();
+
+/* ---------- 5. Volver a mostrar el aviso de versiones nuevas ---------- */
+(function(){if(typeof aparienciaSection!=="function")return;const os=aparienciaSection,ow=aparienciaWire;
+  aparienciaSection=function(){const h=os.apply(this,arguments);if(window.__AP==="ar_")return h;
+    return h+`<div class="card" style="margin-top:12px"><label class="row" style="gap:10px;font-size:15px;cursor:pointer"><input type="checkbox" id="vnshow" ${ls.get("tp_vnhide",false)?"":"checked"}> Mostrar el aviso de «Versiones nuevas» en Mis enseñanzas</label></div>`};
+  aparienciaWire=function(v){const r=ow.apply(this,arguments);const c=document.getElementById("vnshow");if(c)c.onchange=()=>{ls.set("tp_vnhide",!c.checked);toast(c.checked?"El aviso se mostrará":"Aviso oculto")};return r}})();
+
+/* ---------- estilos ---------- */
+(function(){const s=document.createElement("style");s.textContent=`
+html[data-noai] #lprep,html[data-noai] [data-e="hoja"],html[data-noai] .askbox{display:none!important}
+.noai-note{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--oro);border-radius:12px;padding:12px 14px;margin:0 0 16px}
+.noai-note div{display:grid;gap:3px;flex:1;min-width:220px}.noai-note b{font-size:15px}.noai-note span{font-size:13.5px;color:var(--muted)}
+#vnbanner.vnwrap{position:relative}#vnbanner .vnbanner{padding-right:56px}
+.vnx{position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.vnx:hover{background:var(--sunk,rgba(0,0,0,.05));color:var(--ink)}
+.serwrap{display:grid;gap:10px;margin:0 0 18px}
+.sercard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.sercard.open{border-color:var(--azul)}
+.serhead{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;padding:14px 16px;color:inherit;font:inherit;cursor:pointer}
+.serhead>span{display:grid;gap:3px;flex:1}.serhead b{font-family:var(--f-text);font-size:17px;color:var(--azul)}.serhead small{color:var(--muted);font-size:13px}
+.serhead i{font-style:normal;font-size:22px;color:var(--muted);width:24px;text-align:center}
+.serlist{list-style:none;margin:0;padding:0 14px 10px;display:grid;gap:2px}
+.serlist li{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.serlist li:first-child{border-top:0}
+.serlist .sn{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:600;background:var(--sunk,rgba(0,0,0,.05));color:var(--azul)}
+.serlist small{display:block;color:var(--muted);font-size:12.5px}.serlist .grow{flex:1;min-width:0}.serlist .warn{color:var(--danger);font-style:normal}
+.serrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:4px 0;color:inherit;font:inherit;cursor:pointer}
+.serrow b{font-weight:600}
+.sernav{display:flex;align-items:center;gap:8px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 8px;margin:0 0 12px}.sntitle{flex:1;background:none;border:0;font:inherit;font-size:13.5px;color:var(--azul);cursor:pointer;text-align:center}
+.proxcard{display:flex;align-items:center;gap:12px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--oro);border-radius:12px;padding:12px 14px;margin:0 0 14px}.proxcard>div{display:grid;gap:2px}.proxcard b{font-family:var(--f-text);font-size:17px;color:var(--azul)}.proxcard small{color:var(--muted);font-size:13px}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.statc{display:grid;gap:6px;align-content:start}.statc .label{margin:0 0 4px}
+.sbars{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;height:110px;align-items:end}
+.sbar{display:grid;grid-template-rows:1fr auto;height:100%;gap:3px;text-align:center}.sbar i{align-self:end;display:block;background:var(--azul);border-radius:3px 3px 0 0;min-height:2px}
+.sbar small{font-size:10.5px;color:var(--muted)}
+.srow{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px dashed var(--line)}.srow:last-child{border-bottom:0}
+@media (max-width:560px){.top .mbrand{display:block!important;font-size:0!important;line-height:0}.top .mbrand::before{font-size:16px;margin-right:0;width:30px;height:30px;vertical-align:middle}}
+`;document.head.appendChild(s)})();
+
+/* ============ Herramientas de estudio sin IA y sin internet (oct 2026) ============
+   Subrayar y anotar versículos · Referencias cruzadas · Lugares bíblicos con mapa ·
+   Línea de tiempo · Plan de lectura · Buscador único.
+   Fuentes: referencias cruzadas y lugares de OpenBible.info (CC BY 4.0); mapa de Natural Earth (dominio público). */
+
+const ST={xref:null,xrefP:null,lug:null,lugP:null,mapa:null,mapaP:null,vlug:null};
+function stJSON(name,key){if(ST[key])return Promise.resolve(ST[key]);if(ST[key+"P"])return ST[key+"P"];
+  ST[key+"P"]=fetch(name).then(r=>{if(!r.ok)throw new Error(name);return r.json()}).then(d=>{ST[key]=d;return d}).catch(e=>{ST[key+"P"]=null;throw e});return ST[key+"P"]}
+const stXref=()=>stJSON("xref.json","xref");
+const stLug=()=>stJSON("lugares.json","lug").then(l=>{if(!ST.vlug){const m=new Map();l.forEach((p,i)=>{p.i=i;p._n=norm(p.n);for(const r of p.v){if(!m.has(r))m.set(r,[]);m.get(r).push(i)}});ST.vlug=m}return l});
+const stMapa=()=>stJSON("mapa.json","mapa");
+const bName=b=>(BIBLE&&BIBLE[b]?BIBLE[b].name:"");
+const vText=(b,c,v)=>{try{return BIBLE[b].chs[c-1][v-1]||""}catch(e){return ""}};
+const vLabel=(b,c,v,v2)=>`${bName(b)} ${c}:${v}${v2&&v2!==v?"-"+v2:""}`;
+const stCut=(s,n)=>{s=String(s||"");return s.length>n?s.slice(0,n).replace(/\s+\S*$/,"")+"…":s};
+
+/* ---------- 1. Subrayados y notas ---------- */
+const MKC={am:["Amarillo","#F2C94C"],ve:["Verde","#6FCF97"],az:["Azul","#7DB7F0"],ro:["Rosa","#F2A0BE"]};
+function mkAll(){const o=ls.get("tp_marks",{});return o&&typeof o==="object"?o:{}}
+function mkSet(key,val){const o=mkAll();if(!val||(!val.c&&!(val.n||"").trim()))delete o[key];else o[key]={c:val.c||"",n:(val.n||"").trim(),f:new Date().toISOString().slice(0,10)};ls.set("tp_marks",o)}
+function bibMarks(v,b,c){const o=mkAll();v.querySelectorAll(".chapter .vs").forEach(s=>{const m=o[`${b}.${c}.${s.dataset.v}`];
+  if(m&&m.c)s.dataset.mk=m.c;else delete s.dataset.mk;s.classList.toggle("hasnote",!!(m&&m.n))})}
+/* panel de estudio del versículo marcado */
+function vstudy(b,c,sel){const old=document.getElementById("vstudy");if(old)old.remove();if(!sel||!sel.length)return;
+  const rp=document.getElementById("refpanel");if(!rp)return;const v=sel[0];const key=`${b}.${c}.${v}`;const m=mkAll()[key]||{};
+  const box=document.createElement("section");box.id="vstudy";box.className="vstudy card";
+  box.innerHTML=`<div class="row" style="justify-content:space-between;gap:8px"><b class="vst">Estudio de ${esc(vLabel(b,c,v,sel.length>1?sel[sel.length-1]:0))}</b></div>
+    <div class="mkrow" role="group" aria-label="Color para subrayar">${Object.entries(MKC).map(([k,[n,col]])=>`<button class="mkc${m.c===k?" on":""}" data-mk="${k}" style="--mk:${col}" aria-label="Subrayar en ${n}" title="${n}"></button>`).join("")}<button class="btn small ghost" data-mk="">Quitar color</button></div>
+    <label class="label" for="vnote" style="margin:4px 0 0">Mi nota${sel.length>1?" (en el versículo "+v+")":""}</label>
+    <textarea id="vnote" rows="2" placeholder="Escriba una idea, un bosquejo o algo que quiera recordar de este versículo">${esc(m.n||"")}</textarea>
+    <div id="vlug"></div>
+    <div id="vxref"><p class="muted" style="margin:0;font-size:13px">Buscando referencias cruzadas…</p></div>`;
+  rp.parentElement.insertBefore(box,rp.nextSibling);
+  box.querySelectorAll("[data-mk]").forEach(x=>x.onclick=()=>{const col=x.dataset.mk;for(const n of sel){const k=`${b}.${c}.${n}`;const cur=mkAll()[k]||{};mkSet(k,{c:col,n:cur.n})}
+    box.querySelectorAll(".mkc").forEach(y=>y.classList.toggle("on",y.dataset.mk===col&&!!col));bibMarks(document.getElementById("view"),b,c);toast(col?"Subrayado":"Color quitado")});
+  let tm;box.querySelector("#vnote").oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{const cur=mkAll()[key]||{};mkSet(key,{c:cur.c,n:e.target.value});bibMarks(document.getElementById("view"),b,c)},500)};
+  /* lugares de este versículo */
+  stLug().then(()=>{const ids=new Set();for(const n of sel)(ST.vlug.get(`${b}.${c}.${n}`)||[]).forEach(i=>ids.add(i));const el=box.querySelector("#vlug");if(!el||!ids.size)return;
+    el.innerHTML=`<p class="label" style="margin:6px 0 4px">Lugares en este pasaje</p><div class="chips">${[...ids].map(i=>`<button class="chip" data-lug="${i}">${esc(ST.lug[i].n)}</button>`).join("")}</div>`;
+    el.onclick=e=>{const t=e.target.closest("[data-lug]");if(t)go("lugares",{sel:+t.dataset.lug})}}).catch(()=>{});
+  /* referencias cruzadas */
+  stXref().then(x=>{const el=box.querySelector("#vxref");if(!el)return;const raw=x[key];
+    if(!raw){el.innerHTML='<p class="muted" style="margin:0;font-size:13px">Este versículo no tiene referencias cruzadas registradas.</p>';return}
+    const L=raw.split(";").map(s=>{const m=s.match(/^(\d+)\.(\d+)\.(\d+)(?:-(?:(\d+)\.)?(\d+))?$/);if(!m)return null;const b2=+m[1],c2=+m[2],v1=+m[3];const c3=m[4]?+m[4]:c2,v2=m[5]?+m[5]:0;return {b:b2,c:c2,v:v1,c3,v2}}).filter(Boolean);
+    el.innerHTML=`<p class="label" style="margin:8px 0 4px">Referencias cruzadas</p><div class="xlist">${L.map(r=>{const t=r.c3===r.c&&r.v2?[...Array(Math.min(r.v2-r.v+1,3))].map((_,i)=>vText(r.b,r.c,r.v+i)).join(" "):vText(r.b,r.c,r.v);
+      return `<button class="xrow" data-xb="${r.b}" data-xc="${r.c}" data-xv="${r.v}" data-xv2="${r.c3===r.c?(r.v2||r.v):r.v}"><b>${esc(bName(r.b))} ${r.c}:${r.v}${r.v2?(r.c3!==r.c?"-"+r.c3+":"+r.v2:"-"+r.v2):""}</b><span>${esc(stCut(t,170))}</span></button>`}).join("")}</div>
+      <p class="muted" style="margin:6px 0 0;font-size:11.5px">Referencias cruzadas: OpenBible.info (CC BY).</p>`;
+    el.onclick=e=>{const t=e.target.closest(".xrow");if(!t)return;goBible(+t.dataset.xb,+t.dataset.xc,[+t.dataset.xv,+t.dataset.xv2])}}).catch(()=>{const el=box.querySelector("#vxref");if(el)el.innerHTML='<p class="muted" style="margin:0;font-size:13px">No se pudieron abrir las referencias cruzadas.</p>'})}
+let MKF="";
+function viewMarcas(v){const o=mkAll();const keys=Object.keys(o).map(k=>{const [b,c,vv]=k.split(".").map(Number);return {k,b,c,v:vv,mk:o[k].c||"",n:o[k].n||""}}).sort((a,b)=>a.b-b.b||a.c-b.c||a.v-b.v);
+  const L=keys.filter(x=>!MKF||(MKF==="nota"?x.n:x.mk===MKF));
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Escritura</p><h1>Subrayados y notas</h1><p class="lede">Los versículos que ha subrayado o anotado en la Biblia. Para subrayar, toque un versículo en la Biblia y escoja un color.</p>
+  <div class="chips" style="margin:0 0 14px"><button class="chip${MKF?"":" on"}" data-f="">Todos (${keys.length})</button>${Object.entries(MKC).map(([k,[n,col]])=>`<button class="chip${MKF===k?" on":""}" data-f="${k}"><i class="mkdot" style="background:${col}"></i>${n} (${keys.filter(x=>x.mk===k).length})</button>`).join("")}<button class="chip${MKF==="nota"?" on":""}" data-f="nota">Con nota (${keys.filter(x=>x.n).length})</button></div>
+  ${BIBLE?(L.length?`<div class="mklist">${L.map(x=>`<button class="mkitem" data-b="${x.b}" data-c="${x.c}" data-v="${x.v}"><span class="mkbar" style="background:${x.mk?MKC[x.mk][1]:"var(--line)"}"></span><span><b>${esc(vLabel(x.b,x.c,x.v))}</b><em>${esc(vText(x.b,x.c,x.v))}</em>${x.n?`<small>✎ ${esc(x.n)}</small>`:""}</span></button>`).join("")}</div>`:'<div class="card muted">Todavía no hay nada aquí. Abra la Biblia, toque un versículo y escoja un color o escriba una nota.</div>'):'<p class="muted">Cargando la Biblia…</p>'}`;
+  v.onclick=e=>{const f=e.target.closest("[data-f]");if(f){MKF=f.dataset.f;viewMarcas(v);return}const it=e.target.closest(".mkitem");if(it)goBible(+it.dataset.b,+it.dataset.c,[+it.dataset.v,+it.dataset.v])}}
+
+/* ---------- 2. Lugares bíblicos con mapa ---------- */
+const LTIPO={settlement:"Ciudad o pueblo",region:"Región",river:"Río",mountain:"Monte","mountain range":"Cordillera",island:"Isla","body of water":"Mar o lago","people group":"Pueblo",valley:"Valle",spring:"Fuente",well:"Pozo",road:"Camino",hill:"Colina",garden:"Huerto",gate:"Puerta",tower:"Torre",pool:"Estanque",wadi:"Arroyo",field:"Campo",desert:"Desierto",plain:"Llanura",forest:"Bosque",ford:"Vado",cave:"Cueva",rock:"Peña",building:"Edificio",altar:"Altar",camp:"Campamento",landmark:"Lugar",district:"Barrio",canal:"Canal",harbor:"Puerto",mountain_pass:"Paso"};
+let LUG={q:"",sel:null,vb:null};
+function lugXY(p,M){return [(p.x-M.lon0)*M.k*M.cx,(M.lat1-p.y)*M.k]}
+function viewLugares(v,opts={}){if(opts.sel!=null)LUG.sel=opts.sel;
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Lugares bíblicos</h1><p class="lede">Más de mil lugares de la Biblia en el mapa, con los versículos donde aparecen y las enseñanzas suyas que los mencionan. Funciona sin internet.</p><p class="muted">Abriendo el mapa…</p>`;
+  Promise.all([stLug(),stMapa(),loadLib().catch(()=>null)]).then(([L,M])=>{if(CURRENT!=="lugares")return;
+    v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Lugares bíblicos</h1>
+    <div class="lugwrap"><div class="lugmap"><div class="mapbox"><svg id="msvg" viewBox="0 0 ${M.w} ${M.h}" role="img" aria-label="Mapa de las tierras bíblicas"><rect class="sea" x="0" y="0" width="${M.w}" height="${M.h}"/><path class="land" d="${M.land}"/><path class="lake" d="${M.lakes}"/><path class="river" d="${M.rivers}"/><g id="mpts"></g></svg>
+      <div class="mapctl"><button class="btn small" data-mz="in" aria-label="Acercar">+</button><button class="btn small" data-mz="out" aria-label="Alejar">−</button><button class="btn small" data-mz="ts">Tierra Santa</button><button class="btn small" data-mz="all">Todo</button></div></div>
+      <p class="muted" style="font-size:11.5px;margin:6px 0 0">Ubicaciones: OpenBible.info (CC BY 4.0). Mapa: Natural Earth. Muchas ubicaciones antiguas son aproximadas.</p></div>
+      <div class="lugside"><div class="bigsearch" style="margin:0 0 10px"><input type="search" id="lugq" value="${esc(LUG.q)}" placeholder="Buscar un lugar: Nínive, Betel, Galacia…" aria-label="Buscar un lugar"></div><div id="lugres"></div></div></div>`;
+    const svg=$("#msvg"),g=$("#mpts");
+    const full={x:0,y:0,w:M.w,h:M.h};const ts=(()=>{const [x1,y1]=lugXY({x:33.6,y:33.6},M),[x2,y2]=lugXY({x:36.6,y:29.6},M);return {x:x1,y:y1,w:x2-x1,h:y2-y1}})();
+    if(!LUG.vb)LUG.vb={...ts};
+    const fit=b=>{const r=svg.clientWidth/svg.clientHeight||1.4;let {x,y,w,h}=b;if(w/h>r){const nh=w/r;y-=(nh-h)/2;h=nh}else{const nw=h*r;x-=(nw-w)/2;w=nw}
+      w=Math.max(4,Math.min(w,M.w*1.2));h=w/r;x=Math.max(-w*.2,Math.min(x,M.w-w*.8));y=Math.max(-h*.2,Math.min(y,M.h-h*.8));return {x,y,w,h}};
+    const draw=()=>{const vb=LUG.vb=fit(LUG.vb);svg.setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+      const px=vb.w/(svg.clientWidth||600),r=Math.max(2.6*px,vb.w/400),fs=12.5*px;const den=vb.w/((svg.clientWidth||600)/600);const minK=den>300?40:den>120?15:den>50?6:den>22?2:0;
+      const vis=L.filter(p=>{const [X,Y]=lugXY(p,M);return X>=vb.x&&X<=vb.x+vb.w&&Y>=vb.y&&Y<=vb.y+vb.h&&(p.k>=minK||p.i===LUG.sel)});
+      const lab=new Set();const placed=[];const order=vis.slice().sort((a,b)=>(b.i===LUG.sel)-(a.i===LUG.sel)||b.k-a.k);
+      for(const p of order){if(lab.size>=40)break;const [X,Y]=lugXY(p,M);const w=fs*0.55*p.n.length+r*2;if(placed.some(q=>X<q.x+q.w&&X+w>q.x&&Math.abs(Y-q.y)<fs*1.1))continue;placed.push({x:X,y:Y,w});lab.add(p.i)}
+      g.innerHTML=vis.map(p=>{const [X,Y]=lugXY(p,M);const on=p.i===LUG.sel;return `<g class="mpt${on?" on":""}" data-pl="${p.i}"><circle cx="${X.toFixed(2)}" cy="${Y.toFixed(2)}" r="${(on?r*2:r).toFixed(3)}"/>${lab.has(p.i)?`<text x="${(X+r*1.6).toFixed(2)}" y="${(Y+fs*.35).toFixed(2)}" font-size="${(on?fs*1.25:fs).toFixed(2)}">${esc(p.n)}</text>`:""}</g>`}).join("")};
+    const zoom=(f,cx,cy)=>{const vb=LUG.vb;cx=cx??vb.x+vb.w/2;cy=cy??vb.y+vb.h/2;LUG.vb={x:cx-(cx-vb.x)*f,y:cy-(cy-vb.y)*f,w:vb.w*f,h:vb.h*f};draw()};
+    $(".mapctl").onclick=e=>{const b=e.target.closest("[data-mz]");if(!b)return;const k=b.dataset.mz;if(k==="in")zoom(.6);if(k==="out")zoom(1/.6);if(k==="ts"){LUG.vb={...ts};draw()}if(k==="all"){LUG.vb={...full};draw()}};
+    /* arrastrar y pellizcar */
+    const pts=new Map();let moved=false;
+    const toU=(dx)=>dx*LUG.vb.w/svg.clientWidth;
+    svg.onpointerdown=e=>{svg.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=false};
+    svg.onpointermove=e=>{if(!pts.has(e.pointerId))return;const p=pts.get(e.pointerId);
+      if(pts.size===1){const dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;LUG.vb.x-=toU(dx);LUG.vb.y-=toU(dy);p.x=e.clientX;p.y=e.clientY;draw()}
+      else if(pts.size===2){const [a,b]=[...pts.values()];const d0=Math.hypot(a.x-b.x,a.y-b.y);p.x=e.clientX;p.y=e.clientY;const [a2,b2]=[...pts.values()];const d1=Math.hypot(a2.x-b2.x,a2.y-b2.y);
+        if(d0>0&&d1>0){moved=true;const rc=svg.getBoundingClientRect();const mx=(a2.x+b2.x)/2-rc.left,my=(a2.y+b2.y)/2-rc.top;zoom(d0/d1,LUG.vb.x+toU(mx),LUG.vb.y+toU(my))}}};
+    svg.onpointerup=svg.onpointercancel=e=>{pts.delete(e.pointerId)};
+    svg.onwheel=e=>{e.preventDefault();const rc=svg.getBoundingClientRect();zoom(e.deltaY>0?1.15:1/1.15,LUG.vb.x+toU(e.clientX-rc.left),LUG.vb.y+toU(e.clientY-rc.top))};
+    svg.onclick=e=>{if(moved)return;const t=e.target.closest("[data-pl]");if(t)pick(+t.dataset.pl,false)};
+    const side=()=>{const el=$("#lugres");const q=norm(LUG.q.trim());
+      if(LUG.sel!=null&&!q){const p=L[LUG.sel];const ens=[];
+        if(LIB&&p._n.length>=3){const re=new RegExp("(^|[^a-z])"+p._n.replace(/[-]/g,"[- ]?").replace(/[.*+?^${}()|[\]\\]/g,m=>m==="-"?m:"\\"+m)+"([^a-z]|$)");for(const it of LIB.items){if(re.test(it._b||"")){ens.push(it);if(ens.length>=12)break}}}
+        el.innerHTML=`<div class="card lugcard"><button class="btn small ghost" data-back>‹ Todos los lugares</button><h2 style="margin:6px 0 2px">${esc(p.n)}</h2><p class="muted" style="margin:0 0 8px;font-size:13.5px">${esc(LTIPO[p.t]||"Lugar")} · mencionado en ${p.k} ${p.k===1?"versículo":"versículos"}</p>
+          ${ens.length?`<p class="label" style="margin:8px 0 4px">En sus enseñanzas</p><div class="reflist">${ens.map(it=>`<button class="refrow" data-li="${it.i}"><b>${esc(it.t)}</b><span>${esc(it.r||"")}</span></button>`).join("")}</div>`:""}
+          <p class="label" style="margin:10px 0 4px">Versículos</p><div class="xlist">${p.v.slice(0,40).map(r=>{const [b,c,vv]=r.split(".").map(Number);return `<button class="xrow" data-xb="${b}" data-xc="${c}" data-xv="${vv}"><b>${esc(vLabel(b,c,vv))}</b><span>${esc(stCut(vText(b,c,vv),150))}</span></button>`}).join("")}</div>${p.k>40?`<p class="muted" style="font-size:12.5px;margin:6px 0 0">Se muestran 40 de ${p.k}. Busque «${esc(p.n)}» en la concordancia para verlos todos.</p>`:""}</div>`;return}
+      const R=(q?L.filter(p=>p._n.includes(q)).sort((a,b)=>(b._n.startsWith(q)-a._n.startsWith(q))||b.k-a.k):L).slice(0,q?60:40);
+      el.innerHTML=`${q?"":`<p class="label" style="margin:0 0 6px">Los más mencionados</p>`}<div class="reflist">${R.map(p=>`<button class="refrow" data-pick="${p.i}"><b>${esc(p.n)}</b><span>${esc(LTIPO[p.t]||"Lugar")} · ${p.k} ${p.k===1?"versículo":"versículos"}</span></button>`).join("")||'<p class="muted">No se encontró ese lugar.</p>'}</div>`};
+    const pick=(i,center=true)=>{LUG.sel=i;LUG.q="";const q=$("#lugq");if(q)q.value="";const p=L[i];if(center){const [X,Y]=lugXY(p,M);const w=Math.min(LUG.vb.w,p.k>200?160:60);LUG.vb={x:X-w/2,y:Y-w/2/1.4,w,h:w/1.4}}draw();side();if(window.innerWidth<820)$(".lugmap").scrollIntoView({block:"start",behavior:"smooth"})};
+    $("#lugres").onclick=e=>{const t=e.target.closest("button");if(!t)return;
+      if(t.dataset.pick){pick(+t.dataset.pick);return}if(t.hasAttribute("data-back")){LUG.sel=null;draw();side();return}
+      if(t.dataset.li){LSTATE.item=+t.dataset.li;go("biblioteca");return}
+      if(t.dataset.xb){goBible(+t.dataset.xb,+t.dataset.xc,[+t.dataset.xv,+t.dataset.xv])}};
+    let tm;$("#lugq").oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{LUG.q=e.target.value;side()},150)};
+    requestAnimationFrame(()=>{if(LUG.sel!=null&&opts.sel!=null)pick(LUG.sel);else draw();side()});
+  }).catch(()=>{v.innerHTML+=`<div class="card muted">No se pudieron abrir los datos del mapa. Abra la app una vez con internet para guardarlos.</div>`})}
+
+/* ---------- 3. Línea de tiempo ---------- */
+const CRONO=[
+ {e:"Los comienzos",y:"Sin fecha",items:[["La creación, la caída, el diluvio y Babel","El origen del mundo, del pecado y de las naciones.",["Génesis"]]]},
+ {e:"Los patriarcas",y:"c. 2100–1800 a.C.",items:[["Abraham sale de Ur","Dios llama a Abram y le promete una tierra y una descendencia.",["Génesis"]],["Isaac, Jacob y las doce tribus","La promesa pasa de padre a hijo.",[]],["José en Egipto","Israel desciende a Egipto en tiempo de hambre.",[]],["Job","Su historia se ubica, probablemente, en la época de los patriarcas.",["Job"]]]},
+ {e:"Egipto y el éxodo",y:"c. 1446–1406 a.C.",items:[["Moisés y la salida de Egipto","La pascua, el mar Rojo y el Sinaí.",["Éxodo"]],["La ley y el tabernáculo","Dios da la ley y el orden del culto.",["Levítico"]],["Cuarenta años en el desierto","La generación incrédula muere en el desierto.",["Números","Deuteronomio"]]]},
+ {e:"La conquista y los jueces",y:"c. 1406–1050 a.C.",items:[["Josué conquista Canaán","Jericó, Hai y el reparto de la tierra.",["Josué"]],["El tiempo de los jueces","Ciclos de pecado, opresión, clamor y liberación.",["Jueces"]],["Rut la moabita","Una historia de fidelidad en tiempo de los jueces.",["Rut"]]]},
+ {e:"El reino unido",y:"c. 1050–931 a.C.",items:[["Samuel y Saúl","El último juez y el primer rey.",["1 Samuel"]],["David, rey de Israel (c. 1010–970)","Jerusalén capital; los salmos.",["2 Samuel","1 Crónicas","Salmos"]],["Salomón (c. 970–931)","El templo, la sabiduría y el desvío del corazón.",["1 Reyes","2 Crónicas","Proverbios","Eclesiastés","Cantares"]]]},
+ {e:"El reino dividido",y:"931–722 a.C.",items:[["El reino se divide","Israel al norte, Judá al sur.",["1 Reyes"]],["Elías y Eliseo (c. 860–800)","Profetas contra la idolatría de Baal.",["1 Reyes","2 Reyes"]],["Jonás y Amós (c. 780–750)","Prosperidad bajo Jeroboam II; Jonás va a Nínive y Amós denuncia la injusticia.",["Jonás","Amós"]],["Oseas (c. 755–715)","El amor fiel de Dios a un pueblo infiel.",["Oseas"]],["Isaías y Miqueas (c. 740–680)","Profetas en Judá; anuncian al Mesías.",["Isaías","Miqueas"]],["Cae Samaria (722)","Asiria lleva cautivo al reino del norte.",["2 Reyes"]]]},
+ {e:"Judá queda sola",y:"722–586 a.C.",items:[["Ezequías y Josías","Dos reyes que buscaron a Dios y reformaron el culto.",["2 Reyes","2 Crónicas"]],["Nahúm, Sofonías y Habacuc (c. 660–605)","Juicio sobre Nínive y sobre Judá.",["Nahúm","Sofonías","Habacuc"]],["Jeremías (c. 627–580)","El profeta que lloró la caída de Jerusalén.",["Jeremías"]],["Cae Jerusalén (586)","Babilonia destruye la ciudad y el templo.",["Lamentaciones"]],["Joel","La fecha es incierta; anuncia el derramamiento del Espíritu.",["Joel"]]]},
+ {e:"El destierro",y:"605–538 a.C.",items:[["Daniel en Babilonia (605–536)","Fiel en la corte de reyes paganos.",["Daniel"]],["Ezequiel (593–571)","El profeta del destierro: los huesos secos y el templo.",["Ezequiel"]],["Abdías","Juicio sobre Edom por su crueldad con Judá.",["Abdías"]]]},
+ {e:"El regreso y los persas",y:"538–430 a.C.",items:[["Ciro deja volver al pueblo (538)","Zorobabel reconstruye el templo (terminado en 516).",["Esdras"]],["Hageo y Zacarías (520)","Animan a terminar la casa de Dios.",["Hageo","Zacarías"]],["Ester en Susa (c. 483–473)","Dios guarda a su pueblo en Persia.",["Ester"]],["Esdras y Nehemías (458–432)","La ley enseñada y el muro reconstruido.",["Esdras","Nehemías"]],["Malaquías (c. 430)","La última voz profética del Antiguo Testamento.",["Malaquías"]]]},
+ {e:"Entre los testamentos",y:"c. 430–5 a.C.",items:[["Cuatrocientos años sin profeta","Griegos, macabeos y romanos; se prepara el tiempo de Cristo.",[]]]},
+ {e:"Jesucristo",y:"c. 5 a.C.–30 d.C.",items:[["El nacimiento, el ministerio, la cruz y la resurrección","Dios manifestado en carne.",["Mateo","Marcos","Lucas","Juan"]]]},
+ {e:"La iglesia primitiva",y:"30–68 d.C.",items:[["Pentecostés (c. 30)","El Espíritu es derramado y nace la iglesia.",["Hechos"]],["Santiago (c. 45–49)","Una fe que se demuestra con obras.",["Santiago"]],["Primeras cartas de Pablo (c. 48–51)","Gálatas y las dos cartas a Tesalónica.",["Gálatas","1 Tesalonicenses","2 Tesalonicenses"]],["Corinto y Roma (c. 55–57)","Correcciones, dones y la gran carta de la gracia.",["1 Corintios","2 Corintios","Romanos"]],["Cartas desde la prisión (c. 60–62)","Escritas desde Roma.",["Efesios","Filipenses","Colosenses","Filemón"]],["Últimas cartas de Pablo (c. 62–67)","Instrucciones a sus hijos en la fe.",["1 Timoteo","Tito","2 Timoteo"]],["Pedro, Hebreos y Judas (c. 63–80)","Firmeza ante la persecución y los falsos maestros.",["1 Pedro","2 Pedro","Hebreos","Judas"]]]},
+ {e:"El final del primer siglo",y:"c. 85–95 d.C.",items:[["Cartas de Juan","Andar en la luz y en el amor.",["1 Juan","2 Juan","3 Juan"]],["Apocalipsis (c. 95)","Juan en Patmos: el Señor que viene.",["Apocalipsis"]]]}];
+function viewCrono(v){v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Línea de tiempo</h1><p class="lede">En qué época va cada libro, cada rey y cada profeta. Toque un libro para abrirlo. Las fechas son aproximadas y los estudiosos difieren en algunas.</p>
+  <ol class="crono">${CRONO.map(e=>`<li><div class="cre"><b>${esc(e.e)}</b><span>${esc(e.y)}</span></div>${e.items.map(([t,d,bs])=>`<div class="cri"><b>${esc(t)}</b><span>${esc(d)}</span>${bs.length?`<div class="chips">${bs.map(n=>`<button class="chip" data-bk="${esc(n)}">${esc(n)}</button>`).join("")}</div>`:""}</div>`).join("")}</li>`).join("")}</ol>`;
+  v.onclick=e=>{const t=e.target.closest("[data-bk]");if(!t)return;const b=bookIndex(t.dataset.bk);if(b!=null)goBible(b,1,null)}}
+
+/* ---------- 4. Plan de lectura ---------- */
+const PLANES={biblia365:["La Biblia en un año","Toda la Biblia en 365 días, unos tres o cuatro capítulos al día.",365,()=>BIBLE.map((_,b)=>b)],
+  nt90:["El Nuevo Testamento en 90 días","Unos tres capítulos al día.",90,()=>BIBLE.map((_,b)=>b).filter(b=>b>=NT_START)],
+  evang30:["Los evangelios en 30 días","Mateo, Marcos, Lucas y Juan.",30,()=>[NT_START,NT_START+1,NT_START+2,NT_START+3]],
+  salprov:["Salmos y Proverbios en un mes","Cinco salmos y un capítulo de Proverbios cada día.",31,null]};
+function lectDias(id){const P=PLANES[id];if(id==="salprov"){const ps=bookIndex("Salmos"),pr=bookIndex("Proverbios");return [...Array(31)].map((_,d)=>{const a=[];for(let k=d*5;k<Math.min(150,d*5+5);k++)a.push([ps,k+1]);a.push([pr,d+1]);return a})}
+  const chs=[];for(const b of P[3]())BIBLE[b].chs.forEach((vs,c)=>chs.push([b,c+1,vs.filter(Boolean).length]));
+  const tot=chs.reduce((s,x)=>s+x[2],0),n=P[2],per=tot/n;const out=[];let acc=0,day=[];
+  for(const x of chs){day.push([x[0],x[1]]);acc+=x[2];if(acc>=per*(out.length+1)&&out.length<n-1){out.push(day);day=[]}}
+  if(day.length)out.push(day);while(out.length<n)out.push([]);return out}
+function lectState(){const s=ls.get("tp_lect",null);return s&&s.p&&PLANES[s.p]?s:null}
+function viewLectura(v){if(!BIBLE){v.innerHTML='<p class="muted">Cargando la Biblia…</p>';return}const s=lectState();
+  if(!s){v.innerHTML=`<p class="label" style="margin:0 0 4px">Escritura</p><h1>Plan de lectura</h1><p class="lede">Escoja un plan. La app le muestra cada día qué leer y lleva la cuenta de lo que ya leyó.</p>
+    <div class="grid2">${Object.entries(PLANES).map(([k,[n,d]])=>`<button class="tool-card" data-pl="${k}"><b>${esc(n)}</b><span>${esc(d)}</span></button>`).join("")}</div>`;
+    v.onclick=e=>{const t=e.target.closest("[data-pl]");if(!t)return;ls.set("tp_lect",{p:t.dataset.pl,ini:new Date().toISOString().slice(0,10),ok:[]});toast("Plan iniciado");viewLectura(v)};return}
+  const D=lectDias(s.p);const N=D.length;const hoy=Math.min(N-1,Math.max(0,Math.floor((new Date(new Date().toISOString().slice(0,10))-new Date(s.ini))/864e5)));
+  const ok=new Set(s.ok||[]);const pct=Math.round(ok.size/N*100);const atr=[];for(let d=0;d<hoy;d++)if(!ok.has(d)&&D[d].length)atr.push(d);
+  const lbl=day=>{const g=[];for(const [b,c] of day){const l=g[g.length-1];if(l&&l.b===b&&l.c2===c-1)l.c2=c;else g.push({b,c1:c,c2:c})}return g.map(x=>`${bName(x.b)} ${x.c1}${x.c2>x.c1?"–"+x.c2:""}`).join(" · ")};
+  const dayCard=(d,main)=>`<div class="card lectday${ok.has(d)?" done":""}"><div class="row" style="justify-content:space-between;gap:8px"><b>${main?"Hoy · ":""}Día ${d+1} de ${N}</b>${ok.has(d)?'<span class="muted" style="font-size:13px">✓ Leído</span>':""}</div>
+    <p style="margin:6px 0 10px;font-family:var(--f-text);font-size:17px">${esc(lbl(D[d]))||"Día libre"}</p>
+    <div class="chips">${D[d].map(([b,c])=>`<button class="chip" data-rb="${b}" data-rc="${c}">${esc(bName(b))} ${c}</button>`).join("")}</div>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn ${ok.has(d)?"ghost":"primary"} small" data-ok="${d}">${ok.has(d)?"Desmarcar":"Marcar como leído"}</button></div></div>`;
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Escritura</p><h1>Plan de lectura</h1><p class="lede">${esc(PLANES[s.p][0])} · comenzó el ${esc(fmtDate(s.ini))}</p>
+  <div class="lectbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><p class="muted" style="margin:6px 0 14px;font-size:13px">${ok.size} de ${N} días leídos (${pct} %)</p>
+  ${dayCard(hoy,true)}
+  ${atr.length?`<div class="section-head"><h2>Pendientes</h2><span class="muted" style="font-size:13px">${atr.length}</span></div>${atr.slice(-5).reverse().map(d=>dayCard(d,false)).join("")}`:""}
+  <div class="row" style="gap:8px;margin-top:16px"><button class="btn ghost" id="lchg">Cambiar de plan</button></div>`;
+  v.onclick=e=>{const t=e.target.closest("button");if(!t)return;
+    if(t.dataset.rb){goBible(+t.dataset.rb,+t.dataset.rc,null);return}
+    if(t.dataset.ok){const d=+t.dataset.ok;const st=lectState();const o=new Set(st.ok||[]);o.has(d)?o.delete(d):o.add(d);st.ok=[...o];ls.set("tp_lect",st);viewLectura(v);return}
+    if(t.id==="lchg"){if(!confirm("¿Dejar este plan y escoger otro? Se pierde la cuenta de lo leído."))return;ls.set("tp_lect",null);viewLectura(v)}}}
+
+/* ---------- 5. Buscador único ---------- */
+function viewBuscar(v,opts={}){const q=String(opts.q||"").trim();const nq=norm(q);
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Buscar en todo</p><h1>«${esc(q)}»</h1><div id="busres"><p class="muted">Buscando…</p></div>`;
+  if(!nq)return;
+  Promise.all([loadLib().catch(()=>null),stLug().catch(()=>[])]).then(([lib,L])=>{if(CURRENT!=="buscar")return;const out=[];
+    const sec=(t,n,html,more)=>out.push(`<div class="section-head"><h2>${esc(t)}</h2><span class="muted" style="font-size:13px">${n}</span></div>${html}${more||""}`);
+    /* enseñanzas */
+    const ens=[];if(lib){for(const it of lib.items)if(it._t.includes(nq))ens.push({it,w:2});for(const it of lib.items)if(!it._t.includes(nq)&&(it._b||"").includes(nq))ens.push({it,w:1})}
+    const mine=(SERMONS||[]).filter(s=>norm([s.titulo,s.texto,s.ensenanza].join(" ")).includes(nq));
+    if(ens.length||mine.length)sec("Enseñanzas",ens.length+mine.length,`<div class="reflist">${mine.slice(0,10).map(s=>`<button class="refrow" data-sm="${esc(s.id)}"><b>${esc(s.titulo||"Sin título")}</b><span>Preparada en la app</span></button>`).join("")}${ens.slice(0,24).map(({it})=>`<button class="refrow" data-li="${it.i}"><b>${esc(it.t)}</b><span>${esc([it.r,(lib.carpetas[it.c]||{}).t].filter(Boolean).join(" · "))}</span></button>`).join("")}</div>`);
+    /* series */
+    if(typeof serAll==="function"){const S=serAll().filter(s=>norm(s.n).includes(nq));if(S.length)sec("Series",S.length,`<div class="reflist">${S.map(s=>`<button class="refrow" data-ser="${esc(s.id)}"><b>${esc(s.n)}</b><span>${s.refs.length} mensajes</span></button>`).join("")}</div>`)}
+    /* lugares */
+    const P=L.filter(p=>p._n.includes(nq)).sort((a,b)=>b.k-a.k).slice(0,12);if(P.length)sec("Lugares bíblicos",P.length,`<div class="chips">${P.map(p=>`<button class="chip" data-lug="${p.i}">${esc(p.n)} · ${p.k}</button>`).join("")}</div>`);
+    /* notas y subrayados */
+    const mk=Object.entries(mkAll()).filter(([k,m])=>norm(m.n||"").includes(nq));if(mk.length)sec("Mis notas en la Biblia",mk.length,`<div class="xlist">${mk.slice(0,12).map(([k,m])=>{const [b,c,vv]=k.split(".").map(Number);return `<button class="xrow" data-xb="${b}" data-xc="${c}" data-xv="${vv}"><b>${esc(vLabel(b,c,vv))}</b><span>✎ ${esc(stCut(m.n,150))}</span></button>`}).join("")}</div>`);
+    /* banco */
+    if(typeof bancoAll==="function"){const B=bancoAll().filter(x=>norm([x.texto,x.ref,(x.temas||[]).join(" ")].join(" ")).includes(nq));if(B.length)sec("Banco de ilustraciones",B.length,`<div class="xlist">${B.slice(0,8).map(x=>`<button class="xrow" data-go="banco"><b>${esc(x.ref||BTIPOS[x.tipo]||"")}</b><span>${esc(stCut(x.texto,160))}</span></button>`).join("")}</div>`)}
+    /* biblia */
+    if(BIBLE&&nq.length>=3){const hits=[];let n=0;for(let b=0;b<BIBLE.length;b++)BIBLE[b].chs.forEach((vs,c)=>vs.forEach((t,i)=>{if(t&&norm(t).includes(nq)){n++;if(hits.length<12)hits.push([b,c+1,i+1,t])}}));
+      if(n)sec("En la Biblia",n+(n===1?" versículo":" versículos"),`<div class="xlist">${hits.map(([b,c,vv,t])=>`<button class="xrow" data-xb="${b}" data-xc="${c}" data-xv="${vv}"><b>${esc(vLabel(b,c,vv))}</b><span>${esc(stCut(t,170))}</span></button>`).join("")}</div>`,`<button class="btn" data-conc style="margin-top:8px">Ver los ${n} en la concordancia</button>`)}
+    const el=$("#busres");if(!el)return;el.innerHTML=out.join("")||`<div class="card muted">No se encontró «${esc(q)}» en sus enseñanzas, la Biblia, los lugares ni sus notas.</div>`;
+    el.onclick=e=>{const t=e.target.closest("button");if(!t)return;
+      if(t.dataset.li){LSTATE.item=+t.dataset.li;go("biblioteca");return}if(t.dataset.sm){go("sermones",{open:t.dataset.sm});return}
+      if(t.dataset.ser){go("series",{open:t.dataset.ser});return}if(t.dataset.lug){go("lugares",{sel:+t.dataset.lug});return}
+      if(t.dataset.xb){goBible(+t.dataset.xb,+t.dataset.xc,[+t.dataset.xv,+t.dataset.xv]);return}if(t.hasAttribute("data-conc"))go("concordancia",{q})}})}
+
+/* ---------- estilos ---------- */
+(function(){const s=document.createElement("style");s.textContent=`
+.chapter .vs[data-mk]{border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.chapter .vs[data-mk=am]{background:linear-gradient(transparent 52%,rgba(242,201,76,.55) 52%)}
+.chapter .vs[data-mk=ve]{background:linear-gradient(transparent 52%,rgba(111,207,151,.5) 52%)}
+.chapter .vs[data-mk=az]{background:linear-gradient(transparent 52%,rgba(125,183,240,.5) 52%)}
+.chapter .vs[data-mk=ro]{background:linear-gradient(transparent 52%,rgba(242,160,190,.5) 52%)}
+.chapter .vs.hasnote>sup::after{content:" ✎";color:var(--oro)}
+.vstudy{display:grid;gap:8px;margin:14px 0}.vstudy .vst{font-family:var(--f-text);font-size:17px;color:var(--azul)}
+.vstudy textarea{width:100%;font:inherit;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical}
+.mkrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mkc{width:34px;height:34px;border-radius:50%;border:2px solid var(--surface);background:var(--mk);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.mkc.on{box-shadow:0 0 0 3px var(--azul)}
+.xlist{display:grid;gap:2px}.xrow{display:grid;gap:2px;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:8px 2px;color:inherit;font:inherit;cursor:pointer}
+.xrow:first-child{border-top:0}.xrow b{font-size:13.5px;color:var(--azul)}.xrow span{font-family:var(--f-text);font-size:15px;line-height:1.45}
+.mkdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+.chip.on{background:var(--azul);color:var(--azul-ink);border-color:var(--azul)}
+.mklist{display:grid;gap:8px}.mkitem{display:flex;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;color:inherit;font:inherit;cursor:pointer}
+.mkitem .mkbar{flex:none;width:5px;border-radius:3px}.mkitem>span:last-child{display:grid;gap:4px}.mkitem b{color:var(--azul);font-size:14px}
+.mkitem em{font-style:normal;font-family:var(--f-text);font-size:16px;line-height:1.45}.mkitem small{color:var(--muted);font-size:14px}
+.lugwrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.lugwrap{grid-template-columns:1fr}}
+.mapbox{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+#msvg{background:#DCE9F0;display:block;width:100%;height:min(62vh,560px);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#msvg .sea{fill:#DCE9F0}#msvg .land{fill:#F4EFE3;stroke:#C9BFA8;stroke-width:.15}#msvg .lake{fill:#DCE9F0;stroke:#B7CBD6;stroke-width:.08}#msvg .river{fill:none;stroke:#9DBFD3;stroke-width:.18}
+:root[data-skin=noche] #msvg .sea,:root[data-skin=noche] #msvg .lake{fill:#16263A}:root[data-skin=noche] #msvg .land{fill:#22303F;stroke:#3A4C60}:root[data-skin=noche] #msvg .river{stroke:#3E6A8A}
+#msvg .mpt circle{fill:var(--azul);stroke:var(--surface);stroke-width:.05}#msvg .mpt text{fill:var(--ink);paint-order:stroke;stroke:var(--surface);stroke-width:.25;font-family:var(--f-ui)}
+#msvg .mpt.on circle{fill:#C0392B}:root[data-skin=noche] #msvg{background:#16263A}#msvg .mpt.on text{font-weight:700}
+.mapctl{position:absolute;top:8px;right:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mapctl .btn{background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.lugcard{display:grid;gap:2px}
+.crono{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--line);display:grid;gap:18px}
+.crono>li{position:relative;display:grid;gap:8px}.crono>li::before{content:"";position:absolute;left:-25px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--oro);border:2px solid var(--bg)}
+.cre{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.cre b{font-family:var(--f-text);font-size:19px;color:var(--azul)}.cre span{color:var(--muted);font-size:13.5px}
+.cri{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px}.cri b{font-size:15px}.cri span{font-size:14px;color:var(--muted)}
+.lectbar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}.lectbar i{display:block;height:100%;background:var(--azul)}
+.lectday{margin:0 0 10px}.lectday.done{opacity:.75}
+`;document.head.appendChild(s)})();
+
+const AR={uid:()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7)};
+const arHoy=()=>new Date().toISOString().slice(0,10);
+const arFecha=f=>{try{const d=new Date(f+"T12:00:00");const t=d.toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short",year:"numeric"});return t.charAt(0).toUpperCase()+t.slice(1)}catch{return f}};
+
+/* ---------- lista de enseñanzas para escoger (archivo + las propias) ---------- */
+function arEnsList(){const out=[];
+  try{(SERMONS||[]).forEach(s=>{if(s&&s.titulo)out.push({k:"S"+s.id,t:s.titulo,r:s.texto||"",src:"Mis enseñanzas"})})}catch{}
+  try{if(LIB)LIB.items.forEach(it=>out.push({k:"L"+it.i,t:it.t,r:it.r||"",src:LIB.carpetas[it.c]?.t||"Archivo"}))}catch{}
+  return out}
+function arEnsLabel(e){return e.t+(e.r?" · "+e.r:"")}
+function arOpenEns(k){if(!k)return;if(k[0]==="L"){LSTATE.item=+k.slice(1);go("biblioteca")}else go("sermones",{open:k.slice(1)})}
+function arEnsMd(k){if(!k)return null;if(k[0]==="L"){const it=LIB&&LIB.items[+k.slice(1)];return it?{md:autoFix(libToMd(it),true),t:it.t}:null}
+  const s=(SERMONS||[]).find(x=>"S"+x.id===k);return s&&s.ensenanza?{md:s.ensenanza,t:s.titulo}:null}
+
+/* ================= BANCO DE ILUSTRACIONES ================= */
+const BTIPOS={frase:"Frase de impacto",ejemplo:"Ejemplo o ilustración",personaje:"Personaje bíblico",historia:"Historia o testimonio",cita:"Cita o versículo"};
+const bancoAll=()=>ls.get("tp_banco",[]);
+const bancoSave=a=>ls.set("tp_banco",a);
+let BANCO={q:"",t:"",n:60};
+function viewBanco(v){
+  const all=bancoAll();
+  v.innerHTML=`<h1>Banco de ilustraciones</h1>
+  <p class="lede">Guarde frases de impacto, ejemplos, personajes e historias para usarlos en cualquier mensaje. Toque uno para copiarlo.</p>
+  <form class="card" id="bkf" autocomplete="off" style="display:grid;gap:10px">
+    <div class="row" style="gap:8px"><div class="field" style="flex:1;min-width:170px"><label for="bkt">Tipo</label><select id="bkt">${Object.entries(BTIPOS).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
+    <div class="field" style="flex:2;min-width:200px"><label for="bkr">Referencia o fuente (opcional)</label><input type="text" id="bkr" placeholder="Ej.: Génesis 22:13 · testimonio de la hermana Rosa"></div></div>
+    <div class="field"><label for="bktx">Texto</label><textarea id="bktx" rows="3" placeholder="Escriba aquí la frase, el ejemplo o la historia"></textarea></div>
+    <div class="field"><label for="bkg">Temas (separados por coma)</label><input type="text" id="bkg" placeholder="Ej.: fe, familia, cruz"></div>
+    <div class="row" style="gap:8px"><button class="btn primary" type="submit">Guardar en el banco</button>${all.some(x=>x.auto)?"":`<button class="btn" type="button" id="bkfill">Traer las frases de impacto de mis enseñanzas</button>`}</div>
+  </form>
+  <div class="row" style="margin:14px 0 8px;gap:8px"><div class="bigsearch" style="flex:2;min-width:200px;margin:0"><input type="search" id="bkq" value="${esc(BANCO.q)}" placeholder="Buscar por palabra, tema o referencia" aria-label="Buscar en el banco"></div>
+  <select id="bkft" style="flex:1;min-width:160px" aria-label="Tipo"><option value="">Todos los tipos</option>${Object.entries(BTIPOS).map(([k,l])=>`<option value="${k}" ${BANCO.t===k?"selected":""}>${l}</option>`).join("")}</select></div>
+  <div id="bkres"></div>`;
+  const draw=()=>{const q=norm(BANCO.q=$("#bkq").value.trim());BANCO.t=$("#bkft").value;
+    const L=bancoAll().filter(x=>(!BANCO.t||x.tipo===BANCO.t)&&(!q||norm([x.texto,x.ref,(x.temas||[]).join(" ")].join(" ")).includes(q)));
+    $("#bkres").innerHTML=L.length?`<p class="muted" style="font-size:13px;margin:0 0 8px">${L.length} ${L.length===1?"elemento":"elementos"}</p>`+L.slice(0,BANCO.n).map(x=>`<div class="card" style="display:grid;gap:6px;margin-bottom:8px;padding:12px 14px">
+      <span class="label" style="margin:0">${esc(BTIPOS[x.tipo]||x.tipo)}${x.ref?" · "+esc(x.ref):""}</span>
+      <div style="font-family:var(--f-text);font-size:16.5px;line-height:1.5;white-space:pre-wrap">${esc(x.texto)}</div>
+      ${(x.temas||[]).length?`<div class="chips">${x.temas.map(t=>`<button class="chip" data-bt="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}
+      <div class="row" style="gap:6px"><button class="btn small" data-bc="${x.id}">Copiar</button>${x.k?`<button class="btn small ghost" data-bo="${x.id}">Ver la enseñanza</button>`:""}<button class="btn small ghost" data-bd="${x.id}">Quitar</button></div></div>`).join("")+(L.length>BANCO.n?`<button class="btn" id="bkmore">Ver más</button>`:"")
+      :`<div class="card muted">${bancoAll().length?"No hay nada con esa búsqueda.":"Su banco está vacío. Guarde arriba su primera frase o ejemplo."}</div>`;
+    const m=$("#bkmore");if(m)m.onclick=()=>{BANCO.n+=60;draw()}};
+  let tm;$("#bkq").oninput=()=>{clearTimeout(tm);BANCO.n=60;tm=setTimeout(draw,180)};$("#bkft").onchange=()=>{BANCO.n=60;draw()};
+  $("#bkf").onsubmit=e=>{e.preventDefault();const tx=$("#bktx").value.trim();if(!tx){toast("Escriba el texto");return}
+    const a=bancoAll();a.unshift({id:AR.uid(),tipo:$("#bkt").value,texto:tx,ref:$("#bkr").value.trim(),temas:$("#bkg").value.split(",").map(s=>s.trim()).filter(Boolean),fecha:arHoy()});bancoSave(a);toast("Guardado en el banco");viewBanco(v)};
+  const fill=$("#bkfill");if(fill)fill.onclick=async()=>{fill.disabled=true;fill.textContent="Buscando…";
+    try{await loadLib();const a=bancoAll();const seen=new Set(a.map(x=>norm(x.texto)));let n=0;
+      const add=(txt,k,t)=>{const key=norm(txt);if(seen.has(key)||txt.length<12)return;seen.add(key);a.push({id:AR.uid(),tipo:"frase",texto:txt,ref:t,temas:[],k,auto:true,fecha:arHoy()});n++};
+      const scan=(mdT,k,t)=>{for(const m of String(mdT).matchAll(/^\*\*(¡[^*]+!)\*\*\s*$/gm))add(m[1],k,t)};
+      LIB.items.forEach(it=>{if(it.md)scan(it.md,"L"+it.i,it.t);else it.p.forEach(([kk,tx])=>{if(kk==="i"&&/^¡.+!$/.test(tx.trim()))add(tx.trim(),"L"+it.i,it.t)})});
+      (SERMONS||[]).forEach(s=>{if(s.ensenanza)scan(s.ensenanza,"S"+s.id,s.titulo)});
+      bancoSave(a);toast(n+" frases de impacto agregadas al banco",4000);viewBanco(v)}catch(e){toast("No se pudieron leer sus enseñanzas");fill.disabled=false}};
+  $("#bkres").onclick=e=>{const t=e.target.closest("button");if(!t)return;const a=bancoAll();
+    if(t.dataset.bt){$("#bkq").value=t.dataset.bt;BANCO.n=60;draw();return}
+    if(t.dataset.bc){const x=a.find(y=>y.id===t.dataset.bc);if(x)copyText(x.texto+(x.ref?" ("+x.ref+")":""));return}
+    if(t.dataset.bo){const x=a.find(y=>y.id===t.dataset.bo);if(x)arOpenEns(x.k);return}
+    if(t.dataset.bd){if(!confirm("¿Quitar del banco?"))return;bancoSave(a.filter(y=>y.id!==t.dataset.bd));draw()}};
+  draw();
+}
+/* guardar en el banco lo que el predicador seleccione en una enseñanza */
+document.addEventListener("selectionchange",()=>{clearTimeout(AR.selT);AR.selT=setTimeout(()=>{const s=String(window.getSelection()||"").trim();let b=$("#arsel");
+  const inPage=s.length>=8&&s.length<1200&&window.getSelection().anchorNode&&window.getSelection().anchorNode.parentElement?.closest(".pg,.libread,#ensbox,.md");
+  if(!inPage){if(b)b.hidden=true;return}
+  if(!b){b=document.createElement("button");b.id="arsel";b.className="btn primary";b.textContent="Guardar en el banco";b.style.cssText="position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.18)";document.body.appendChild(b);
+    b.onclick=()=>{const tx=String(window.getSelection()||"").trim()||AR.lastSel;if(!tx)return;const a=bancoAll();a.unshift({id:AR.uid(),tipo:/^¡.*!$/.test(tx)?"frase":"ejemplo",texto:tx,ref:"",temas:[],fecha:arHoy()});bancoSave(a);b.hidden=true;toast("Guardado en el banco de ilustraciones")}}
+  AR.lastSel=s;b.hidden=false},350)});
+
+
 </script>
 <script type="text/app">
 "use strict";
@@ -1311,6 +1940,30 @@ function parseRef(str){
 function refLabel(r){const n=BIBLE[r.b].name;if(!r.v1)return `${n} ${r.c}`;return r.v2&&r.v2!==r.v1?`${n} ${r.c}:${r.v1}-${r.v2}`:`${n} ${r.c}:${r.v1}`}
 function passageVerses(r){const ch=BIBLE[r.b].chs[r.c-1]||[];const a=r.v1||1,z=Math.min(r.v2||r.v1||ch.length,ch.length);const out=[];for(let v=a;v<=z;v++)if(ch[v-1])out.push([v,ch[v-1]]);return out}
 function passageText(r,max=80){return passageVerses(r).slice(0,max).map(([v,t])=>`${v} ${t}`).join("\n")}
+
+/* ============ Biblia conectada con sus enseñanzas ============ */
+let REFIDX=null,REFIDX_P=null;
+function refIdxBuild(){if(REFIDX)return Promise.resolve(REFIDX);if(REFIDX_P)return REFIDX_P;
+  REFIDX_P=(async()=>{await loadLib();if(!BIBLE||!REFRE)throw new Error("biblia");const idx=new Map();
+    const add=(key,src,v1,v2)=>{let m=idx.get(key);if(!m){m=new Map();idx.set(key,m)}let e=m.get(src);if(!e){e={n:0,vs:new Set(),whole:false};m.set(src,e)}e.n++;if(v1){for(let v=v1;v<=Math.min(v2||v1,v1+40);v++)e.vs.add(v)}else e.whole=true};
+    const scan=(txt,src)=>{if(!txt)return;REFRE.lastIndex=0;let m;while((m=REFRE.exec(txt))){const b=bookIndex(m[2]);if(b==null)continue;const c=+m[3];if(!BIBLE[b].chs[c-1])continue;add(b+":"+c,src,m[4]?+m[4]:0,m[5]?+m[5]:0)}};
+    const items=LIB.items;for(let k=0;k<items.length;k++){const it=items[k];scan((it.r||"")+"\n"+(it.md||it.p.map(x=>x[1]).join("\n")),"L"+k);if(k%40===39)await new Promise(r=>setTimeout(r,0))}
+    for(const sm of SERMONS)scan([sm.texto,sm.ensenanza,sm.notas].join("\n"),"S"+sm.id);
+    REFIDX=idx;return idx})().catch(e=>{REFIDX_P=null;throw e});return REFIDX_P}
+function refSrcInfo(src){if(src[0]==="L"){const it=LIB.items[+src.slice(1)];return it?{t:it.t,f:LIB.carpetas[it.c]?.t||"",open:()=>{LSTATE.item=it.i;go("biblioteca")}}:null}
+  const sm=SERMONS.find(x=>"S"+x.id===src);return sm?{t:sm.titulo||"Sin título",f:"Preparada en la app",open:()=>go("sermones",{open:sm.id})}:null}
+function refPanel(b,c,sel){const box=$("#refpanel");if(!box)return;
+  refIdxBuild().then(idx=>{if(!$("#refpanel"))return;const m=idx.get(b+":"+c);const cited=new Set();
+    let rows=m?[...m.entries()].map(([src,e])=>{e.vs.forEach(v=>cited.add(v));return {src,e,hit:sel&&sel.length?sel.some(v=>e.vs.has(v)):true}}).filter(x=>x.hit):[];
+    document.querySelectorAll(".chapter .vs").forEach(x=>x.classList.toggle("cited",cited.has(+x.dataset.v)));
+    rows.sort((a,b)=>b.e.vs.size-a.e.vs.size||b.e.n-a.e.n);
+    const lbl=sel&&sel.length?`${BIBLE[b].name} ${c}:${compress(sel)}`:`${BIBLE[b].name} ${c}`;
+    if(!rows.length){box.innerHTML=`<div class="section-head"><h2>En sus enseñanzas</h2></div><p class="muted" style="margin:0">Ninguna de sus enseñanzas cita ${esc(lbl)}${sel&&sel.length?"":" todavía"}.</p>`;return}
+    const shown=rows.slice(0,40);
+    box.innerHTML=`<div class="section-head"><h2>En sus enseñanzas</h2><span class="muted" style="font-size:13px">${rows.length} ${rows.length===1?"enseñanza cita":"enseñanzas citan"} ${esc(lbl)}</span></div>
+      <div class="reflist">${shown.map((x,k)=>{const inf=refSrcInfo(x.src);if(!inf)return"";const vs=[...x.e.vs].sort((a,b)=>a-b);return `<button class="refrow" data-k="${k}"><b>${esc(inf.t)}</b><span>${esc(inf.f)}${vs.length?` · vers. ${esc(compress(vs))}`:" · todo el capítulo"}</span></button>`}).join("")}</div>`;
+    box.querySelector(".reflist").onclick=e=>{const r=e.target.closest(".refrow");if(!r)return;const inf=refSrcInfo(shown[+r.dataset.k].src);inf&&inf.open()};
+  }).catch(()=>{box.innerHTML=""})}
 /* ============ Versiones de la Biblia y verificación de citas ============ */
 const BVC={};let RV1909=null;
 function bvList(){const l=ls.get("tp_bv_list",[]);return Array.isArray(l)?l:[]}
@@ -1545,7 +2198,7 @@ async function allSermonsForBackup(){
 }
 async function backupData(){
   try{
-    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user"||k.startsWith("tp_bv_"))continue;kv[k]=ls.get(k,null)}
+    const kv={};for(const k of ls.keys()){if(k==="tp_sermones"||k==="tp_cfg"||k==="tp_biblia_user"||k==="tp_libkey"||k.startsWith("tp_bv_"))continue;kv[k]=ls.get(k,null)}
     const data={app:"taller-del-predicador",v:1,fecha:new Date().toISOString(),sermones:await allSermonsForBackup(),kv};
     const d=window.claude?await claude.use("downloads"):null;
     const name="Taller del Predicador - copia de seguridad "+new Date().toISOString().slice(0,10)+".json";
@@ -1709,13 +2362,13 @@ const ICO={
  consulta:'<path d="M4 5h16v11H9l-5 4z"/>'};
 const icon=(k,c)=>`<svg class="${c||"ico"}" viewBox="0 0 24 24" aria-hidden="true">${ICO[k]||""}</svg>`;
 const TABS=[["inicio","Inicio"],["sermones","Enseñanzas"],["biblia","Biblia"],["estudio","Estudio"],["diapositivas","Diapositivas"]];
-function tabOf(id){if(["biblia","concordancia"].includes(id))return "biblia";if(["sermones","armar","biblioteca","nuevas","nuevacmp"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
+function tabOf(id){if(["biblia","concordancia","marcas","lectura"].includes(id))return "biblia";if(["lugares","cronologia"].includes(id))return "estudio";if(["sermones","armar","biblioteca","nuevas","nuevacmp","calendario","series"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
 const NAV=[
   {grupo:"",items:[["inicio","Inicio"]]},
-  {grupo:"Escritura",items:[["biblia","Biblia"],["concordancia","Concordancia"]]},
-  {grupo:"Estudio",items:[["palabras","Palabras originales"],["diccionario","Diccionario bíblico"],["geografia","Geografía bíblica"],["personajes","Personajes"],["temas","Biblia temática"],["paralelos","Referencias cruzadas"]]},
-  {grupo:"Preparación",items:[["comentario","Comentario bíblico"],["bosquejo","Exégesis y homilética"],["consulta","Consulta libre"]]},
-  {grupo:"Mis enseñanzas",items:[["sermones","Mis enseñanzas"]]},
+  {grupo:"Escritura",items:[["biblia","Biblia"],["concordancia","Concordancia"],["marcas","Subrayados y notas"],["lectura","Plan de lectura"]]},
+  {grupo:"Estudio",items:[["lugares","Lugares bíblicos"],["cronologia","Línea de tiempo"],["palabras","Palabras originales"],["diccionario","Diccionario bíblico"],["geografia","Geografía bíblica"],["personajes","Personajes"],["temas","Biblia temática"],["paralelos","Referencias cruzadas"]]},
+  {grupo:"Preparación",items:[["comentario","Comentario bíblico"],["bosquejo","Exégesis y homilética"],["consulta","Consulta libre"],["banco","Banco de ilustraciones"]]},
+  {grupo:"Mis enseñanzas",items:[["sermones","Mis enseñanzas"],["calendario","Calendario de predicación"],["series","Series para predicar"]]},
 ];
 let CURRENT="inicio";
 function renderNav(){
@@ -1728,7 +2381,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b
 function _go(id,opts={}){
   CURRENT=id;try{history.replaceState(history.state,"","#"+id)}catch{}
   renderNav();hideActionbar();window.scrollTo({top:0});
-  const v=$("#view");
+  const v=$("#view");v.onclick=null;
   if(id==="inicio")return viewInicio(v);
   if(id==="estudio")return viewEstudio(v);
   if(id==="biblia")return viewBiblia(v,opts);
@@ -1740,10 +2393,100 @@ function _go(id,opts={}){
   if(id==="nuevas")return viewNuevas(v,opts);
   if(id==="nuevacmp")return viewNuevaCmp(v,opts);
   if(id==="biblioteca"){CURRENT="sermones";renderNav();return viewBiblioteca(v,opts)}
+  if(id==="calendario")return viewCalendario(v,opts);
+  if(id==="series"&&typeof viewSeries==="function")return viewSeries(v,opts);
+  if(id==="marcas"&&typeof viewMarcas==="function")return viewMarcas(v,opts);
+  if(id==="lugares"&&typeof viewLugares==="function")return viewLugares(v,opts);
+  if(id==="cronologia"&&typeof viewCrono==="function")return viewCrono(v,opts);
+  if(id==="lectura"&&typeof viewLectura==="function")return viewLectura(v,opts);
+  if(id==="buscar"&&typeof viewBuscar==="function")return viewBuscar(v,opts);
+  if(id==="banco"&&typeof viewBanco==="function")return viewBanco(v,opts);
   if(TOOLS[id])return viewTool(v,id,opts);
   viewInicio(v);
 }
 
+
+/* ============ Calendario de predicación ============ */
+let CALM=null;
+function calAll(){const l=ls.get("tp_cal",[]);return Array.isArray(l)?l:[]}
+function calSave(l){ls.set("tp_cal",l)}
+const calYMD=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function calRefInfo(ref){if(!ref)return null;if(ref[0]==="L"){const it=LIB&&LIB.items[+ref.slice(1)];return it?{t:it.t,f:LIB.carpetas[it.c]?.t||"",r:it.r||"",open:()=>{LSTATE.item=it.i;go("biblioteca")}}:null}
+  const sm=SERMONS.find(x=>"S"+x.id===ref);return sm?{t:sm.titulo||"Sin título",f:"Preparada en la app",r:sm.texto||"",open:()=>go("sermones",{open:sm.id})}:null}
+/* cuándo se predicó o se agendó esta enseñanza (para avisar si se repite) */
+function calHist(ref,skipId){const out=[];calAll().forEach(e=>{if(e.ref===ref&&e.id!==skipId)out.push(e.fecha)});const p=predAll()[ref];if(p)out.push(p);return [...new Set(out)].sort()}
+function calLugares(){return [...new Set(calAll().map(e=>e.lugar).filter(Boolean))].slice(-12)}
+function viewCalendario(v){
+  const hoy=new Date();if(!CALM)CALM={y:hoy.getFullYear(),m:hoy.getMonth()};
+  loadLib().catch(()=>{}).then(()=>{
+  const {y,m}=CALM;const first=new Date(y,m,1);const start=(first.getDay()+6)%7;const dias=new Date(y,m+1,0).getDate();
+  const ev={};calAll().forEach(e=>{(ev[e.fecha]=ev[e.fecha]||[]).push({...e,tipo:"cal"})});
+  const pred=predAll();for(const [k,d] of Object.entries(pred)){if(!d)continue;if(calAll().some(e=>e.ref===k&&e.fecha===d))continue;(ev[d]=ev[d]||[]).push({id:"p"+k,ref:k,fecha:d,tipo:"pred"})}
+  const mes=first.toLocaleDateString("es-CO",{month:"long",year:"numeric"});const tY=calYMD(hoy);
+  let cells="";for(let i=0;i<start;i++)cells+=`<div class="cday off"></div>`;
+  for(let d=1;d<=dias;d++){const k=calYMD(new Date(y,m,d));const l=ev[k]||[];
+    cells+=`<button class="cday${k===tY?" today":""}${l.length?" has":""}" data-day="${k}"><span class="cn">${d}</span>${l.slice(0,2).map(e=>{const inf=calRefInfo(e.ref);return `<span class="cev${e.tipo==="pred"||k<tY?" past":""}">${esc(inf?inf.t:(e.titulo||"Sin enseñanza"))}</span>`}).join("")}${l.length>2?`<span class="cmore">+${l.length-2}</span>`:""}</button>`}
+  const prox=calAll().filter(e=>e.fecha>=tY).sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,8);
+  const yearN=calAll().filter(e=>e.fecha.startsWith(String(y))).length;
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Mis enseñanzas</p><h1>Calendario de predicación</h1>
+  <p class="lede">Ponga cada enseñanza en su fecha. La app recuerda qué predicó, cuándo y dónde, y le avisa si va a repetir un tema que predicó hace poco.</p>
+  <div class="calbar"><button class="btn" id="calp" aria-label="Mes anterior">‹</button><h2 class="calm">${esc(mes.charAt(0).toUpperCase()+mes.slice(1))}</h2><button class="btn" id="caln" aria-label="Mes siguiente">›</button><button class="btn ghost small" id="calh">Hoy</button><span class="grow"></span><button class="btn primary" id="caladd">Agendar enseñanza</button></div>
+  <div class="calgrid">${["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(x=>`<div class="cwd">${x}</div>`).join("")}${cells}</div>
+  <div class="section-head"><h2>Próximas</h2><span class="muted" style="font-size:13px">${yearN} agendadas en ${y}</span></div>
+  <div class="reflist">${prox.length?prox.map(e=>{const inf=calRefInfo(e.ref);return `<button class="refrow" data-day="${e.fecha}"><b>${esc(inf?inf.t:(e.titulo||"Sin enseñanza"))}</b><span>${esc(fmtDate(e.fecha))}${e.lugar?" · "+esc(e.lugar):""}</span></button>`}).join(""):'<p class="muted" style="margin:0">No hay nada agendado todavía. Toque un día o «Agendar enseñanza».</p>'}</div>`;
+  $("#calp").onclick=()=>{CALM.m--;if(CALM.m<0){CALM.m=11;CALM.y--}viewCalendario(v)};
+  $("#caln").onclick=()=>{CALM.m++;if(CALM.m>11){CALM.m=0;CALM.y++}viewCalendario(v)};
+  $("#calh").onclick=()=>{CALM={y:hoy.getFullYear(),m:hoy.getMonth()};viewCalendario(v)};
+  $("#caladd").onclick=()=>calEdit(null,tY>calYMD(first)?tY:calYMD(first));
+  v.onclick=e=>{const d=e.target.closest("[data-day]");if(d)calDay(d.dataset.day)};
+  })}
+function calDay(day){const sh=$("#sheet");const tY=predToday();
+  const list=calAll().filter(e=>e.fecha===day);const p=Object.entries(predAll()).filter(([k,d])=>d===day&&!list.some(e=>e.ref===k));
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="row" style="justify-content:space-between"><h2>${esc(fmtDate(day))}</h2><button class="btn ghost" data-x>Cerrar</button></div>
+    <div style="display:grid;gap:8px;margin:12px 0">${list.map(e=>{const inf=calRefInfo(e.ref);const done=e.ref&&predAll()[e.ref]===e.fecha;return `<div class="calrow"><div><b>${esc(inf?inf.t:(e.titulo||"Sin enseñanza"))}</b><span>${[inf&&inf.r,e.lugar,e.nota].filter(Boolean).map(esc).join(" · ")}</span></div>
+      <div class="row" style="gap:6px">${inf?`<button class="btn small" data-open="${esc(e.id)}">Abrir</button>`:""}${e.ref&&day<=tY?`<button class="btn small${done?" ghost":""}" data-pred="${esc(e.id)}">${done?"✓ Predicada":"Marcar predicada"}</button>`:""}<button class="btn small ghost" data-edit="${esc(e.id)}">Editar</button><button class="btn small ghost danger" data-del="${esc(e.id)}">Quitar</button></div></div>`}).join("")}
+    ${p.map(([k])=>{const inf=calRefInfo(k);return inf?`<div class="calrow"><div><b>${esc(inf.t)}</b><span>✓ Predicada</span></div><div class="row"><button class="btn small" data-openref="${esc(k)}">Abrir</button></div></div>`:""}).join("")}
+    ${!list.length&&!p.length?'<p class="muted" style="margin:0">Nada agendado este día.</p>':""}</div>
+    <button class="btn primary" data-addday>Agendar una enseñanza este día</button></div>`;
+  sh.hidden=false;
+  sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))return closeSheet();
+    const t=e.target.closest("button");if(!t)return;const all=calAll();const ent=id=>all.find(x=>x.id===id);
+    if(t.dataset.open){const inf=calRefInfo(ent(t.dataset.open).ref);closeSheet();inf&&inf.open();return}
+    if(t.dataset.openref){const inf=calRefInfo(t.dataset.openref);closeSheet();inf&&inf.open();return}
+    if(t.dataset.pred){const x=ent(t.dataset.pred);if(predAll()[x.ref]===x.fecha)predSet(x.ref,null);else predSet(x.ref,x.fecha);calDay(day);calRefresh();return}
+    if(t.dataset.edit){calEdit(ent(t.dataset.edit),day);return}
+    if(t.dataset.del){if(!confirm("¿Quitar esta enseñanza del calendario?"))return;calSave(all.filter(x=>x.id!==t.dataset.del));calDay(day);calRefresh();return}
+    if(t.hasAttribute("data-addday"))calEdit(null,day)}}
+function calRefresh(){if(CURRENT==="calendario")viewCalendario($("#view"))}
+function calEdit(e,day){const sh=$("#sheet");const ed=e?{...e}:{id:"c"+Date.now().toString(36),fecha:day,ref:"",titulo:"",lugar:"",nota:""};
+  loadLib().catch(()=>{}).then(()=>{
+  const opts=[...SERMONS.map(x=>({k:"S"+x.id,t:x.titulo||"Sin título",f:"Preparada en la app",n:norm((x.titulo||"")+" "+(x.texto||""))})),...(LIB?LIB.items.map(it=>({k:"L"+it.i,t:it.t,f:LIB.carpetas[it.c]?.t||"",n:it._t})):[])];
+  const sel=()=>calRefInfo(ed.ref);
+  const render=()=>{const inf=sel();const h=ed.ref?calHist(ed.ref,ed.id).filter(d=>d!==ed.fecha):[];const ult=h.length?h[h.length-1]:"";
+    let aviso="";if(ult){const dd=Math.round((new Date(ed.fecha+"T12:00")-new Date(ult+"T12:00"))/864e5);const abs=Math.abs(dd);
+      const cuando=abs<45?`${abs} días`:abs<365?`${Math.round(abs/30)} meses`:`${(abs/365).toFixed(1).replace(".0","")} años`;
+      aviso=`<p class="notice" style="margin:0">${dd>=0?`Ya la predicó o la tuvo agendada el <b>${esc(fmtDate(ult))}</b>, hace ${cuando}.`:`La tiene agendada también el <b>${esc(fmtDate(ult))}</b>, ${cuando} después.`}${abs<180?" Tal vez convenga escoger otra.":""}</p>`}
+    sh.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="row" style="justify-content:space-between"><h2>${e?"Editar":"Agendar enseñanza"}</h2><button class="btn ghost" data-x>Cerrar</button></div>
+    <div style="display:grid;gap:12px;margin-top:12px">
+      <div class="field"><label for="cfe">Fecha</label><input type="date" id="cfe" value="${esc(ed.fecha)}"></div>
+      <div class="field"><label>Enseñanza</label>${inf?`<div class="calrow"><div><b>${esc(inf.t)}</b><span>${esc(inf.f)}${inf.r?" · "+esc(inf.r):""}</span></div><button class="btn small ghost" id="cchg">Cambiar</button></div>`:
+        `<input type="search" id="cq" placeholder="Buscar por título, tema o pasaje…" autocomplete="off"><div id="cres2" class="reflist" style="margin-top:8px;max-height:260px;overflow:auto"></div><input type="text" id="cti" placeholder="O escriba solo un tema (sin enseñanza todavía)" value="${esc(ed.titulo||"")}" style="margin-top:8px">`}</div>
+      ${aviso}
+      <div class="field"><label for="clu">Lugar o servicio (opcional)</label><input type="text" id="clu" list="clul" value="${esc(ed.lugar||"")}" placeholder="Templo central, vigilia, campaña…"><datalist id="clul">${calLugares().map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>
+      <div class="field"><label for="cno">Nota (opcional)</label><input type="text" id="cno" value="${esc(ed.nota||"")}"></div>
+      <div class="row"><button class="btn primary" id="csv">Guardar</button></div></div></div>`;
+    sh.hidden=false;
+    const keep=()=>{ed.fecha=$("#cfe").value||ed.fecha;ed.lugar=$("#clu").value.trim();ed.nota=$("#cno").value.trim();const ti=$("#cti");if(ti)ed.titulo=ti.value.trim()};
+    $("#cfe").onchange=()=>{keep();render()};
+    const q=$("#cq");if(q){const draw=()=>{const n=norm(q.value.trim());const r=(n?opts.filter(o=>o.n.includes(n)):opts.slice(0,0)).slice(0,30);
+        $("#cres2").innerHTML=r.map(o=>`<button class="refrow" data-k="${esc(o.k)}"><b>${esc(o.t)}</b><span>${esc(o.f)}${calHist(o.k).length?" · ya predicada":""}</span></button>`).join("")||(n?'<p class="muted" style="margin:0">Sin resultados.</p>':"")};
+      q.oninput=draw;setTimeout(()=>q.focus(),150);$("#cres2").onclick=ev=>{const b=ev.target.closest("[data-k]");if(!b)return;keep();ed.ref=b.dataset.k;ed.titulo="";render()}}
+    const ch=$("#cchg");if(ch)ch.onclick=()=>{keep();ed.ref="";render()};
+    $("#csv").onclick=()=>{keep();if(!ed.ref&&!ed.titulo){toast("Escoja una enseñanza o escriba un tema.");return}
+      const all=calAll().filter(x=>x.id!==ed.id);all.push(ed);calSave(all);closeSheet();toast("Agendada.");
+      const [yy,mm]=ed.fecha.split("-").map(Number);CALM={y:yy,m:mm-1};if(CURRENT==="calendario")calRefresh();else go("calendario")};
+    sh.onclick=ev=>{if(ev.target===sh||ev.target.closest("[data-x]"))closeSheet()};
+  };render()})}
 /* ============ atrás y adelante ============ */
 let NAVH=[],NAVI=-1,NAVSKIP=false,NAVPOP=0;
 function navSnap(opts){const o={};["open","q","item","keepSel","vn"].forEach(k=>{if(opts&&opts[k]!=null)o[k]=opts[k]});
@@ -1807,14 +2550,14 @@ function viewEstudio(v){
   (groups["Preparación"]=groups["Preparación"]||[]).push(["consulta","Consulta libre","Pregunte lo que necesite para su preparación."]);
   v.innerHTML=`<h1>Estudio</h1><p class="lede">Herramientas para estudiar el pasaje antes de predicar. Las responde Claude (necesitan internet y su clave de la IA); lo que encuentre lo puede guardar en la enseñanza que está preparando.</p>
   ${Object.entries(groups).map(([g,items])=>`<div class="section-head tgroup"><h2>${esc(g)}</h2></div><div class="grid2" style="margin-top:12px">${items.map(([id,n,d])=>`<button class="tool-card" data-go="${id}"><b>${esc(n)}</b><span>${esc(d)}</span></button>`).join("")}</div>`).join("")}
-  <div class="section-head tgroup"><h2>En la Biblia, sin internet</h2></div><div class="grid2" style="margin-top:12px"><button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque cualquier palabra en toda la Biblia, con conteo por libro.</span></button></div>`;
+  <div class="section-head tgroup"><h2>En la Biblia, sin internet</h2></div><div class="grid2" style="margin-top:12px"><button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque cualquier palabra en toda la Biblia, con conteo por libro.</span></button>${typeof viewLugares==="function"?`<button class="tool-card" data-go="lugares"><b>Lugares bíblicos</b><span>Más de mil lugares en el mapa, con sus versículos y sus enseñanzas.</span></button><button class="tool-card" data-go="cronologia"><b>Línea de tiempo</b><span>En qué época va cada libro, rey y profeta.</span></button><button class="tool-card" data-go="marcas"><b>Subrayados y notas</b><span>Lo que subrayó y anotó en la Biblia, con referencias cruzadas.</span></button><button class="tool-card" data-go="lectura"><b>Plan de lectura</b><span>La Biblia en un año, el Nuevo Testamento en 90 días y otros.</span></button>`:""}${typeof viewBanco==="function"?`<button class="tool-card" data-go="banco"><b>Banco de ilustraciones</b><span>Frases de impacto, ejemplos e historias para sus mensajes.</span></button>`:""}</div>`;
 }
 function renderRecent(){const el=$("#recent");if(!el)return;const act=[...SERMONS].sort((a,b)=>(b.actualizado||"").localeCompare(a.actualizado||"")).slice(0,4);
   el.innerHTML=act.length?act.map(sItem).join(""):`<div class="card"><p style="margin:0">Aquí aparecerán las enseñanzas que esté preparando.</p></div>`}
 function sItem(s){return `<button class="sitem" data-sermon="${esc(s.id)}"><b>${esc(s.titulo||"Sin título")}${predTag("S"+s.id)}</b>${s.reemplaza?`<span class="tag ready">Mejorada</span>`:s.ensenanza?`<span class="tag ready">Enseñanza lista</span>`:"<span></span>"}<span class="pill ${esc(s.estado||"idea")}">${esc(ESTADOS[s.estado||"idea"])}</span><small>${esc([catLabel(s.categoria),s.texto,s.enserie&&s.serie&&("Serie: "+s.serie),s.fecha&&("para el "+fmtDate(s.fecha))].filter(Boolean).join(" · "))}</small></button>`}
-const CATS=[["01","💜","Oración y Adoración"],["02","❤️","Evangelísticas"],["03","💙","Doctrinales"],["04","🟨","El Tabernáculo y el Arca"],["05","🟫","El Arca",1],["06","🖤","Profecía y Escatología"],["07","💛","Fechas y Ocasiones Especiales"],["08","💚","Renovación"],["09","🧡","Personajes Bíblicos"],["10","🩵","Vida Cristiana"],["11","🟦","Servicio y Ministerio"],["12","🟪","Fe en la Prueba"],["13","🟩","Dinámicas",1],["14","🟧","Enseñanzas Especiales",1],["15","🎞️","Talleres y Dinámicas"],["16","📘","Estudios Bíblicos"],["17","🕯️","Mensajes Breves"],["18","🔥","Avivamiento, Milagros y Campañas"],["19","💰","Mayordomía"],["20","🏠","Enseñanzas para la Familia"],["21","📜","Las Dispensaciones"],["22","✝️","La Pasión y la Gloria de Cristo"],["23","📖","Mensajes para el Púlpito"]];
+const CATS=[["01","💜","Oración y Adoración"],["02","❤️","Evangelísticas"],["03","💙","Doctrinales"],["04","🟨","El Tabernáculo y el Arca"],["05","🟫","El Arca",1],["06","🖤","Profecía y Escatología"],["07","💛","Fechas y Ocasiones Especiales"],["08","💚","Renovación"],["09","🧡","Personajes Bíblicos"],["10","🩵","Vida Cristiana"],["11","🟦","Servicio y Ministerio"],["12","🟪","Fe en la Prueba"],["13","🟩","Dinámicas",1],["14","🟧","Enseñanzas Especiales",1],["15","🎞️","Talleres y Dinámicas"],["16","📘","Estudios Bíblicos"],["17","🕯️","Mensajes Breves"],["18","🔥","Avivamiento, Milagros y Campañas"],["19","💰","Mayordomía"],["20","🏠","Enseñanzas para la Familia"],["21","📜","Las Dispensaciones"],["22","✝️","La Pasión y la Gloria de Cristo"],["23","📖","Mensajes para el Púlpito"],["24","📚","Series para predicar"],["25","🐑","El Pastor y el Rebaño"],["26","✉️","Predicando las Cartas"],["27","🌾","Las Parábolas de Jesús"],["28","🧭","Obediencia y Carácter"]];
 const CATORD=()=>{let L=null;try{L=LIB}catch(e){}const o=i=>(L&&L.carpetas&&L.carpetas[i]&&L.carpetas[i].o)||i+100;return CATS.map((c,i)=>i).sort((a,b)=>o(a)-o(b))};
-const FOLDER_ICO={"Todas": "<path d=\"M4 6.5h16M4 12h16M4 17.5h16\"/>", "Oración y Adoración": "<path d=\"M12 3.2c1.9 2.2 1.9 3.9 0 5.3-1.9-1.4-1.9-3.1 0-5.3z\"/><rect x=\"9\" y=\"10.5\" width=\"6\" height=\"10\" rx=\"1\"/><path d=\"M7 20.5h10\"/>", "Evangelísticas": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17\"/>", "Avivamiento, Milagros y Campañas": "<path d=\"M12 3.5c3.4 3.2 5.5 6.3 5.5 9.8a5.5 5.5 0 0 1-11 0c0-2 .9-3.6 2.4-5 .1 1.9.9 3 2 3.4-.3-2.6.1-5.3 1.1-8.2z\"/>", "Renovación": "<path d=\"M12 20.5v-8\"/><path d=\"M12 12.5c0-4 2.8-6.6 7-6.6 0 4-2.8 6.6-7 6.6z\"/><path d=\"M12 14.5c0-3-2.2-5-5.5-5 0 3 2.2 5 5.5 5z\"/>", "Doctrinales": "<path d=\"M3.5 9.5 12 4l8.5 5.5z\"/><path d=\"M6 12v6M10 12v6M14 12v6M18 12v6M4 20.5h16\"/>", "Las Dispensaciones": "<path d=\"M6.5 3.5h11M6.5 20.5h11\"/><path d=\"M8 3.5c0 4.5 8 4.5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 4.5-8 8.5s8 4 8 8.5\"/>", "Profecía y Escatología": "<path d=\"M3.5 17h17M7 17a5 5 0 0 1 10 0\"/><path d=\"M12 6.5V4M6.3 9.3 4.6 7.6M17.7 9.3l1.7-1.7M5 20.5h14\"/>", "El Tabernáculo y el Arca": "<path d=\"M3.5 19.5 12 5l8.5 14.5z\"/><path d=\"M9.5 19.5 12 15l2.5 4.5\"/>", "La Pasión y la Gloria de Cristo": "<path d=\"M12 3v18M7.5 8h9\"/>", "Mensajes para el Púlpito": "<path d=\"M5 8.5h14l-1.8 4H6.8z\"/><path d=\"M12 12.5v8M8.5 20.5h7M9 6l3-2.5L15 6\"/>", "Personajes Bíblicos": "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20.5c.8-4 3.6-6 7-6s6.2 2 7 6\"/>", "Estudios Bíblicos": "<path d=\"M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z\"/><path d=\"M12 6.5v13\"/>", "Vida Cristiana": "<path d=\"M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z\"/>", "Fe en la Prueba": "<circle cx=\"12\" cy=\"5.5\" r=\"2\"/><path d=\"M12 7.5v13M8.5 11h7M4.5 14a7.5 7.5 0 0 0 15 0\"/>", "Servicio y Ministerio": "<path d=\"M3.5 12.5h17a8.5 7 0 0 1-17 0z\"/><path d=\"M9.5 9c0-1.8 1.2-3 2.5-5 1.3 2 2.5 3.2 2.5 5a2.5 2.5 0 0 1-5 0z\"/>", "Mayordomía": "<path d=\"M12 21V11\"/><path d=\"M12 11c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM12 13.5c0-2.8-2-4.8-5-4.8 0 2.8 2 4.8 5 4.8z\"/><path d=\"M7 21h10\"/>", "Enseñanzas para la Familia": "<path d=\"M3.5 11 12 4l8.5 7\"/><path d=\"M5.5 9.5V20h13V9.5\"/><path d=\"M12 17.2s-2.6-1.5-2.6-3.2a1.3 1.3 0 0 1 2.6-.5 1.3 1.3 0 0 1 2.6.5c0 1.7-2.6 3.2-2.6 3.2z\"/>", "Fechas y Ocasiones Especiales": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 9.5h17M8 3v4M16 3v4M12 12.5l.9 1.9 2.1.3-1.5 1.4.4 2-1.9-1-1.9 1 .4-2-1.5-1.4 2.1-.3z\"/>", "Mensajes Breves": "<path d=\"M4.5 5.5h15v10h-8.5l-4.5 3.5v-3.5h-2z\"/><path d=\"M8.5 10.5h7\"/>", "Talleres y Dinámicas": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M12 16v4M8 20.5h8\"/>"};
+const FOLDER_ICO={"Todas": "<path d=\"M4 6.5h16M4 12h16M4 17.5h16\"/>", "El Pastor y el Rebaño": "<path d=\"M8 21V8.5a4 4 0 0 1 8 0c0 1.9-1.4 3.3-3.2 3.3\"/><path d=\"M4.5 21h7\"/>", "Predicando las Cartas": "<rect x=\"3.5\" y=\"6\" width=\"17\" height=\"12.5\" rx=\"1.5\"/><path d=\"m4 7 8 6.2L20 7\"/>", "Las Parábolas de Jesús": "<path d=\"M12 21V8\"/><path d=\"M12 8c-2.2-.9-3.2-2.8-3.2-4.8 2.2.9 3.2 2.8 3.2 4.8zM12 8c2.2-.9 3.2-2.8 3.2-4.8-2.2.9-3.2 2.8-3.2 4.8zM12 13.5c-2.2-.9-3.2-2.8-3.2-4.8 2.2.9 3.2 2.8 3.2 4.8zM12 13.5c2.2-.9 3.2-2.8 3.2-4.8-2.2.9-3.2 2.8-3.2 4.8z\"/>", "Obediencia y Carácter": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"m15.6 8.4-2.2 5-5 2.2 2.2-5z\"/>", "Series para predicar": "<rect x=\"4\" y=\"4.5\" width=\"4\" height=\"15\" rx=\".6\"/><rect x=\"9.5\" y=\"4.5\" width=\"4\" height=\"15\" rx=\".6\"/><path d=\"m15.4 5.6 3.4-.9 3 13.9-3.4.9z\"/><path d=\"M4 8h4M9.5 8h4\"/>", "Oración y Adoración": "<path d=\"M12 3.2c1.9 2.2 1.9 3.9 0 5.3-1.9-1.4-1.9-3.1 0-5.3z\"/><rect x=\"9\" y=\"10.5\" width=\"6\" height=\"10\" rx=\"1\"/><path d=\"M7 20.5h10\"/>", "Evangelísticas": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17\"/>", "Avivamiento, Milagros y Campañas": "<path d=\"M12 3.5c3.4 3.2 5.5 6.3 5.5 9.8a5.5 5.5 0 0 1-11 0c0-2 .9-3.6 2.4-5 .1 1.9.9 3 2 3.4-.3-2.6.1-5.3 1.1-8.2z\"/>", "Renovación": "<path d=\"M12 20.5v-8\"/><path d=\"M12 12.5c0-4 2.8-6.6 7-6.6 0 4-2.8 6.6-7 6.6z\"/><path d=\"M12 14.5c0-3-2.2-5-5.5-5 0 3 2.2 5 5.5 5z\"/>", "Doctrinales": "<path d=\"M3.5 9.5 12 4l8.5 5.5z\"/><path d=\"M6 12v6M10 12v6M14 12v6M18 12v6M4 20.5h16\"/>", "Las Dispensaciones": "<path d=\"M6.5 3.5h11M6.5 20.5h11\"/><path d=\"M8 3.5c0 4.5 8 4.5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 4.5-8 8.5s8 4 8 8.5\"/>", "Profecía y Escatología": "<path d=\"M3.5 17h17M7 17a5 5 0 0 1 10 0\"/><path d=\"M12 6.5V4M6.3 9.3 4.6 7.6M17.7 9.3l1.7-1.7M5 20.5h14\"/>", "El Tabernáculo y el Arca": "<path d=\"M3.5 19.5 12 5l8.5 14.5z\"/><path d=\"M9.5 19.5 12 15l2.5 4.5\"/>", "La Pasión y la Gloria de Cristo": "<path d=\"M12 3v18M7.5 8h9\"/>", "Mensajes para el Púlpito": "<path d=\"M5 8.5h14l-1.8 4H6.8z\"/><path d=\"M12 12.5v8M8.5 20.5h7M9 6l3-2.5L15 6\"/>", "Personajes Bíblicos": "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20.5c.8-4 3.6-6 7-6s6.2 2 7 6\"/>", "Estudios Bíblicos": "<path d=\"M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z\"/><path d=\"M12 6.5v13\"/>", "Vida Cristiana": "<path d=\"M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z\"/>", "Fe en la Prueba": "<circle cx=\"12\" cy=\"5.5\" r=\"2\"/><path d=\"M12 7.5v13M8.5 11h7M4.5 14a7.5 7.5 0 0 0 15 0\"/>", "Servicio y Ministerio": "<path d=\"M3.5 12.5h17a8.5 7 0 0 1-17 0z\"/><path d=\"M9.5 9c0-1.8 1.2-3 2.5-5 1.3 2 2.5 3.2 2.5 5a2.5 2.5 0 0 1-5 0z\"/>", "Mayordomía": "<path d=\"M12 21V11\"/><path d=\"M12 11c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM12 13.5c0-2.8-2-4.8-5-4.8 0 2.8 2 4.8 5 4.8z\"/><path d=\"M7 21h10\"/>", "Enseñanzas para la Familia": "<path d=\"M3.5 11 12 4l8.5 7\"/><path d=\"M5.5 9.5V20h13V9.5\"/><path d=\"M12 17.2s-2.6-1.5-2.6-3.2a1.3 1.3 0 0 1 2.6-.5 1.3 1.3 0 0 1 2.6.5c0 1.7-2.6 3.2-2.6 3.2z\"/>", "Fechas y Ocasiones Especiales": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 9.5h17M8 3v4M16 3v4M12 12.5l.9 1.9 2.1.3-1.5 1.4.4 2-1.9-1-1.9 1 .4-2-1.5-1.4 2.1-.3z\"/>", "Mensajes Breves": "<path d=\"M4.5 5.5h15v10h-8.5l-4.5 3.5v-3.5h-2z\"/><path d=\"M8.5 10.5h7\"/>", "Talleres y Dinámicas": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M12 16v4M8 20.5h8\"/>"};
 const folderIco=t=>`<svg class="fico" viewBox="0 0 24 24" aria-hidden="true">${FOLDER_ICO[t]||'<circle cx="12" cy="12" r="2"/>'}</svg>`;
 const CATMAP=Object.fromEntries(CATS.map(c=>[c[0],c]));
 function catLabel(k){const c=CATMAP[k];return c?c[2]:""}
@@ -1839,6 +2582,7 @@ function viewBiblia(v,opts){
     <button class="btn" id="prev" aria-label="Capítulo anterior">‹ Anterior</button><button class="btn" id="next" aria-label="Capítulo siguiente">Siguiente ›</button>
     <span class="muted" style="font-size:13px">Toque los versículos para marcarlos.</span></div>
   <article class="chapter"><h2>${esc(book.name)} ${c}</h2>${book.chs[c-1].map((t,i)=>t?`<span class="vs${SEL.includes(i+1)?" sel":""}" data-v="${i+1}" tabindex="0"><sup>${i+1}</sup>${esc(t)}</span> `:"").join("")}</article>
+  <div id="refpanel" class="refpanel"></div>
   ${versionLinks({b,c})}
 `;
   $("#vsel").onchange=async e=>{await setMainVersion(e.target.value);go("biblia",{keepSel:true})};
@@ -1846,9 +2590,9 @@ function viewBiblia(v,opts){
   $("#csel").onchange=e=>{BSTATE.c=+e.target.value;go("biblia")};
   $("#prev").onclick=()=>{if(c>1)BSTATE.c--;else if(b>0){BSTATE.b--;BSTATE.c=BIBLE[BSTATE.b].chs.length}go("biblia")};
   $("#next").onclick=()=>{if(c<book.chs.length)BSTATE.c++;else if(b<BIBLE.length-1){BSTATE.b++;BSTATE.c=1}go("biblia")};
-  $(".chapter",v).onclick=e=>{const s=e.target.closest(".vs");if(!s)return;const n=+s.dataset.v;SEL=SEL.includes(n)?SEL.filter(x=>x!==n):[...SEL,n].sort((a,b)=>a-b);s.classList.toggle("sel");updateActionbar()};
+  $(".chapter",v).onclick=e=>{const s=e.target.closest(".vs");if(!s)return;const n=+s.dataset.v;SEL=SEL.includes(n)?SEL.filter(x=>x!==n):[...SEL,n].sort((a,b)=>a-b);s.classList.toggle("sel");updateActionbar();refPanel(b,c,SEL);if(typeof vstudy==="function")vstudy(b,c,SEL)};
   $(".chapter",v).onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("vs"))e.target.click()};
-  updateActionbar();
+  updateActionbar();refPanel(b,c,SEL);if(typeof vstudy==="function")vstudy(b,c,SEL);if(typeof bibMarks==="function")bibMarks(v,b,c);
   if(SEL.length){$(`.vs[data-v="${SEL[0]}"]`)?.scrollIntoView({block:"center"})}
 }
 function vselHTML(){const l=bvList().filter(x=>bvGet(x.abbr));return `<select id="vsel" aria-label="Versión de la Biblia">${l.length&&BVER.abbr!=="RV1909"?"":`<option value="RV1909" ${BVER.abbr==="RV1909"?"selected":""}>RV1909</option>`}${l.map(x=>`<option value="${esc(x.abbr)}" ${x.abbr===BVER.abbr?"selected":""}>${esc(x.abbr)}</option>`).join("")}</select>`}
@@ -1874,7 +2618,7 @@ function updateActionbar(){
     if(a==="copy")copyText(`${label} (${BVER.abbr})\n${txt}`);
     if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:label+" ("+BVER.abbr+")",texto:SEL.map(n=>`**${n}** ${ch[n-1]}`).join(" ")}));
     if(a==="cmpv")return compareVersions(r);
-    if(a==="clear"){SEL=[];document.querySelectorAll(".vs.sel").forEach(x=>x.classList.remove("sel"));updateActionbar()}
+    if(a==="clear"){SEL=[];document.querySelectorAll(".vs.sel").forEach(x=>x.classList.remove("sel"));updateActionbar();refPanel(b,c,[])}
     if(["comentario","bosquejo","paralelos"].includes(a))go(a,{prefill:{pasaje:rangeLabel}});
   };
 }
@@ -1908,6 +2652,13 @@ function highlight(t,n,res){
   const spans=[];for(const r of res){r.lastIndex=0;let m;while(m=r.exec(n)){spans.push([m.index,m.index+m[0].length]);if(!m[0].length)r.lastIndex++}}
   spans.sort((a,b)=>a[0]-b[0]);let out="",p=0;for(const [a,z] of spans){if(a<p)continue;out+=esc(t.slice(p,a))+"<mark>"+esc(t.slice(a,z))+"</mark>";p=z}return out+esc(t.slice(p));
 }
+function concEns(m){loadLib().then(()=>{const box=$("#concens");if(!box)return;
+  const sc=LIB.items.map(it=>{const t=m.test(it._t),bb=m.test(it._b);return {it,s:(t?10:0)+(bb?1:0)}}).filter(x=>x.s>0);
+  const tot=sc.length;if(!tot){box.innerHTML="";return}
+  sc.sort((a,b)=>b.s-a.s);const top=sc.slice(0,6);
+  box.innerHTML=`<p class="label" style="margin:0 0 8px">En sus enseñanzas · ${tot} ${tot===1?"habla":"hablan"} de «${esc(CONC.q.replace(/["“”]/g,""))}»</p><div class="reflist">${top.map(x=>`<button class="refrow" data-ens="${x.it.i}"><b>${esc(x.it.t)}</b><span>${esc(LIB.carpetas[x.it.c]?.t||"")}</span></button>`).join("")}</div>${tot>top.length?`<p style="margin:8px 0 0"><button class="btn small" id="concall">Ver las ${tot} en Mis enseñanzas</button></p>`:""}`;
+  const all=$("#concall");if(all)all.onclick=ev=>{ev.stopPropagation();LSTATE.q=CONC.q.replace(/["“”]/g,"");LSTATE.c=null;LSTATE.f="todas";LSTATE.item=null;go("sermones")};
+}).catch(()=>{})}
 function doSearch(){
   const box=$("#cres");if(!box)return;
   if(!BIBLE){box.innerHTML=`<div class="thinking"><span class="dot"></span>Cargando la Biblia…</div>`;return}
@@ -1919,6 +2670,7 @@ function doSearch(){
   const hits=CONC.libro!==""?all.filter(x=>x.b===+CONC.libro):all;
   const max=Math.max(1,...Object.values(per));
   box.innerHTML=`<div class="conc-layout"><div style="min-width:0">
+    <div id="concens" class="concref"></div>
     <p><b>${hits.length.toLocaleString("es-CO")}</b> versículo${hits.length===1?"":"s"}${CONC.libro!==""?` en ${esc(BIBLE[+CONC.libro].name)}`:""}${CONC.libro!==""&&all.length!==hits.length?` <span class="muted">(${all.length.toLocaleString("es-CO")} en total)</span>`:""}</p>
     <div id="hits">${hits.slice(0,CONC.shown).map(x=>`<div class="hit"><a data-b="${x.b}" data-c="${x.c}" data-v="${x.v}">${esc(BIBLE[x.b].name)} ${x.c}:${x.v}</a><div class="t">${highlight(x.t,x.n,m.res)}</div></div>`).join("")}</div>
     ${hits.length>CONC.shown?`<p><button class="btn" id="more">Mostrar más (${(hits.length-CONC.shown).toLocaleString("es-CO")} restantes)</button></p>`:""}
@@ -1927,7 +2679,9 @@ function doSearch(){
   <aside class="card" aria-label="Distribución por libro"><p class="label" style="margin:0 0 8px">Por libro</p>
     <div class="dist">${Object.entries(per).map(([b,n])=>`<button data-lib="${b}" ${CONC.libro===b?'style="background:var(--oro-soft)"':""}><span>${esc(BIBLE[b].name)}</span><span class="bar" style="width:${Math.max(4,n/max*100)}%"></span><span class="n">${n}</span></button>`).join("")||'<span class="muted">Sin resultados.</span>'}</div>
     ${CONC.libro!==""?'<button class="btn small" style="margin-top:8px" data-lib="">Ver todos los libros</button>':""}</aside></div>`;
+  concEns(m);
   box.onclick=e=>{
+    const ce=e.target.closest("[data-ens]");if(ce){LSTATE.item=+ce.dataset.ens;go("biblioteca");return}
     const a=e.target.closest("a[data-b]");if(a){goBible(+a.dataset.b,+a.dataset.c,[+a.dataset.v,+a.dataset.v]);return}
     const l=e.target.closest("[data-lib]");if(l){CONC.libro=l.dataset.lib;$("#clibro").value=CONC.libro;CONC.shown=100;doSearch();return}
     if(e.target.id==="more"){CONC.shown+=200;doSearch()}
@@ -2055,7 +2809,7 @@ async function sendChat(){
 /* ============ Mi biblioteca ============ */
 let LIB=null,LIB_P=null;const LSTATE={c:null,q:"",item:null,f:"todas"};
 function loadLib(){if(LIB)return Promise.resolve(LIB);if(LIB_P)return LIB_P;
-  LIB_P=fetch("biblioteca.json").then(r=>{if(!r.ok)throw new Error("lib");return r.json()}).then(d=>{d.items.forEach((it,i)=>{it.i=i;it._t=norm([it.t,it.T,it.r,it.S].join(" "));it._b=norm(it.p.map(x=>x[1]).join("\n"))});LIB=d;return d}).catch(e=>{LIB_P=null;throw e});return LIB_P}
+  LIB_P=(window.libFetch?libFetch("biblioteca"):fetch("biblioteca.json").then(r=>{if(!r.ok)throw new Error("lib");return r.json()})).then(d=>{d.items.forEach((it,i)=>{it.i=i;it._t=norm([it.t,it.T,it.r,it.S].join(" "));it._b=norm(it.p.map(x=>x[1]).join("\n"))});LIB=d;return d}).catch(e=>{LIB_P=null;throw e});return LIB_P}
 const DUR={"🔴":"Larga","🟠":"Mediana","🟡":"Corta","🟢":"Breve","🔵":"Muy breve"};
 function libFolder(it){return LIB.carpetas[it.c].t}
 function libItem(it,q){const sn=q&&!it._t.includes(norm(q))?libSnippet(it,q):"";
@@ -2072,7 +2826,7 @@ function viewBiblioteca(v,opts){
   if(!LSTATE.f)LSTATE.f="todas";
   v.innerHTML=`<p class="label" style="margin:0 0 4px">Mis enseñanzas</p><h1>Mis enseñanzas</h1>
   <p class="lede" id="llede"></p>
-  <div class="row" style="margin:0 0 12px;gap:8px"><div class="bigsearch" style="flex:1;min-width:240px;margin:0"><input type="search" id="lq" value="${esc(LSTATE.q)}" placeholder="Buscar: Elías, diezmo, Juan 3:16, avivamiento…" aria-label="Buscar en mis enseñanzas"></div><button class="btn primary" id="newbtn" style="padding:12px 16px">Nueva enseñanza</button></div>
+  <div class="row" style="margin:0 0 12px;gap:8px"><div class="bigsearch" style="flex:1;min-width:240px;margin:0"><input type="search" id="lq" value="${esc(LSTATE.q)}" placeholder="Buscar: Elías, diezmo, Juan 3:16, avivamiento…" aria-label="Buscar en mis enseñanzas"></div><button class="btn" data-go="calendario" style="padding:12px 16px">Calendario</button><button class="btn primary" id="newbtn" style="padding:12px 16px">Nueva enseñanza</button></div>
   <div id="vnbanner"></div>
   <div id="accbanner" class="accgrid"></div>
   <form class="card" id="newform" autocomplete="off" hidden style="margin-bottom:16px"><div class="row"><input type="text" id="nt" placeholder="Título" style="flex:2;min-width:200px" aria-label="Título"><input type="text" id="ntx" placeholder="Texto clave (opcional)" style="flex:1;min-width:150px" aria-label="Texto clave"><select id="ncat" style="flex:1;min-width:180px" aria-label="Carpeta">${catOptions(LSTATE.c!=null&&LSTATE.c!=="sin"?CATS[LSTATE.c]?.[0]:"")}</select><button class="btn primary" type="submit" data-mode="open">Crear</button><button class="btn" type="submit" data-mode="armar">Crear y armarla yo mismo</button></div></form>
@@ -2113,10 +2867,11 @@ function viewBiblioteca(v,opts){
   $("#newform").onsubmit=async e=>{e.preventDefault();const mode=e.submitter?.dataset.mode||"open";const t=$("#nt").value.trim();if(!t){$("#nt").focus();return}const id=await Store.saveSermon({titulo:t,texto:$("#ntx").value.trim(),categoria:$("#ncat").value,culto:"dominical",estado:"idea",fecha:"",notas:"",enserie:false,serie:""});mode==="armar"?go("armar",{id}):go("sermones",{open:id})};
   if(LSTATE.openNew){LSTATE.openNew=false;$("#newform").hidden=false;$("#nt").focus()}
   viewSermones.draw=draw;draw();
-  const vnb=()=>{const el=$("#vnbanner");if(!el||!VN)return;const ids=vnIds();if(!ids.length)return;const p=ids.filter(i=>vnStatus(i)==="pend").length;
-    el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas</b><span>${p?`${p} de ${ids.length} enseñanzas de su archivo, pasadas al modelo nuevo, esperan su revisión.`:`Revisó las ${ids.length} versiones nuevas.`}</span><i>›</i></button>`};
+  const vnb=()=>{const el=$("#vnbanner");if(!el||!VN)return;if(ls.get("tp_vnhide",false)){el.innerHTML="";return}const ids=vnIds();if(!ids.length)return;const p=ids.filter(i=>vnStatus(i)==="pend").length;
+    el.innerHTML=`<button class="vnbanner" data-go="nuevas"><b>Versiones nuevas</b><span>${p?`${p} de ${ids.length} enseñanzas de su archivo, pasadas al modelo nuevo, esperan su revisión.`:`Revisó las ${ids.length} versiones nuevas.`}</span><i>›</i></button><button class="vnx" type="button" aria-label="Ocultar este aviso" title="Ocultar este aviso">×</button>`;el.classList.add("vnwrap");
+    el.querySelector(".vnx").onclick=()=>{if(!confirm("¿Ocultar el aviso de versiones nuevas? Las versiones siguen disponibles en cada enseñanza, y puede volver a mostrar el aviso en Ajustes → Apariencia."))return;ls.set("tp_vnhide",true);el.innerHTML="";toast("Aviso oculto")}};
   if(VN)vnb();else loadVN().then(vnb).catch(()=>{});
-  {const ab=$("#accbanner");if(ab&&LIB){const acc=[["Las Dispensaciones","De la Inocencia al Reino, en orden. Ábralas, predíquelas o proyéctelas en diapositivas."],["Mensajes para el Púlpito","Personajes y pasajes de toda la Biblia, listos para predicar."]].map(([t,d])=>{const i=LIB.carpetas.findIndex(c=>c.t===t);if(i<0)return"";const n=LIB.items.filter(x=>x.c===i).length;return `<button class="vnbanner accb" data-acc="${i}"><b>${esc(t)}</b><span>${n} enseñanzas. ${esc(d)}</span><i>›</i></button>`}).join("");ab.innerHTML=acc;ab.onclick=e=>{const b=e.target.closest("[data-acc]");if(!b)return;LSTATE.c=+b.dataset.acc;LSTATE.item=null;$("#lq").value="";draw();navRecord({},window.scrollY);$("#lres").scrollIntoView({block:"start",behavior:"smooth"})}}}
+  {const ab=$("#accbanner");if(ab&&LIB){const acc=[["El Pastor y el Rebaño","Nuevas: el corazón del pastor, el cuidado de la iglesia por sus pastores y el valor del rebaño."],["Predicando las Cartas","Nuevas: mensajes desde Romanos, Corintios, Efesios, Filipenses, Colosenses, Timoteo, Hebreos y Juan."],["Las Parábolas de Jesús","Nuevas: el sembrador, el hijo pródigo, el buen samaritano, las diez vírgenes y más."],["Obediencia y Carácter","Nuevas: obediencia, rebeldía, orgullo, envidia, integridad, tibieza y perdón."],["Las Dispensaciones","De la Inocencia al Reino, en orden. Ábralas, predíquelas o proyéctelas en diapositivas."],["Mensajes para el Púlpito","Personajes y pasajes de toda la Biblia, listos para predicar."]].map(([t,d])=>{const i=LIB.carpetas.findIndex(c=>c.t===t);if(i<0)return"";const n=LIB.items.filter(x=>x.c===i).length;return `<button class="vnbanner accb" data-acc="${i}"><b>${esc(t)}</b><span>${n} enseñanzas. ${esc(d)}</span><i>›</i></button>`}).join("")+(typeof viewSeries==="function"?(()=>{const n=new Set(LIB.items.filter(x=>x.serie).map(x=>x.serie)).size;return `<button class="vnbanner accb" data-go="series"><b>Series para predicar</b><span>${n} series de varias semanas, en orden. Agéndelas en el calendario con un toque.</span><i>›</i></button>`})():"");ab.innerHTML=acc;ab.onclick=e=>{const b=e.target.closest("[data-acc]");if(!b)return;LSTATE.c=+b.dataset.acc;LSTATE.item=null;$("#lq").value="";draw();navRecord({},window.scrollY);$("#lres").scrollIntoView({block:"start",behavior:"smooth"})}}}
   if(LSTATE.flash){const el=$(`#lres [data-sermon="${CSS.escape(LSTATE.flash)}"]`);LSTATE.flash=null;if(el){el.classList.add("flash");setTimeout(()=>el.scrollIntoView({block:"center",behavior:"smooth"}),100)}}
 }
 function libToMd(it){if(it.md)return it.md;const L=[`# ${it.T||it.t}`];let i=0;const P=it.p;
@@ -2155,7 +2910,7 @@ document.addEventListener("click",e=>{const b=e.target.closest(".predbox [data-p
 /* ============ Versiones nuevas: el archivo pasado al modelo nuevo ============ */
 let VN=null,VN_P=null;const VNS={f:"pend",q:"",c:"",m:""};
 function loadVN(){if(VN)return Promise.resolve(VN);if(VN_P)return VN_P;
-  VN_P=fetch("biblioteca-nueva.json").then(r=>{if(!r.ok)throw new Error("vn");return r.json()}).then(d=>{VN=d.items||{};return VN}).catch(e=>{VN_P=null;throw e});return VN_P}
+  VN_P=(window.libFetch?libFetch("biblioteca-nueva"):fetch("biblioteca-nueva.json").then(r=>{if(!r.ok)throw new Error("vn");return r.json()})).then(d=>{VN=d.items||{};return VN}).catch(e=>{VN_P=null;throw e});return VN_P}
 loadVN().catch(()=>{});
 function vnState(){return ls.get("tp_vn",{})||{}}
 function vnSet(i,st){const o={...vnState()};if(st)o[i]=st;else delete o[i];ls.set("tp_vn",o)}
@@ -2221,7 +2976,7 @@ function libRead(v,it){
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
   <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
-  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lcopy">Copiar</button></div>
+  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lpdf">Compartir PDF</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
   $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
@@ -2232,7 +2987,7 @@ function libRead(v,it){
   $("#lcopy").onclick=()=>copyText(libToText(it));
   const vo=v.querySelector("[data-vnopen]");if(vo)vo.onclick=()=>go("nuevacmp",{vn:it.i});
   $("#lpulpit").onclick=()=>openPulpit(mdText,it.t);
-  $("#lslides").onclick=()=>{location.href="diapositivas.html?lib="+it.i};
+  $("#lslides").onclick=()=>openSlides("lib="+it.i);
   v.querySelector(".out-actions").addEventListener("click",e=>{const a=e.target.closest("[data-p]")?.dataset.p;if(a==="w_lib_cur")exportWord(mdText,curStyle(),"",{titulo:it.t})});
   $("#libpage").onclick=e=>{const d=e.target.closest("[data-e^='ds_']");if(!d)return;ls.set("tp_wstyle",d.dataset.e.slice(3));$("#libpage").innerHTML=designPicker("lib")+pageHTML(mdText,curStyle());$("#ldl").textContent="Descargar Word · "+WSHORT[curStyle()]};
 }
@@ -2853,7 +3608,7 @@ function renderEns(id){
     body=`${ui.mode==="view"?designPicker("ens"):""}${ui.mode==="view"?pageHTML(txt,curStyle()):`<div class="md paper">${md(txt)}</div>`}${ui.mode==="rev"?`<div class="thinking" style="margin-top:8px"><span class="dot"></span>Aplicando el cambio…</div>`:""}`;
   }
   const tools=ui.mode==="view"?`<div class="askbox"><label for="ens_ask" class="label">Pedirle un cambio a Claude</label><div class="row" style="margin-top:6px"><input type="text" id="ens_ask" placeholder="Ej.: quite el punto III · añada el ejemplo de Ana · haga la conclusión más corta" style="flex:1;min-width:220px"><button class="btn" data-e="ask">Aplicar</button></div></div>
-  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="slides">Hacer diapositivas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
+  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="pdf">Compartir PDF</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="slides">Hacer diapositivas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">El Word se descarga tal como se ve aquí. Las citas se comparan con su Reina-Valera 1960 al crear la enseñanza; toque "Verificar citas" para revisarlas o para añadir otra versión.</p>`:ui.mode==="rev"?`<div class="out-actions"><button class="btn" data-e="revstop">Detener</button></div>`:"";
   const pend=ui.mode==="pending"?`<div class="decide"><p style="margin:0 0 4px"><b>Hay una versión nueva de esta enseñanza.</b> Revísela y decida qué hacer con ella.</p>
     <div class="row" style="margin:8px 0 2px;gap:6px"><span class="seg"><button class="btn small ${ui.show!=="old"?"on":""}" data-e="shownew">Ver la nueva</button><button class="btn small ${ui.show==="old"?"on":""}" data-e="showold">Ver la que tenía</button></span></div>
@@ -2865,7 +3620,7 @@ function renderEns(id){
   box.onclick=e=>{const a=e.target.closest("[data-e],[data-p]");if(!a)return;const k=a.dataset.e||a.dataset.p;
     if(k.startsWith("w_")){const [,kind,style]=k.split("_");return exportWord(kind==="hoja"?st.hoja:OPEN.ensenanza,style,kind==="hoja"?"Hoja para la congregación":"")}
     if(k==="verif")return verifyUI(id);
-    if(k==="slides"){saveOpen().then(()=>{location.href="diapositivas.html?ens="+encodeURIComponent(id)});return}
+    if(k==="slides"){saveOpen().then(()=>openSlides("ens="+encodeURIComponent(id)));return}
     if(k==="edit"){ui.mode="edit";renderEns(id);$("#ens_ta")?.focus();return}
     if(k==="ecancel"){ui.mode="view";renderEns(id);return}
     if(k==="esave"){const t=$("#ens_ta").value;if(t!==OPEN.ensenanza){OPEN.ensanterior=OPEN.ensenanza;OPEN.ensenanza=t;saveOpen();toast("Cambios guardados")}ui.mode="view";renderEns(id);return}
@@ -2921,7 +3676,7 @@ function drawMats(id){
 }
 
 /* ============ barra de búsqueda ============ */
-$("#jumpform").onsubmit=e=>{e.preventDefault();const q=$("#jump").value.trim();if(!q)return;const r=parseRef(q);if(r){goBible(r.b,r.c,r.v1?[r.v1,r.v2||r.v1]:null)}else go("concordancia",{q});$("#jump").blur()};
+$("#jumpform").onsubmit=e=>{e.preventDefault();const q=$("#jump").value.trim();if(!q)return;const r=parseRef(q);if(r){goBible(r.b,r.c,r.v1?[r.v1,r.v2||r.v1]:null)}else go(typeof viewBuscar==="function"?"buscar":"concordancia",{q});$("#jump").blur()};
 
 /* ============ arranque ============ */
 (async function start(){
