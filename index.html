@@ -1125,7 +1125,7 @@ function histSection(){const a=histAll();
     <p class="muted" style="margin:8px 0;font-size:13px">Si algo se perdió al sincronizar, recupérelo aquí. «Recuperar» lo trae como una enseñanza aparte, sin tocar la actual.</p>
     <div style="display:grid;gap:8px">${a.map(x=>`<div style="border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px">
       <b style="font-size:14.5px">${esc((x.d&&x.d.titulo)||"Enseñanza sin título")}</b>
-      <span class="muted" style="font-size:12.5px">${x.kind==="conf"?"⚠️ ":""}${esc(x.why)} · ${fmt(x.f)}</span>
+      <span class="muted" style="font-size:12.5px">${x.kind==="conf"?"<b style=\"color:var(--oro)\">Atención:</b> ":""}${esc(x.why)} · ${fmt(x.f)}</span>
       <div class="row" style="gap:6px"><button class="btn small" data-hrec="${x.h}">Recuperar</button><button class="btn small" data-hdel="${x.h}">Quitar de la lista</button></div></div>`).join("")}</div></details>`}
 function histWire(v){
   v.querySelectorAll("[data-hrec]").forEach(b=>b.onclick=()=>{const x=histAll().find(y=>y.h===b.dataset.hrec);if(!x)return;

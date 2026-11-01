@@ -1,4 +1,4 @@
-const V="tp-cf7bc4dd";
+const V="tp-c7eedf40";
 const CORE=["./", "apple-touch-icon.png", "biblioteca-nueva.enc", "biblioteca.enc", "diapositivas.html", "docx.js", "html2canvas.min.js", "icon-192.png", "icon-512.png", "index.html", "jspdf.umd.min.js", "libcrypt.js", "lugares.json", "manifest.webmanifest", "mapa.json", "pptxgen.bundle.js", "rv1909.json", "xref.json", "shim.js"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("tp-")&&k!==V&&k!=="tp-fonts").map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
