@@ -3013,13 +3013,16 @@ function viewNuevaCmp(v,opts){
   $("#vncopy").onclick=()=>copyText(md.replace(/==/g,"").replace(/\*\*/g,""));
 }
 function libToText(it){if(it.md)return it.md.replace(/^#+\s*/gm,"").replace(/==|\*\*/g,"").replace(/^> /gm,"");return [it.T||it.t,...it.p.map(([k,t])=>k==="li"?"• "+t:t)].join("\n\n")}
+/* enseñanzas relacionadas: vienen calculadas dentro de la biblioteca (it.rel) */
+function relHTML(it){const R=(it.rel||[]).map(j=>LIB.items[j]).filter(Boolean);if(!R.length)return "";
+  return `<div class="section-head" style="margin-top:26px"><h2>También predicó sobre esto</h2></div><div class="grid2" style="margin-top:12px">${R.map(x=>`<button class="tool-card" data-rel="${x.i}"><b>${esc(x.t)}</b><span>${esc((LIB.carpetas[x.c]||{}).t||"")}${x.r?" · "+esc(x.r):""}</span></button>`).join("")}</div>`}
 function libRead(v,it){
   const c=LIB.carpetas[it.c];const mdText=autoFix(libToMd(it),true);
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
   <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
   <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lpdf">Compartir PDF</button><button class="btn" id="lcopy">Copiar</button></div>
-  <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p></article>`;
+  <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p>${relHTML(it)}</article>`;
   $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
     const id=await Store.saveSermon({titulo:it.t,texto:it.r||"",categoria:cat,culto:"dominical",estado:"prep",fecha:"",notas:"",enserie:false,serie:"",origen:it.i,origenTitulo:it.t,ensenanza:prep?"":autoFix(libToMd(it),true)});
@@ -3027,6 +3030,7 @@ function libRead(v,it){
     LSTATE.item=null;go("sermones",{open:id,prepFocus:prep});toast(prep?"Revise las opciones y toque «Preparar enseñanza».":"Copia lista. Toque «Editar» en la vista previa.")};
   $("#lprep").onclick=()=>toSermon(true);$("#lsave").onclick=()=>toSermon(false);
   $("#lcopy").onclick=()=>copyText(libToText(it));
+  v.querySelectorAll("[data-rel]").forEach(b=>b.onclick=()=>{const y0=window.scrollY;LSTATE.item=+b.dataset.rel;viewBiblioteca($("#view"),{});window.scrollTo({top:0});navRecord({},y0)});
   const vo=v.querySelector("[data-vnopen]");if(vo)vo.onclick=()=>go("nuevacmp",{vn:it.i});
   $("#lpulpit").onclick=()=>openPulpit(mdText,it.t);
   $("#lslides").onclick=()=>openSlides("lib="+it.i);
