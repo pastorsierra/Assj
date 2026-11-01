@@ -997,7 +997,17 @@ function syncCfg(){try{return JSON.parse(TP.kv.get("sync_cfg")||"null")}catch{re
 function syncSaveCfg(c){if(c){const t=JSON.stringify(c);TP.kv.set("sync_cfg",t);TP.put("sync_cfg",t)}else TP.del("sync_cfg")}
 function syncMeta(){try{return JSON.parse(TP.kv.get("sync_meta")||"null")||{s:{},del:{},kv:{}}}catch{return {s:{},del:{},kv:{}}}}
 function syncSaveMeta(m){const t=JSON.stringify(m);TP.kv.set("sync_meta",t);TP.put("sync_meta",t)}
-const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_cfg"||k==="tp_lock"||k==="tp_libkey"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
+const SYNC_SKIP=k=>!k.startsWith("tp_")||k==="tp_sync_hist"||k==="tp_cfg"||k==="tp_lock"||k==="tp_libkey"||k==="tp_sermones"||k==="tp_biblia_user"||k==="tp_biblia"||k.startsWith("tp_bv_");
+/* versiones guardadas: antes de que la sincronización reemplace o borre una enseñanza de este equipo,
+   se guarda aquí la versión que había (solo en este equipo, no se sincroniza). */
+const HIST_KEY="tp_sync_hist",HIST_MAX=40;
+function histAll(){try{return JSON.parse(TP.kv.get(HIST_KEY)||"[]")}catch{return []}}
+function histSave(a){const t=JSON.stringify(a.slice(0,HIST_MAX));TP.kv.set(HIST_KEY,t);TP.put(HIST_KEY,t)}
+function histAdd(items){if(!items||!items.length)return 0;let a=histAll(),n=0;const now=new Date().toISOString();
+  for(const it of items){const js=JSON.stringify(it.d);if(a.some(x=>x.id===it.id&&JSON.stringify(x.d)===js))continue;
+    if(it.kind==="prev")a=a.filter(x=>!(x.id===it.id&&x.kind==="prev"));
+    a.unshift({h:"h"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),id:it.id,kind:it.kind,why:it.why,f:now,d:it.d});n++}
+  if(n)histSave(a);return n}
 /* registrar cada cambio local con su hora */
 function syncInit(){const orig=ls.set.bind(ls);
   ls.set=function(k,v){
@@ -1044,11 +1054,21 @@ function syncMerge(R){
   const tL=id=>m.s[id]||Date.parse((L.get(id)||{}).actualizado||"")||1;
   const ids=new Set([...L.keys(),...Object.keys(R.s),...Object.keys(R.del),...Object.keys(m.del)]);
   const out={v:1,s:{},del:{},kv:{}};const merged=[];let changedLocal=false;
+  m.base=m.base||{};const nb={...m.base};const hist=[];let conflicts=0;
+  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   for(const id of ids){
     const lt=L.has(id)?tL(id):0,rt=R.s[id]?R.s[id].t:0,dt=Math.max(m.del[id]||0,R.del[id]||0);
-    if(dt&&dt>=lt&&dt>=rt){out.del[id]=dt;if(L.has(id))changedLocal=true;continue}
-    if(rt>lt){merged.push(R.s[id].d);out.s[id]={t:rt,d:R.s[id].d};m.s[id]=rt;if(!L.has(id)||JSON.stringify(L.get(id))!==JSON.stringify(R.s[id].d))changedLocal=true}
-    else if(lt){merged.push(L.get(id));out.s[id]={t:lt,d:L.get(id)};m.s[id]=lt}
+    const base=m.base[id],known=base!==undefined;
+    if(dt&&dt>=lt&&dt>=rt){out.del[id]=dt;delete nb[id];
+      if(L.has(id)){changedLocal=true;if(!m.del[id]||m.del[id]<dt)hist.push({id,kind:"del",why:"Se borró desde el otro equipo",d:L.get(id)})}
+      continue}
+    if(rt>lt){merged.push(R.s[id].d);out.s[id]={t:rt,d:R.s[id].d};m.s[id]=rt;nb[id]=rt;
+      if(L.has(id)&&!same(L.get(id),R.s[id].d)){changedLocal=true;
+        if(known&&lt>base){conflicts++;hist.push({id,kind:"conf",why:"Se cambió en los dos equipos. Quedó la del otro equipo; esta es la de este equipo",d:L.get(id)})}
+        else hist.push({id,kind:"prev",why:"Versión anterior, antes de recibir cambios del otro equipo",d:L.get(id)})}
+      else if(!L.has(id))changedLocal=true}
+    else if(lt){merged.push(L.get(id));out.s[id]={t:lt,d:L.get(id)};m.s[id]=lt;nb[id]=lt;
+      if(R.s[id]&&known&&rt>base&&!same(L.get(id),R.s[id].d)){conflicts++;hist.push({id,kind:"conf",why:"Se cambió en los dos equipos. Quedó la de este equipo; esta es la del otro equipo",d:R.s[id].d})}}
   }
   m.del=out.del;
   const keys=new Set([...ls.keys().filter(k=>!SYNC_SKIP(k)),...Object.keys(R.kv),...Object.keys(m.kv)]);const kvApply=[];
@@ -1057,7 +1077,7 @@ function syncMerge(R){
     if(rt&&rt===lt&&r.v&&typeof r.v==="object"&&!Array.isArray(r.v)){const lv=ls.get(k,null);if(lv&&typeof lv==="object"&&!Array.isArray(lv)){const mv={...r.v,...lv};out.kv[k]={t:lt,v:mv};if(JSON.stringify(mv)!==JSON.stringify(lv))kvApply.push([k,mv]);continue}}
     if(rt>lt){out.kv[k]=r;m.kv[k]=rt;const cur=TP.kv.get(k);const want=r.v==null?undefined:JSON.stringify(r.v);if(cur!==want)kvApply.push([k,r.v])}
     else if(lt){const v=ls.get(k,null);out.kv[k]={t:lt,v};m.kv[k]=lt}}
-  return {out,m,merged,changedLocal,kvApply}}
+  return {out,m,merged,changedLocal,kvApply,hist,conflicts,nb}}
 async function syncNow(opts={}){
   const c=syncCfg();if(!c||SYNC.busy)return;if(!navigator.onLine){SYNC.err="Sin conexión";syncStatus();return}
   SYNC.busy=true;
@@ -1066,7 +1086,10 @@ async function syncNow(opts={}){
       const g=await ghGet(c);
       if(g.same&&!syncDirty()){SYNC.last=Date.now();SYNC.err="";break}
       let R=g.same?SYNC.remote:g.data;if(!g.same)SYNC.remote=R;
-      const {out,m,merged,changedLocal,kvApply}=syncMerge(R);
+      const {out,m,merged,changedLocal,kvApply,hist,conflicts,nb}=syncMerge(R);
+      const agreed=()=>{const mm=syncMeta();mm.base=nb;syncSaveMeta(mm)};/* solo cuando GitHub ya tiene esta misma versión */
+      histAdd(hist);
+      if(conflicts)toast(conflicts===1?"Una enseñanza se cambió en los dos equipos. Quedó la más reciente; la otra está guardada en Ajustes → Versiones guardadas.":conflicts+" enseñanzas se cambiaron en los dos equipos. Quedaron las más recientes; las otras están en Ajustes → Versiones guardadas.");
       if(changedLocal||kvApply.length){SYNC.applying=true;try{
           if(changedLocal)Store.localSave(merged);
           for(const [k,v] of kvApply)ls.set(k,v==null?undefined:v);
@@ -1075,8 +1098,8 @@ async function syncNow(opts={}){
         if(!opts.quiet)toast("Se actualizó con los cambios del otro lado")}
       m.pend=false;syncSaveMeta(m);
       const same=R&&JSON.stringify(R)===JSON.stringify(out);
-      if(same){SYNC.last=Date.now();SYNC.err="";break}
-      if(await ghPut(c,out)){SYNC.remote=out;SYNC.last=Date.now();SYNC.err="";break}
+      if(same){agreed();SYNC.last=Date.now();SYNC.err="";break}
+      if(await ghPut(c,out)){agreed();SYNC.remote=out;SYNC.last=Date.now();SYNC.err="";break}
     }
   }catch(e){SYNC.err=e.message||"Error al sincronizar"}
   finally{SYNC.busy=false;syncStatus()}}
@@ -1094,6 +1117,24 @@ function syncStart(){clearInterval(SYNC.poll);if(!syncCfg())return;
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&syncCfg())syncNow()});
 window.addEventListener("pageshow",()=>{if(syncCfg())syncNow()});
 window.addEventListener("online",()=>{if(syncCfg())syncNow()});
+/* versiones guardadas en Ajustes */
+function histSection(){const a=histAll();
+  if(!a.length)return `<p class="muted" style="margin:0;font-size:13px"><b>Versiones guardadas:</b> ninguna todavía. Si la sincronización cambia o borra una enseñanza de este equipo, la versión anterior se guarda aquí.</p>`;
+  const fmt=f=>new Date(f).toLocaleString("es-CO",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+  return `<details id="syhist"${a.some(x=>x.kind==="conf")?" open":""}><summary style="cursor:pointer;font-weight:600">Versiones guardadas (${a.length})</summary>
+    <p class="muted" style="margin:8px 0;font-size:13px">Si algo se perdió al sincronizar, recupérelo aquí. «Recuperar» lo trae como una enseñanza aparte, sin tocar la actual.</p>
+    <div style="display:grid;gap:8px">${a.map(x=>`<div style="border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px">
+      <b style="font-size:14.5px">${esc((x.d&&x.d.titulo)||"Enseñanza sin título")}</b>
+      <span class="muted" style="font-size:12.5px">${x.kind==="conf"?"⚠️ ":""}${esc(x.why)} · ${fmt(x.f)}</span>
+      <div class="row" style="gap:6px"><button class="btn small" data-hrec="${x.h}">Recuperar</button><button class="btn small" data-hdel="${x.h}">Quitar de la lista</button></div></div>`).join("")}</div></details>`}
+function histWire(v){
+  v.querySelectorAll("[data-hrec]").forEach(b=>b.onclick=()=>{const x=histAll().find(y=>y.h===b.dataset.hrec);if(!x)return;
+    const all=Store.localAll();const now=new Date().toISOString();
+    const t=((x.d&&x.d.titulo)||"Enseñanza")+" (recuperada)";
+    all.push({...x.d,id:"s"+Date.now(),titulo:t,actualizado:now});Store.localSave(all);
+    toast("Recuperada como «"+t+"». Está en Mis enseñanzas.")});
+  v.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{if(!confirm("¿Quitar esta versión de la lista? No afecta sus enseñanzas."))return;
+    histSave(histAll().filter(y=>y.h!==b.dataset.hdel));viewAjustes(v)})}
 /* sección en Ajustes */
 function syncSection(){const c=syncCfg()||{};const on=!!syncCfg();
   return `<div class="section-head"><h2>Sincronizar Safari y la app</h2></div>
@@ -1109,9 +1150,10 @@ function syncSection(){const c=syncCfg()||{};const on=!!syncCfg();
     <div class="field"><label for="syt">Clave (token)</label><div class="row" style="gap:6px"><input type="password" id="syt" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" value="${esc(c.token||"")}" style="flex:1"><button class="btn" type="button" id="syshow">Ver</button></div></div>
     <div class="row" style="gap:8px">${on?`<button class="btn primary" id="synow">Sincronizar ahora</button><button class="btn" id="syoff">Desconectar este equipo</button>`:`<button class="btn primary" id="syon">Conectar y sincronizar</button>`}</div>
     <p class="muted" style="margin:0;font-size:13.5px" id="syst" role="status"></p>
+    ${histSection()}
     <p class="muted" style="margin:0;font-size:12.5px">Se sincronizan sus enseñanzas preparadas, las marcas de «Predicada», las versiones nuevas que aceptó o descartó y sus preferencias. La clave de la IA, las Biblias cargadas y esta clave de GitHub no se envían.</p>
   </div>`}
-function syncWire(v){const st=document.getElementById("syst");if(!st)return;syncStatus();
+function syncWire(v){const st=document.getElementById("syst");if(!st)return;syncStatus();histWire(v);
   const sh=v.querySelector("#syshow");if(sh)sh.onclick=()=>{const i=v.querySelector("#syt");const s=i.type==="password";i.type=s?"text":"password";sh.textContent=s?"Ocultar":"Ver"};
   const rd=()=>({owner:v.querySelector("#syo").value.trim(),repo:v.querySelector("#syr").value.trim(),token:v.querySelector("#syt").value.trim()});
   const msg=(t,bad)=>{st.textContent=t;st.style.color=bad?"var(--danger)":"var(--verde)"};
