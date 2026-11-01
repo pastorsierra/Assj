@@ -1929,6 +1929,84 @@ function viewBuscar(v,opts={}){const q=String(opts.q||"").trim();const nq=norm(q
 .lectday{margin:0 0 10px}.lectday.done{opacity:.75}
 `;document.head.appendChild(s)})();
 
+/* ============ Escuchar: la Biblia y las enseñanzas en voz alta (nov 2026) ============
+   Usa las voces en español que trae el iPad/iPhone (funciona sin internet y sin costo).
+   Lee párrafo por párrafo, resalta lo que va leyendo y deja pausar, adelantar, cambiar velocidad y voz. */
+const VOZ={items:[],i:0,on:false,paused:false,bar:null,titulo:"",gen:0};
+const vozKey=k=>(window.__AP||"tp_")+"voz_"+k;
+const vozGet=(k,d)=>{try{return localStorage.getItem(vozKey(k))||d}catch{return d}};
+const vozSet=(k,v)=>{try{localStorage.setItem(vozKey(k),v)}catch{}};
+const VOZ_LIB={"Gn":"Génesis","Éx":"Éxodo","Ex":"Éxodo","Lv":"Levítico","Nm":"Números","Dt":"Deuteronomio","Jos":"Josué","Jue":"Jueces","Rt":"Rut","1 S":"Primera de Samuel","2 S":"Segunda de Samuel","1 R":"Primera de Reyes","2 R":"Segunda de Reyes","1 Cr":"Primera de Crónicas","2 Cr":"Segunda de Crónicas","Neh":"Nehemías","Est":"Ester","Sal":"Salmos","Pr":"Proverbios","Ec":"Eclesiastés","Cnt":"Cantares","Is":"Isaías","Jer":"Jeremías","Lm":"Lamentaciones","Ez":"Ezequiel","Dn":"Daniel","Os":"Oseas","Jl":"Joel","Am":"Amós","Abd":"Abdías","Jon":"Jonás","Mi":"Miqueas","Nah":"Nahúm","Hab":"Habacuc","Sof":"Sofonías","Hag":"Hageo","Zac":"Zacarías","Mal":"Malaquías","Mt":"Mateo","Mr":"Marcos","Mc":"Marcos","Lc":"Lucas","Jn":"Juan","Hch":"Hechos","Ro":"Romanos","Rm":"Romanos","1 Co":"Primera de Corintios","2 Co":"Segunda de Corintios","Gá":"Gálatas","Ga":"Gálatas","Ef":"Efesios","Fil":"Filipenses","Flp":"Filipenses","Col":"Colosenses","1 Ts":"Primera de Tesalonicenses","2 Ts":"Segunda de Tesalonicenses","1 Ti":"Primera de Timoteo","2 Ti":"Segunda de Timoteo","Tit":"Tito","Flm":"Filemón","He":"Hebreos","Heb":"Hebreos","Stg":"Santiago","1 P":"Primera de Pedro","2 P":"Segunda de Pedro","1 Jn":"Primera de Juan","2 Jn":"Segunda de Juan","3 Jn":"Tercera de Juan","Jud":"Judas","Ap":"Apocalipsis"};
+const VOZ_ORD={"1":"Primera de","2":"Segunda de","3":"Tercera de"};
+function vozTexto(t){
+  t=String(t||"").replace(/[•▪◦]/g," ").replace(/\((RVR1960|RV1909|RVR|NVI|NTV|DHH|TLA|LBLA)\)/g," ")
+    .replace(/\b(cp|cf|vv?)\.\s*/gi," ");
+  // abreviaturas de libros seguidas de capítulo: «Gá 2:20», «1 Co 13:4»
+  t=t.replace(/(^|[\s(;,])([123] ?)?([A-ZÁÉÍÓÚ][a-záéíóúñ]{0,3})\.? (?=\d)/g,(m,pre,num,ab)=>{const k=(num?num.trim()+" ":"")+ab;if(VOZ_LIB[k])return pre+VOZ_LIB[k]+" ";if(!num&&VOZ_LIB[ab])return pre+VOZ_LIB[ab]+" ";return m});
+  // «1 Juan» → «Primera de Juan», «2 Samuel» → «Segunda de Samuel»
+  t=t.replace(/(^|[\s(;,])([123]) (?=(Samuel|Reyes|Crónicas|Corintios|Tesalonicenses|Timoteo|Pedro|Juan)\b)/g,(m,pre,n)=>pre+VOZ_ORD[n]+" ");
+  // 2:20-22 → «2, versículos 20 al 22»
+  t=t.replace(/(\d+):(\d+)\s*[-–]\s*(\d+)/g,"$1, versículos $2 al $3").replace(/(\d+):(\d+)/g,"$1, versículo $2");
+  return t.replace(/\s+/g," ").trim()}
+function vozTrozos(t){if(t.length<=220)return [t];const out=[];let cur="";
+  for(const f of t.split(/(?<=[.!?;:»])\s+/)){if((cur+" "+f).length>220&&cur){out.push(cur);cur=f}else cur=cur?cur+" "+f:f}
+  if(cur)out.push(cur);return out.flatMap(x=>x.length>300?x.match(/.{1,240}(\s|$)/g):[x])}
+function vozVoces(){const v=(speechSynthesis.getVoices()||[]).filter(x=>/^es/i.test(x.lang));
+  const pref=x=>(/enhanced|mejorad|premium|natural/i.test(x.name)?0:1)*10+(/es[-_](CO|MX|US|419)/i.test(x.lang)?0:/es[-_]ES/i.test(x.lang)?1:2);
+  return v.sort((a,b)=>pref(a)-pref(b)||a.name.localeCompare(b.name))}
+function vozElegida(){const vs=vozVoces();const n=vozGet("nombre","");return vs.find(x=>x.name===n)||vs[0]||null}
+/* qué leer */
+function vozBiblia(root){const art=root.querySelector("article.chapter")||document.querySelector("#view article.chapter");if(!art)return null;
+  const items=[];const h=art.querySelector("h2");if(h)items.push({el:h,t:vozTexto(h.textContent.replace(/(\d+)$/,"capítulo $1"))});
+  art.querySelectorAll(".vs").forEach(s=>{const c=s.cloneNode(true);c.querySelectorAll("sup").forEach(x=>x.remove());const t=c.textContent.trim();if(t)items.push({el:s,t:vozTexto(t)})});
+  return {items,titulo:h?h.textContent:"Biblia"}}
+function vozPagina(root){const pt=(root.querySelector("#libpage h1.pt")||document.querySelector("#view h1.pt"));if(!pt)return null;const page=pt.parentElement;
+  const els=[...page.querySelectorAll("h1,h2,h3,h4,p,li,blockquote")].filter(e=>!e.closest(".dpick,.designs,[data-dp]")&&!e.querySelector("p,li"));
+  const items=els.map(el=>{const c=el.cloneNode(true);c.querySelectorAll("sup").forEach(x=>x.remove());return {el,t:vozTexto(c.textContent)}}).filter(x=>x.t&&x.t.length>1);
+  return {items,titulo:pt.textContent}}
+/* reproducción */
+function vozHablar(){const g=++VOZ.gen;speechSynthesis.cancel();if(!VOZ.on||VOZ.i>=VOZ.items.length){if(VOZ.on&&VOZ.i>=VOZ.items.length)vozCerrar(true);return}
+  const it=VOZ.items[VOZ.i];vozMarcar(it.el);const partes=vozTrozos(it.t);let k=0;const v=vozElegida();const rate=+vozGet("vel","1");
+  const sig=()=>{if(g!==VOZ.gen)return;if(k>=partes.length){VOZ.i++;vozHablar();return}
+    const u=new SpeechSynthesisUtterance(partes[k++]);u.lang=v?v.lang:"es-ES";if(v)u.voice=v;u.rate=rate;u.pitch=1;
+    u.onend=()=>{if(g===VOZ.gen&&!VOZ.paused)sig()};u.onerror=e=>{if(g===VOZ.gen&&e.error!=="interrupted"&&e.error!=="canceled"){VOZ.i++;vozHablar()}};speechSynthesis.speak(u)};
+  sig();vozBarra()}
+function vozMarcar(el){document.querySelectorAll(".voz-on").forEach(x=>x.classList.remove("voz-on"));if(el&&el.isConnected){el.classList.add("voz-on");el.scrollIntoView({block:"center",behavior:"smooth"})}}
+function vozEmpezar(datos,desde){if(!("speechSynthesis" in window)){toast("Este navegador no puede leer en voz alta.");return}
+  if(!datos||!datos.items.length){toast("No hay texto para leer aquí.");return}
+  Object.assign(VOZ,datos,{i:desde||0,on:true,paused:false});vozHablar()}
+function vozPausa(){if(!VOZ.on)return;if(VOZ.paused){VOZ.paused=false;vozHablar()}else{VOZ.paused=true;VOZ.gen++;speechSynthesis.cancel()}vozBarra()}
+function vozSalto(d){if(!VOZ.on)return;VOZ.i=Math.max(0,Math.min(VOZ.items.length-1,VOZ.i+d));VOZ.paused=false;vozHablar()}
+function vozCerrar(fin){VOZ.gen++;VOZ.on=false;VOZ.paused=false;try{speechSynthesis.cancel()}catch{}vozMarcar(null);if(VOZ.bar){VOZ.bar.remove();VOZ.bar=null}if(fin===true)toast("Terminó la lectura.")}
+const VOZ_IC={prev:'<path d="M7 5v14M19 6l-9 6 9 6z"/>',next:'<path d="M17 5v14M5 6l9 6-9 6z"/>',play:'<path d="M8 5l11 7-11 7z"/>',pause:'<path d="M8 5v14M16 5v14"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="1.5"/>'};
+const vozIco=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${VOZ_IC[n]}</svg>`;
+function vozBarra(){let b=VOZ.bar;if(!b){b=document.createElement("div");b.className="vozbar";b.setAttribute("role","region");b.setAttribute("aria-label","Lectura en voz alta");document.body.appendChild(b);VOZ.bar=b;
+    b.addEventListener("click",e=>{const a=e.target.closest("[data-va]");if(!a)return;const k=a.dataset.va;if(k==="pp")vozPausa();else if(k==="prev")vozSalto(-1);else if(k==="next")vozSalto(1);else if(k==="stop")vozCerrar()});
+    b.addEventListener("change",e=>{if(e.target.id==="vozvel"){vozSet("vel",e.target.value)}else if(e.target.id==="voznom"){vozSet("nombre",e.target.value)}if(VOZ.on&&!VOZ.paused)vozHablar()})}
+  const vs=vozVoces(),cur=vozElegida(),vel=vozGet("vel","1");
+  b.innerHTML=`<div class="vz-t"><b>${esc(VOZ.titulo||"Escuchando")}</b><span>${VOZ.paused?"En pausa":"Leyendo"} · ${Math.min(VOZ.i+1,VOZ.items.length)} de ${VOZ.items.length}</span></div>
+   <div class="vz-c"><button class="vz-b" data-va="prev" aria-label="Párrafo anterior">${vozIco("prev")}</button><button class="vz-b vz-main" data-va="pp" aria-label="${VOZ.paused?"Continuar":"Pausa"}">${vozIco(VOZ.paused?"play":"pause")}</button><button class="vz-b" data-va="next" aria-label="Párrafo siguiente">${vozIco("next")}</button><button class="vz-b" data-va="stop" aria-label="Detener">${vozIco("stop")}</button></div>
+   <div class="vz-o"><select id="vozvel" aria-label="Velocidad">${[["0.8","Lenta"],["0.9","Pausada"],["1","Normal"],["1.15","Ágil"],["1.3","Rápida"]].map(([v,n])=>`<option value="${v}" ${v===vel?"selected":""}>${n}</option>`).join("")}</select>${vs.length>1?`<select id="voznom" aria-label="Voz">${vs.map(x=>`<option value="${esc(x.name)}" ${cur&&x.name===cur.name?"selected":""}>${esc(x.name)} (${esc(x.lang.replace("_","-"))})</option>`).join("")}</select>`:""}</div>`}
+/* botones «Escuchar» */
+document.addEventListener("click",e=>{const b=e.target.closest("[data-voz]");if(!b)return;e.preventDefault();
+  const root=b.closest("#view")||document;const datos=b.dataset.voz==="biblia"?vozBiblia(root):vozPagina(root);vozEmpezar(datos,0)});
+/* tocar un versículo o párrafo mientras se escucha: seguir desde ahí */
+document.addEventListener("dblclick",e=>{if(!VOZ.on)return;const i=VOZ.items.findIndex(x=>x.el.contains(e.target));if(i>=0){VOZ.i=i;VOZ.paused=false;vozHablar()}});
+/* si cambia la pantalla, se detiene */
+setInterval(()=>{if(VOZ.on&&VOZ.items.length&&!VOZ.items[0].el.isConnected)vozCerrar()},800);
+if("speechSynthesis" in window&&speechSynthesis.addEventListener)speechSynthesis.addEventListener("voiceschanged",()=>{if(VOZ.bar)vozBarra()});
+(function(){const st=document.createElement("style");st.textContent=`
+.voz-on{background:color-mix(in srgb,var(--oro,#B08A3E) 22%,transparent)!important;border-radius:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--oro,#B08A3E) 22%,transparent)}
+.vozbar{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));width:min(720px,calc(100% - 24px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;border-radius:16px;background:var(--surface,#fff);color:var(--ink,#141B26);border:1px solid var(--line,#E2E6EC);box-shadow:0 12px 34px rgba(10,20,40,.18)}
+@media (min-width:740px){[data-ui="moderno"] .vozbar{left:calc(50% + 122px);bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(720px,calc(100% - 244px - 32px))}}
+.vozbar .vz-t{flex:1 1 180px;min-width:0;display:grid}.vozbar .vz-t b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vozbar .vz-t span{font-size:12.5px;color:var(--muted,#66707E)}
+.vozbar .vz-c{display:flex;gap:6px;align-items:center}
+.vz-b{all:unset;cursor:pointer;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--ink,#141B26);background:var(--sunk,#E8EDF5)}
+.vz-b svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vz-b.vz-main{width:46px;height:46px;background:var(--azul,#1D3F72);color:var(--azul-ink,#fff)}.vz-b.vz-main svg{fill:currentColor}
+.vz-b:focus-visible{outline:2px solid var(--oro,#B08A3E);outline-offset:2px}
+.vozbar .vz-o{display:flex;gap:6px;flex-wrap:wrap}.vozbar select{max-width:210px;font-size:13px;padding:6px 8px}`;document.head.appendChild(st)})();
+
 const AR={uid:()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7)};
 const arHoy=()=>new Date().toISOString().slice(0,10);
 const arFecha=f=>{try{const d=new Date(f+"T12:00:00");const t=d.toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short",year:"numeric"});return t.charAt(0).toUpperCase()+t.slice(1)}catch{return f}};
@@ -2685,7 +2763,7 @@ function viewBiblia(v,opts){
   v.innerHTML=`<div class="seg2" role="tablist"><button data-go="biblia" ${CURRENT==="biblia"?'aria-current="page"':""}>Leer</button><button data-go="concordancia" ${CURRENT==="concordancia"?'aria-current="page"':""}>Buscar palabras</button></div><div class="reader-bar">
     ${vselHTML()}<select id="bsel" aria-label="Libro">${BIBLE.map((x,i)=>`${i===0?'<optgroup label="Antiguo Testamento">':""}${i===NT_START?'</optgroup><optgroup label="Nuevo Testamento">':""}<option value="${i}" ${i===b?"selected":""}>${esc(x.name)}</option>`).join("")}</optgroup></select>
     <select id="csel" aria-label="Capítulo">${book.chs.map((_,i)=>`<option value="${i+1}" ${i+1===c?"selected":""}>Capítulo ${i+1}</option>`).join("")}</select>
-    <button class="btn" id="prev" aria-label="Capítulo anterior">‹ Anterior</button><button class="btn" id="next" aria-label="Capítulo siguiente">Siguiente ›</button>
+    <button class="btn" id="prev" aria-label="Capítulo anterior">‹ Anterior</button><button class="btn" id="next" aria-label="Capítulo siguiente">Siguiente ›</button><button class="btn" data-voz="biblia">Escuchar</button>
     <span class="muted" style="font-size:13px">Toque los versículos para marcarlos.</span></div>
   <article class="chapter"><h2>${esc(book.name)} ${c}</h2>${book.chs[c-1].map((t,i)=>t?`<span class="vs${SEL.includes(i+1)?" sel":""}" data-v="${i+1}" tabindex="0"><sup>${i+1}</sup>${esc(t)}</span> `:"").join("")}</article>
   <div id="refpanel" class="refpanel"></div>
@@ -3085,7 +3163,7 @@ function libRead(v,it){
   v.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost small" id="lback">‹ ${LSTATE.q?"Resultados":esc(c.t)}</button></div>
   <article class="libread" style="margin-top:10px"><p class="label" style="margin:0 0 10px">${esc(c.t)}${it.d?` · ${DUR[it.d]||""}`:""}</p>${predBox("L"+it.i)}${VN&&VN[it.i]?`<div class="notice vnnote" style="margin:0 0 14px"><b>Esta enseñanza ya tiene su versión con el modelo nuevo.</b> <button class="btn small primary" data-vnopen="${it.i}">Compararlas</button></div>`:""}<div id="libpage">${designPicker("lib")}${pageHTML(mdText,curStyle())}</div>
   ${(()=>{const d=SERMONS.filter(s=>s.origen!=null&&+s.origen===it.i);return d.length?`<div class="notice" style="margin-top:16px">Ya tiene ${d.length===1?"una versión trabajada":"versiones trabajadas"} de esta enseñanza: ${d.map(s=>`<button class="btn small ghost" data-sermon="${esc(s.id)}">${esc(s.titulo)}</button>`).join(" ")}</div>`:""})()}
-  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" id="lpdf">Compartir PDF</button><button class="btn" id="lcopy">Copiar</button></div>
+  <div class="out-actions"><button class="btn primary" id="lprep">Mejorar con el modelo nuevo</button><button class="btn" id="lsave">Editar</button><button class="btn" id="lpulpit">${VN&&VN[it.i]?"Predicar la original":"Predicar"}</button><button class="btn" id="lslides">Diapositivas</button><button class="btn" data-p="w_lib_cur" id="ldl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-voz="lib">Escuchar</button><button class="btn" id="lpdf">Compartir PDF</button><button class="btn" id="lcopy">Copiar</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">«Mejorar» y «Editar» trabajan sobre una copia. Al terminar, usted decide si esa copia reemplaza a la original en su carpeta o si conserva las dos.</p>${relHTML(it)}</article>`;
   $("#lback").onclick=()=>{const y0=window.scrollY;LSTATE.item=null;if(!LSTATE.q&&LSTATE.c==null)LSTATE.c=it.c;viewBiblioteca($("#view"),{});navRecord({},y0)};
   const toSermon=async prep=>{const cat=CATS.find(x=>norm(x[2])===norm(c.t))?.[0]||"";
@@ -3718,7 +3796,7 @@ function renderEns(id){
     body=`${ui.mode==="view"?designPicker("ens"):""}${ui.mode==="view"?pageHTML(txt,curStyle()):`<div class="md paper">${md(txt)}</div>`}${ui.mode==="rev"?`<div class="thinking" style="margin-top:8px"><span class="dot"></span>Aplicando el cambio…</div>`:""}`;
   }
   const tools=ui.mode==="view"?`<div class="askbox"><label for="ens_ask" class="label">Pedirle un cambio a Claude</label><div class="row" style="margin-top:6px"><input type="text" id="ens_ask" placeholder="Ej.: quite el punto III · añada el ejemplo de Ana · haga la conclusión más corta" style="flex:1;min-width:220px"><button class="btn" data-e="ask">Aplicar</button></div></div>
-  <div class="out-actions">${saveBtn()}<button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="pdf">Compartir PDF</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="slides">Hacer diapositivas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
+  <div class="out-actions">${saveBtn()}<button class="btn" data-voz="ens">Escuchar</button><button class="btn" data-e="dl">Descargar Word · ${WSHORT[curStyle()]}</button><button class="btn" data-e="pdf">Compartir PDF</button><button class="btn" data-e="hoja" ${st.hstatus==="running"?"disabled":""}>${st.hoja?"Rehacer la hoja":"Hoja para la congregación"}</button><button class="btn" data-e="copy">Copiar</button><button class="btn" data-e="verif">Verificar citas</button><button class="btn" data-e="slides">Hacer diapositivas</button><button class="btn" data-e="notes">Pasar a mis notas</button></div>
   <p class="muted" style="font-size:12.5px;margin:10px 0 0">El Word se descarga tal como se ve aquí. Las citas se comparan con su Reina-Valera 1960 al crear la enseñanza; toque "Verificar citas" para revisarlas o para añadir otra versión.</p>`:ui.mode==="rev"?`<div class="out-actions"><button class="btn" data-e="revstop">Detener</button></div>`:"";
   const pend=ui.mode==="pending"?`<div class="decide"><p style="margin:0 0 4px"><b>Hay una versión nueva de esta enseñanza.</b> Revísela y decida qué hacer con ella.</p>
     <div class="row" style="margin:8px 0 2px;gap:6px"><span class="seg"><button class="btn small ${ui.show!=="old"?"on":""}" data-e="shownew">Ver la nueva</button><button class="btn small ${ui.show==="old"?"on":""}" data-e="showold">Ver la que tenía</button></span></div>
