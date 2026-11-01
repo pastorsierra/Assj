@@ -589,8 +589,66 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 .fotobox{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .fotobox img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--oro)}
 </style>
-<script>(function(){try{var A=((document.querySelector('meta[name="apple-mobile-web-app-title"]')||{}).content==="Armador")?"ar_":"tp_";window.__AP=A;var k=localStorage.getItem(A+"skin"),r=document.documentElement;
-if(k==="noche"){r.setAttribute("data-skin","noche");r.setAttribute("data-theme","dark")}else if(k==="pergamino"){r.setAttribute("data-skin","pergamino");r.setAttribute("data-theme","light")}else if(k==="hojas"){r.setAttribute("data-theme","light")}
+<style id="moderno">
+/* ============ Interfaz moderna para iPad (nov 2026): menú lateral, letra del sistema, paneles suaves ============
+   Se activa con data-ui="moderno". Los temas clásicos (Hojas, Noche, Pergamino) siguen disponibles en Ajustes. */
+:root[data-ui="moderno"]{--bg:#F2F4F7;--surface:#FFFFFF;--sunk:#E8EDF5;--ink:#141B26;--muted:#66707E;--line:#E2E6EC;--azul:#1D3F72;--azul-ink:#FFFFFF;--oro:#A9843A;--oro-soft:#F6EFDF;--hoja:#A9843A;--verde:#1F6B57;--mark:#FFE9A3;--danger:#B3412F;color-scheme:light;--f-ui:-apple-system,"SF Pro Text",BlinkMacSystemFont,Inter,"Segoe UI",system-ui,sans-serif;--f-text:-apple-system,"SF Pro Display",BlinkMacSystemFont,Inter,"Segoe UI",system-ui,sans-serif;--f-read:"Literata","Noto Serif Hebrew",Georgia,"Times New Roman",serif;--r:14px}
+@media (prefers-color-scheme: dark){:root[data-ui="moderno"]:not([data-theme="light"]){--bg:#0B1018;--surface:#131A26;--sunk:#1C2535;--ink:#E8ECF2;--muted:#8F9AAB;--line:#243042;--azul:#8DB2EE;--azul-ink:#0B1018;--oro:#D6B26A;--oro-soft:#2A2416;--hoja:#D6B26A;--verde:#7CC9B0;--mark:#4D4020;--danger:#E59088;color-scheme:dark}}
+:root[data-ui="moderno"][data-theme="dark"]{--bg:#0B1018;--surface:#131A26;--sunk:#1C2535;--ink:#E8ECF2;--muted:#8F9AAB;--line:#243042;--azul:#8DB2EE;--azul-ink:#0B1018;--oro:#D6B26A;--oro-soft:#2A2416;--hoja:#D6B26A;--verde:#7CC9B0;--mark:#4D4020;--danger:#E59088;color-scheme:dark}
+:root[data-ui="moderno"] body{background-image:none!important;background:var(--bg);font-family:var(--f-ui);-webkit-font-smoothing:antialiased}
+[data-ui="moderno"] .chapter{font-family:var(--f-read)}
+[data-ui="moderno"] h1{font-family:var(--f-ui);font-weight:800;font-size:30px;letter-spacing:-.022em}
+[data-ui="moderno"] .label{letter-spacing:.12em;font-weight:600}
+[data-ui="moderno"] .section-head{border-bottom:0;padding-bottom:0;margin:30px 0 12px}
+[data-ui="moderno"] .section-head h2{font-family:var(--f-ui);font-weight:700;font-size:18px;letter-spacing:-.01em}
+[data-ui="moderno"] .section-head h2::before{display:none}
+[data-ui="moderno"] .card{border-radius:var(--r);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+[data-ui="moderno"] .btn{border-radius:10px;font-weight:600;font-size:14px;padding:9px 14px}
+[data-ui="moderno"] .btn.small{border-radius:9px}
+[data-ui="moderno"] input[type=text],[data-ui="moderno"] input[type=search],[data-ui="moderno"] input[type=password],[data-ui="moderno"] select,[data-ui="moderno"] textarea{border-radius:10px}
+[data-ui="moderno"] .tool-card{border-radius:var(--r)}
+[data-ui="moderno"] .tool-card b{font-family:var(--f-ui);font-weight:650;font-size:15.5px}
+[data-ui="moderno"] .acts{gap:12px}
+[data-ui="moderno"] .act{border-radius:16px;display:grid;grid-template-columns:42px minmax(0,1fr);column-gap:14px;row-gap:3px;align-content:start;min-height:92px;padding:16px}
+[data-ui="moderno"] .act .ico{grid-row:1/3;width:42px;height:42px;padding:10px;box-sizing:border-box;border-radius:12px;background:var(--sunk);color:var(--azul)}
+[data-ui="moderno"] .act.main .ico{background:rgba(255,255,255,.16);color:var(--azul-ink)}
+[data-ui="moderno"] .act b{align-self:end;font-weight:650}
+[data-ui="moderno"] .top{background:color-mix(in srgb,var(--bg) 88%,transparent)}
+[data-ui="moderno"] .tabs .nav[aria-current="page"]{background:var(--sunk)}
+/* iPad y pantallas anchas: menú lateral fijo, sin barra inferior */
+@media (min-width:740px){
+  [data-ui="moderno"] .app{grid-template-columns:244px minmax(0,1fr)!important}
+  [data-ui="moderno"] .side{display:flex!important;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--line);padding:max(20px,env(safe-area-inset-top,0px)) 12px 28px max(12px,env(safe-area-inset-left,0px))}
+  [data-ui="moderno"] .tabs{display:none!important}
+  [data-ui="moderno"] .content{padding-bottom:calc(48px + env(safe-area-inset-bottom,0px))!important}
+  [data-ui="moderno"] .actionbar{left:244px!important;bottom:0!important;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}
+  [data-ui="moderno"] .top .mbrand{display:none!important}
+  [data-ui="moderno"] .acts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  [data-ui="moderno"] .act:not(.main) span{display:block}
+}
+[data-ui="moderno"] .brand{padding:2px 10px 18px}
+[data-ui="moderno"] .brand b{font-family:var(--f-ui);font-weight:700;font-size:15px;color:var(--ink);letter-spacing:0}
+[data-ui="moderno"] .brand span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+[data-ui="moderno"] .side .nav{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;font-size:14.5px;font-weight:500;color:var(--muted);text-decoration:none}
+[data-ui="moderno"] .side .nav svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+[data-ui="moderno"] .side .nav:hover{color:var(--ink);background:color-mix(in srgb,var(--sunk) 60%,transparent)}
+[data-ui="moderno"] .side .nav[aria-current="page"]{background:var(--sunk);color:var(--azul);font-weight:650}
+[data-ui="moderno"] .side .navgroup{margin-top:4px;gap:1px}
+[data-ui="moderno"] .side .navgroup h6{margin:18px 12px 6px;font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--muted);opacity:.8}
+[data-ui="moderno"] .side .navgroup:not(.primary) .nav{padding:7px 12px;font-size:13.5px}
+[data-ui="moderno"] .side .navgroup:not(.primary) .nav[aria-current="page"]{font-weight:600}
+.side .navgroup.primary .nav svg{display:inline}
+[data-ui="moderno"] .brand b{white-space:nowrap;font-size:14px}
+[data-ui="moderno"] .top .gear{padding:0;width:40px;height:40px}
+[data-ui="moderno"] .top .gear svg{width:21px;height:21px;min-width:21px}
+@media (max-width:739px){
+  [data-ui="moderno"] .act:not(.main){grid-template-columns:minmax(0,1fr);justify-items:start;row-gap:8px;min-height:0;padding:14px 12px}
+  [data-ui="moderno"] .act:not(.main) .ico{grid-row:auto;width:36px;height:36px;padding:8px}
+  [data-ui="moderno"] .act:not(.main) b{font-size:13.5px;align-self:start}
+}
+</style>
+<script>(function(){try{var A=((document.querySelector('meta[name="apple-mobile-web-app-title"]')||{}).content==="Armador")?"ar_":"tp_";window.__AP=A;var k=localStorage.getItem(A+"skin2")||"auto",r=document.documentElement;
+if(k==="noche"){r.setAttribute("data-skin","noche");r.setAttribute("data-theme","dark")}else if(k==="pergamino"){r.setAttribute("data-skin","pergamino");r.setAttribute("data-theme","light")}else if(k==="hojas"){r.setAttribute("data-theme","light")}else{r.setAttribute("data-ui","moderno");if(k==="claro")r.setAttribute("data-theme","light");else if(k==="oscuro")r.setAttribute("data-theme","dark")}
 var f=localStorage.getItem(A+"foto");if(f){r.setAttribute("data-foto","1");r.style.setProperty("--foto",'url("'+f+'")');document.addEventListener("DOMContentLoaded",function(){var im=document.querySelector(".wl-photo img");if(im)im.src=f})}}catch(e){}})();</script>
 </head>
 <body>
@@ -1267,18 +1325,22 @@ function lockWire(v){const m=t=>{const e=document.getElementById("lkmsg");if(e)e
 
 /* ============ Apariencia: tema de la app y foto del encabezado ============ */
 const SKINS=[
-  {id:"hojas",n:"Hojas y viento",d:"Claro, azul y dorado. El de siempre.",c:["#F2F6F7","#FFFFFF","#1D3557","#8C6D2E"]},
-  {id:"noche",n:"Noche dorada",d:"Oscuro y sereno, con detalles en oro.",c:["#0E1622","#141F2E","#D8B66A","#93A1B4"]},
-  {id:"pergamino",n:"Pergamino",d:"Cálido y suave, como papel antiguo.",c:["#F5F0E6","#FFFCF6","#23395B","#93692A"]},
+  {id:"auto",n:"Moderno · automático",d:"Claro de día y oscuro de noche, como su iPad.",c:["#F2F4F7","#FFFFFF","#1D3F72","#0B1018"]},
+  {id:"claro",n:"Moderno claro",d:"Limpio y luminoso, con menú lateral.",c:["#F2F4F7","#FFFFFF","#1D3F72","#A9843A"]},
+  {id:"oscuro",n:"Moderno oscuro",d:"Descansa la vista; ideal de noche.",c:["#0B1018","#131A26","#8DB2EE","#D6B26A"]},
+  {id:"hojas",n:"Clásico: Hojas y viento",d:"El diseño anterior, claro.",c:["#F2F6F7","#FFFFFF","#1D3557","#8C6D2E"]},
+  {id:"noche",n:"Clásico: Noche dorada",d:"El diseño anterior, oscuro.",c:["#0E1622","#141F2E","#D8B66A","#93A1B4"]},
+  {id:"pergamino",n:"Clásico: Pergamino",d:"Cálido, como papel antiguo.",c:["#F5F0E6","#FFFCF6","#23395B","#93692A"]},
 ];
 const apKey=k=>(window.__AP||"tp_")+k;
 const apGet=k=>{try{return localStorage.getItem(apKey(k))}catch{return null}};
 const apSet=(k,v)=>{try{v==null?localStorage.removeItem(apKey(k)):localStorage.setItem(apKey(k),v)}catch{toast("No se pudo guardar en este equipo.")}};
-function skinNow(){return apGet("skin")||"hojas"}
-function skinApply(id){const r=document.documentElement;r.removeAttribute("data-skin");
+function skinNow(){return apGet("skin2")||"auto"}
+function skinApply(id){const r=document.documentElement;r.removeAttribute("data-skin");r.removeAttribute("data-ui");r.removeAttribute("data-theme");
   if(id==="noche"){r.setAttribute("data-skin","noche");r.setAttribute("data-theme","dark")}
   else if(id==="pergamino"){r.setAttribute("data-skin","pergamino");r.setAttribute("data-theme","light")}
-  else r.setAttribute("data-theme","light")}
+  else if(id==="hojas")r.setAttribute("data-theme","light")
+  else{r.setAttribute("data-ui","moderno");if(id==="claro")r.setAttribute("data-theme","light");else if(id==="oscuro")r.setAttribute("data-theme","dark")}}
 function fotoNow(){return apGet("foto")}
 function fotoApply(src){const r=document.documentElement;
   if(src){r.setAttribute("data-foto","1");r.style.setProperty("--foto",`url("${src}")`)}else{r.removeAttribute("data-foto");r.style.removeProperty("--foto")}
@@ -1309,7 +1371,7 @@ function aparienciaSection(){const cur=skinNow();const f=fotoNow()||fotoDefault(
     <p class="muted" style="margin:0;font-size:13px">También puede cambiar la foto tocándola arriba, junto a su nombre. El tema y la foto quedan guardados en este equipo.</p>
   </div>`}
 function aparienciaWire(v){const again=()=>{if(typeof viewAjustes==="function")viewAjustes(document.getElementById("view"))};
-  const sk=document.getElementById("skins");if(sk)sk.onclick=e=>{const b=e.target.closest("[data-skin]");if(!b)return;apSet("skin",b.dataset.skin);skinApply(b.dataset.skin);
+  const sk=document.getElementById("skins");if(sk)sk.onclick=e=>{const b=e.target.closest("[data-skin]");if(!b)return;apSet("skin2",b.dataset.skin);skinApply(b.dataset.skin);
     sk.querySelectorAll("[data-skin]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))};
   const c=document.getElementById("fotocam");if(c)c.onclick=()=>fotoElegir(again);
   const d=document.getElementById("fotodef");if(d)d.onclick=()=>fotoQuitar(again)}
@@ -2414,8 +2476,10 @@ const NAV=[
 ];
 let CURRENT="inicio";
 function renderNav(){
-  const side=NAV.map(g=>`<div class="navgroup">${g.grupo?`<h6>${g.grupo}</h6>`:""}${g.items.map(([id,n])=>`<button class="nav" data-go="${id}" ${id===CURRENT?'aria-current="page"':""}>${n}</button>`).join("")}</div>`).join("");
-  $("#sidenav").innerHTML=side;const t=tabOf(CURRENT);
+  const t=tabOf(CURRENT);const prim=TABS.map(([id,n])=>id==="diapositivas"?`<a class="nav" href="diapositivas.html">${icon(id,"")}${n}</a>`:`<button class="nav" data-go="${id}" ${id===t?'aria-current="page"':""}>${icon(id,"")}${n}</button>`).join("");
+  const enPrim=new Set(TABS.map(x=>x[0]));
+  const side=`<div class="navgroup primary">${prim}</div>`+NAV.map(g=>{const its=g.items.filter(([id])=>!enPrim.has(id));if(!its.length)return "";return `<div class="navgroup">${g.grupo?`<h6>${g.grupo}</h6>`:""}${its.map(([id,n])=>`<button class="nav" data-go="${id}" ${id===CURRENT?'aria-current="page"':""}>${n}</button>`).join("")}</div>`}).join("");
+  $("#sidenav").innerHTML=side;
   $("#tabnav").innerHTML=TABS.map(([id,n])=>id==="diapositivas"?`<a class="nav" href="diapositivas.html">${icon(id,"")}${n}</a>`:`<button class="nav" data-go="${id}" ${id===t?'aria-current="page"':""}>${icon(id,"")}${n}</button>`).join("");
 }
 document.addEventListener("click",e=>{const nv=e.target.closest("#nvb,#nvf");if(nv){navStep(nv.id==="nvb"?-1:1);return}});
