@@ -1523,7 +1523,7 @@ function viewAjustes(v){
     e.target.value="";
   };
   (async()=>{const el=$("#offst");let t="Esta app guarda lo necesario en el equipo para abrir sin internet.";
-    try{const ks=await caches.keys();const ok=ks.some(k=>k.startsWith("tp-")&&k!=="tp-fonts");
+    try{const ks=await caches.keys();const ok=ks.some(k=>k.startsWith("tp-")&&k!=="tp-fonts"&&k!=="tp-datos");
       t=ok?"Lista para usar sin internet: la Biblia, sus carpetas, el croquis, la vista previa, el Word y el modo Predicar. La IA y los enlaces a otras versiones de la Biblia sí necesitan conexión.":"Todavía no está guardada para usar sin internet. Abra la app una vez con conexión y espere un momento.";
       if(navigator.storage?.persisted){const p=await navigator.storage.persisted();t+=p?"":" (Para que el equipo no borre datos, agréguela a la pantalla de inicio.)"}
     }catch{}
@@ -2009,7 +2009,7 @@ function aiMark(){document.documentElement.toggleAttribute("data-noai",!aiOn())}
 (function(){if(window.TP&&TP.saveCfg){const o=TP.saveCfg;TP.saveCfg=function(c){const r=o.apply(this,arguments);setTimeout(aiMark,0);return r}}aiMark()})();
 function aiNote(){if(!document.documentElement.hasAttribute("data-noai"))return;const v=document.getElementById("view");if(!v||v.querySelector(".noai-note"))return;
   let tab="";try{tab=tabOf(CURRENT)}catch(e){}
-  if(tab!=="estudio"&&CURRENT!=="armar")return;if(["lugares","cronologia","banco"].includes(CURRENT))return;
+  if(tab!=="estudio"&&CURRENT!=="armar")return;if(["lugares","cronologia","banco","guia","quien","esquema","cuadernos","libros","paralelo"].includes(CURRENT))return;
   const d=document.createElement("div");d.className="noai-note";
   d.innerHTML=`<div><b>Estas herramientas trabajan con la IA</b><span>Para usarlas, pegue su clave en Ajustes → Inteligencia artificial. La Biblia, la concordancia, sus enseñanzas, el calendario, las series y las diapositivas funcionan sin ella.</span></div><button class="btn small" data-go="ajustes">Ir a Ajustes</button>`;
   v.prepend(d)}
@@ -2435,6 +2435,535 @@ function viewBuscar(v,opts={}){const q=String(opts.q||"").trim();const nq=norm(q
 .cri{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px}.cri b{font-size:15px}.cri span{font-size:14px;color:var(--muted)}
 .lectbar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}.lectbar i{display:block;height:100%;background:var(--azul)}
 .lectday{margin:0 0 10px}.lectday.done{opacity:.75}
+`;document.head.appendChild(s)})();
+
+/* ============ Herramientas de estudio tipo Logos (nov 2026) ============
+   Interlineal y estudio de palabras · Guía del pasaje · Personajes y lugares conectados ·
+   Biblias en paralelo · Esquema del pasaje · Cuadernos de estudio · Biblioteca de consulta.
+   Todo funciona sin internet una vez guardado. La IA (solo en el Taller) se usa a través de
+   las herramientas que ya existen, que empiezan siempre con DOCTRINA.
+   Datos: STEPBible.org basados en Tyndale House Cambridge (CC BY 4.0); glosas en español
+   hechas para esta app; nombres propios de la Reina-Valera 1909. Visor de PDF: pdf.js (Apache 2.0). */
+
+const BE_IA=true;               /* el Armador lo cambia a false al construirse */
+const BE_DV="bdab91da35";      /* versión de los datos; la pone build.py */
+const BE_CACHE="tp-datos";      /* el Armador usa "ar-datos" */
+const BE={c:{},p:{}};
+const BE_FILES=()=>[...Array(66)].map((_,i)=>"il/"+String(i).padStart(2,"0")+".json").concat(["lex-h.json","lex-g.json","conc.json","personas.json","intros.json","pdfjs/pdf.min.js","pdfjs/pdf.worker.min.js"]);
+const beURL=p=>"datos/"+p+"?v="+BE_DV;
+function beGet(p){if(BE.c[p])return Promise.resolve(BE.c[p]);if(BE.p[p])return BE.p[p];
+  BE.p[p]=fetch(beURL(p)).then(r=>{if(!r.ok)throw new Error(p);return r.json()}).then(d=>{BE.c[p]=d;delete BE.p[p];return d}).catch(e=>{delete BE.p[p];throw e});return BE.p[p]}
+const beIL=b=>beGet("il/"+String(b).padStart(2,"0")+".json");
+const beLexAll=k=>beGet(k[0]==="H"?"lex-h.json":"lex-g.json");
+const beLex=k=>beLexAll(k).then(L=>L[k]||null);
+const beConc=()=>beGet("conc.json");
+const bePer=()=>beGet("personas.json");
+const beIntros=()=>beGet("intros.json");
+const BE_SIN="Esta parte todavía no está guardada en este equipo. Conéctese a internet una vez, o en Biblioteca de consulta toque «Guardar todo para usar sin internet».";
+/* limpiar versiones viejas de los datos guardados */
+setTimeout(()=>{try{const base=new URL("datos/",location.href).href;caches.open(BE_CACHE).then(c=>c.keys().then(ks=>ks.forEach(r=>{if(r.url.startsWith(base)&&!r.url.includes("v="+BE_DV))c.delete(r)})))}catch(e){}},8000);
+
+const beIsNT=k=>k&&k[0]==="G";
+const beStrongNum=k=>String(k||"").replace(/^([HG])0*(\d+)([A-Za-z]?)$/,(m,a,n,s)=>a+n+(s&&s===s.toLowerCase()?s:""));
+const beRefKey=(b,c,v)=>`${b}.${c}.${v}`;
+const beRefLbl=s=>{const [b,c,v]=String(s).split(".").map(Number);return `${bName(b)} ${c}:${v}`};
+const beVerseTxt=s=>{const [b,c,v]=String(s).split(".").map(Number);return vText(b,c,v)};
+
+/* ---------- 1. Gramática en español ---------- */
+const BEG={
+  caso:{N:"nominativo",G:"genitivo",D:"dativo",A:"acusativo",V:"vocativo"},
+  num:{S:"singular",P:"plural"},gen:{M:"masculino",F:"femenino",N:"neutro"},
+  tiempo:{P:"presente",I:"imperfecto",F:"futuro",A:"aoristo",R:"perfecto",L:"pluscuamperfecto",X:"sin tiempo"},
+  voz:{A:"activa",M:"media",P:"pasiva",E:"media o pasiva",D:"media (deponente)",O:"pasiva (deponente)",N:"media o pasiva (deponente)",Q:"activa impersonal",X:"sin voz"},
+  modo:{I:"indicativo",S:"subjuntivo",O:"optativo",M:"imperativo",N:"infinitivo",P:"participio",R:"participio imperativo"},
+  pos:{N:"Sustantivo",A:"Adjetivo",T:"Artículo",V:"Verbo",P:"Pronombre personal",R:"Pronombre relativo",C:"Pronombre recíproco",D:"Pronombre demostrativo",K:"Pronombre correlativo",I:"Pronombre interrogativo",X:"Pronombre indefinido",Q:"Pronombre correlativo o interrogativo",F:"Pronombre reflexivo",S:"Pronombre posesivo",ADV:"Adverbio",CONJ:"Conjunción",COND:"Conjunción condicional",PREP:"Preposición",PRT:"Partícula",INJ:"Interjección",ARAM:"Palabra aramea",HEB:"Palabra hebrea",N_LI:"Letra",N_OI:"Número"}
+};
+const BE_TIP={
+  "aoristo":"Presenta la acción como un hecho completo, sin fijarse en su duración. En indicativo suele ser pasado.",
+  "presente":"En griego subraya la acción en curso o repetida.",
+  "imperfecto":"Acción continua o repetida en el pasado: «estaba haciendo».",
+  "perfecto":"Una acción cumplida cuyo resultado sigue vigente: «está hecho y permanece».",
+  "pluscuamperfecto":"Acción cumplida en el pasado cuyo resultado duró hasta otro momento pasado.",
+  "imperativo":"Es una orden, un mandato o una súplica.",
+  "subjuntivo":"Acción posible, deseada o con propósito: «para que…», «si…».",
+  "participio":"Forma verbal que funciona como adjetivo o sustantivo: «el que cree».",
+  "pasiva":"El sujeto recibe la acción.",
+  "media":"El sujeto actúa sobre sí mismo o para su propio interés.",
+  "genitivo":"Indica posesión, origen o relación: «de».",
+  "dativo":"Indica a quién o para quién, o el medio: «a», «para», «con».",
+  "acusativo":"Suele ser el complemento directo o la dirección.",
+  "Qal":"La forma simple y más común del verbo hebreo.",
+  "Nifal":"Forma pasiva o reflexiva del Qal.",
+  "Piel":"Forma intensiva: la acción con fuerza, repetida o causada con empeño.",
+  "Pual":"Forma pasiva del Piel.",
+  "Hifil":"Forma causativa: «hacer que algo suceda».",
+  "Hofal":"Forma pasiva del Hifil: «ser hecho…».",
+  "Hitpael":"Forma reflexiva o recíproca: «hacerse a sí mismo», «unos a otros».",
+  "wayyiqtol (narrativo)":"La forma típica de la narración hebrea: «y dijo», «y fue».",
+  "weqatal":"Suele continuar una idea futura o un mandato: «y harás».",
+  "qatal (perfecto)":"Acción vista como completa; muchas veces pasado.",
+  "yiqtol (imperfecto)":"Acción incompleta: futuro, costumbre o deseo.",
+  "constructo":"Va unido al sustantivo siguiente: «palabra de…»."
+};
+function beMorphG(code){code=String(code||"");if(!code)return {t:"",tips:[]};
+  const p=code.split("-");const h=p[0];const out=[];const tips=[];
+  const add=(s,tip)=>{if(s){out.push(s);if(tip&&BE_TIP[tip])tips.push([tip,BE_TIP[tip]])}};
+  if(h==="V"){add("Verbo");let tvm=p[1]||"";if(/^\d/.test(tvm)){tvm=tvm.slice(1)}
+    const t=BEG.tiempo[tvm[0]],vz=BEG.voz[tvm[1]],m=BEG.modo[tvm[2]];add(t,t);add(vz&&"voz "+vz,vz&&vz.split(" ")[0]);add(m,m);
+    const r=p[2]||"";if(/^[123]/.test(r)){add(r[0]+".ª persona "+(BEG.num[r[1]]||""))}
+    else if(r){add(BEG.caso[r[0]],BEG.caso[r[0]]);add(BEG.num[r[1]]);add(BEG.gen[r[2]])}}
+  else if(BEG.pos[h]&&p.length===1){add(BEG.pos[h])}
+  else if(h==="PRT"&&p[1]==="N"){add("Partícula negativa")}
+  else if(h==="PRT"&&p[1]==="I"){add("Partícula interrogativa")}
+  else {add(BEG.pos[h]||h);let r=p[1]||"";if(/^[123]/.test(r)){add(r[0]+".ª persona");r=r.slice(1)}
+    if(r){add(BEG.caso[r[0]],BEG.caso[r[0]]);add(BEG.num[r[1]]);add(BEG.gen[r[2]])}
+    const x=p[2]||"";if(x==="C")add("comparativo");if(x==="S")add("superlativo");if(x==="P")add("nombre de persona");if(x==="L")add("nombre de lugar");if(x==="T")add("título");if(x==="G")add("gentilicio")}
+  return {t:out.filter(Boolean).join(" · "),tips}}
+const BEH={
+  st:{q:"Qal",N:"Nifal",p:"Piel",P:"Pual",h:"Hifil",H:"Hofal",t:"Hitpael",o:"Polel",O:"Polal",r:"Hitpolel",m:"Poel",M:"Poal",k:"Palel",K:"Pulal",Q:"Qal pasivo",l:"Pilpel",L:"Polpal",f:"Hitpalpel",D:"Nitpael",j:"Pealal",i:"Pilel",u:"Hotpaal",c:"Tifil",v:"Histafel",w:"Nitpalel",y:"Nitpoel",z:"Hitpoel"},
+  stA:{q:"Peal",Q:"Peil",u:"Hitpeel",p:"Pael",P:"Itpaal",M:"Hitpaal",a:"Afel",h:"Hafel",s:"Safel",e:"Safel",H:"Hofal",i:"Itpeel",t:"Histafel",v:"Istafel",w:"Hitafel",o:"Polel",z:"Itpoel",r:"Hitpolel",f:"Hitpalpel",b:"Hefal",c:"Tifel",m:"Poel",l:"Palpel",L:"Itpalpel",O:"Itpolel",G:"Itafal"},
+  ty:{p:"qatal (perfecto)",q:"weqatal",i:"yiqtol (imperfecto)",w:"wayyiqtol (narrativo)",h:"cohortativo",j:"yusivo",v:"imperativo",r:"participio activo",s:"participio pasivo",a:"infinitivo absoluto",c:"infinitivo constructo"},
+  pe:{1:"1.ª persona",2:"2.ª persona",3:"3.ª persona"},ge:{m:"masculino",f:"femenino",b:"común",c:"común"},nu:{s:"singular",p:"plural",d:"dual"},sta:{a:"absoluto",c:"constructo",d:"determinado"},
+  ntp:{c:"",g:"gentilicio",p:"nombre propio"},ptp:{d:"demostrativo",f:"indefinido",i:"interrogativo",p:"personal",r:"relativo"},
+  ttp:{a:"de afirmación",d:"artículo definido «el»",e:"exhortativa",i:"interrogativa",j:"interjección",m:"demostrativa",n:"negación",o:"marca de complemento directo",r:"relativa"},
+  atp:{a:"",c:"número cardinal",g:"gentilicio",o:"número ordinal"},sfx:{d:"he direccional («hacia»)",h:"he paragógica",n:"nun paragógica",p:"sufijo pronominal"}};
+function beMorphH(code){code=String(code||"");if(!code)return {t:"",tips:[]};const ara=code[0]==="A";const parts=code.slice(1).split("/");const res=[];const tips=[];
+  const tip=k=>{if(BE_TIP[k]&&!tips.find(x=>x[0]===k))tips.push([k,BE_TIP[k]])};
+  for(const m of parts){if(!m)continue;const k=m[0];let s="";
+    if(k==="V"){const stn=(ara?BEH.stA:BEH.st)[m[1]]||"";const ty=BEH.ty[m[2]]||"";tip(stn);tip(ty);let rest=m.slice(3);let x=[ "Verbo",stn,ty];
+      if(m[2]==="r"||m[2]==="s"){x.push(BEH.ge[rest[0]],BEH.nu[rest[1]],BEH.sta[rest[2]])}else if(rest){x.push(BEH.pe[rest[0]],BEH.ge[rest[1]],BEH.nu[rest[2]])}
+      s=x.filter(Boolean).join(" · ")}
+    else if(k==="N"){const x=["Sustantivo",BEH.ntp[m[1]],BEH.ge[m[2]],BEH.nu[m[3]],BEH.sta[m[4]]];if(m[4]==="c")tip("constructo");s=x.filter(Boolean).join(" · ")}
+    else if(k==="A"){s=["Adjetivo",BEH.atp[m[1]],BEH.ge[m[2]],BEH.nu[m[3]],BEH.sta[m[4]]].filter(Boolean).join(" · ")}
+    else if(k==="P"){s=["Pronombre",BEH.ptp[m[1]],BEH.pe[m[2]],BEH.ge[m[3]],BEH.nu[m[4]]].filter(Boolean).join(" · ")}
+    else if(k==="S"){s=["Sufijo",BEH.sfx[m[1]],BEH.pe[m[2]],BEH.ge[m[3]],BEH.nu[m[4]]].filter(Boolean).join(" · ")}
+    else if(k==="T"){s="Partícula "+(BEH.ttp[m[1]]||"")}
+    else if(k==="R"){s=m[1]==="d"?"Preposición con artículo":"Preposición"}
+    else if(k==="C"){s="Conjunción «y»"}else if(k==="D"){s="Adverbio"}else s=m;
+    res.push(s.trim())}
+  return {t:res.join("  +  ")+(ara?" (arameo)":""),tips}}
+const beMorph=(k,code)=>beIsNT(k)?beMorphG(code):beMorphH(code);
+function bePOS(p){p=String(p||"");const [lg,t]=p.split(":");const L={H:"hebreo",A:"arameo",G:"griego",N:""}[lg]||"";const x=(t||"").split("-");const pos={V:"Verbo",N:"Sustantivo",A:"Adjetivo",Adv:"Adverbio",Prep:"Preposición",Conj:"Conjunción",Part:"Partícula",Prt:"Partícula",Pron:"Pronombre",Intg:"Interrogativo",Intj:"Interjección",Art:"Artículo",Pers:"Pronombre personal",Dem:"Demostrativo",Rel:"Relativo",Neg:"Negación",Num:"Número"}[x[0]]||x[0]||"";
+  const g={M:"masculino",F:"femenino",N:"neutro"}[x[1]]||"";const pr={P:"nombre de persona",L:"nombre de lugar",T:"título",G:"gentilicio",O:"otro nombre propio"}[x[2]]||"";
+  return [pos,g,pr,L&&("en "+L)].filter(Boolean).join(" · ")}
+const BE_FUNC=new Set(["H0853","H9001","H9002","H9003","H9004","H9005","H9006","H9007","H9008","H9009","H9010","H9014","H9016","H9015","G3588","G2532","G1161","G1063","G3754G","G3754H","G0846","G1722","G1519","G1537","G1909","G4314","G3739","G3778","G1473","G4771","G3165","G0575","G1223","G2596","G3326","G3756","G3361","G5613","G1487G","G1437","G2443","G0235","G3767","H5921A","H0413","H3605","H3808","H0834A","H3588A","H5704","H4480A","H5973A","H0854","H1931","H2088","H0589","H0859A","H9030","H9031","H9032","H9033","H9034","H9035","H9036","H9038","H0408","H3651C","H3541","H0518A","H2063","H0428","H1992","G1510","H1961","G1096"]);
+
+/* ---------- 2. Interlineal dentro de la Biblia ---------- */
+const beILon=()=>!!ls.get("tp_interlineal",false);
+function beCleanHeb(s){return String(s||"").replace(/[֑-ֽ֯׀׃]/g,"")}
+function beILrow(w,i,nt){const hb=!nt;const v=w[5]===1||w[5]===true;
+  return `<button class="ilc${v?" ilv":""}" data-wi="${i}" type="button"><span class="ilo" ${hb?'dir="rtl" lang="he"':'lang="grc"'}>${esc(hb?beCleanHeb(w[0]):w[0])}</span><span class="ilt">${esc(w[1]||"")}</span><span class="ile">${esc(w[4]||"·")}</span><span class="ils">${esc(beStrongNum(w[2]))}</span></button>`}
+function beAfterBiblia(v,b,c){const tx=v.querySelector(".bib-txt");if(!tx)return;
+  const bt=v.querySelector("#bil");if(bt){bt.classList.toggle("on",beILon());bt.setAttribute("aria-pressed",beILon()?"true":"false")}
+  if(!beILon()){tx.classList.remove("il-on");return}
+  tx.classList.add("il-on");const nt=b>=NT_START;
+  beIL(b).then(D=>{if(CURRENT!=="biblia"||BSTATE.b!==b||BSTATE.c!==c)return;const cap=D[c-1]||[];
+    tx.querySelectorAll(".vs").forEach(s=>{const n=+s.dataset.v;const ws=cap[n-1]||[];if(s.querySelector(".ilrow"))return;
+      const row=document.createElement("span");row.className="ilrow"+(nt?"":" heb");row.innerHTML=ws.map((w,i)=>beILrow(w,i,nt)).join("")||'<span class="muted" style="font-size:12px">Sin datos del original para este versículo.</span>';
+      row.onclick=e=>{const x=e.target.closest(".ilc");if(!x)return;e.stopPropagation();const w=ws[+x.dataset.wi];beWord(w[2],{b,c,v:n,w})};
+      row.onkeydown=e=>e.stopPropagation();s.appendChild(row)});
+    if(!tx.querySelector(".ilnote")){const p=document.createElement("p");p.className="ilnote muted";p.innerHTML=`${nt?"Griego del Nuevo Testamento":"Hebreo del Antiguo Testamento"} palabra por palabra. Toque una palabra para estudiarla. <span>Datos: STEPBible.org (CC BY).</span>`;tx.appendChild(p)}
+  }).catch(()=>{if(!tx.querySelector(".ilnote")){const p=document.createElement("p");p.className="ilnote muted";p.textContent=BE_SIN;tx.appendChild(p)}})}
+function beToggleIL(){ls.set("tp_interlineal",!beILon());go("biblia",{keepSel:true})}
+
+/* ---------- 3. Panel de estudio de una palabra ---------- */
+function beSheet(html,cls){const sh=$("#sheet");sh.innerHTML=`<div class="sheet be-sheet ${cls||""}" role="dialog" aria-modal="true">${html}</div>`;sh.hidden=false;
+  sh.onclick=e=>{if(e.target===sh||e.target.closest("[data-x]"))closeSheet()};return sh.firstElementChild}
+const beHead=(t,sub)=>`<div class="sheet-h be-h"><div><h2>${t}</h2>${sub?`<p class="muted">${sub}</p>`:""}</div><button class="ibtn" data-x aria-label="Cerrar">${icon("cerrar","")}</button></div>`;
+async function beWord(k,ctx={}){k=String(k||"").split("/").pop();if(!k)return;
+  const box=beSheet(beHead("Cargando…"));
+  let L=null;try{L=await beLex(k)}catch(e){box.innerHTML=beHead("Sin datos")+`<p>${esc(BE_SIN)}</p>`;return}
+  const nt=beIsNT(k);const w=ctx.w;const hb=!nt;
+  const lemma=L?L[0]:(w?w[0]:k);const tr=L?String(L[1]||"").replace(/\./g,""):"";const es=(L&&L[3])||(w&&w[4])||"";
+  const m=w?beMorph(k,w[3]):{t:"",tips:[]};const ref=ctx.b!=null?vLabel(ctx.b,ctx.c,ctx.v):"";
+  box.innerHTML=beHead(`<span class="be-lem" ${hb?'dir="rtl" lang="he"':'lang="grc"'}>${esc(hb?beCleanHeb(lemma):lemma)}</span>`,`${esc(tr)} · ${esc(beStrongNum(k))} · ${esc(bePOS(L&&L[2]))}`)+`
+   <div class="be-mean"><b>${esc(es||"—")}</b>${L&&L[4]?`<span class="muted"> · en inglés: ${esc(L[4])}</span>`:""}</div>
+   ${w?`<div class="be-ctx card"><p class="label">En ${esc(ref)}</p><p class="be-form"><span ${hb?'dir="rtl" lang="he"':'lang="grc"'}>${esc(hb?beCleanHeb(w[0]):w[0])}</span> <i>${esc(w[1]||"")}</i> — «${esc(w[4]||"")}»</p>${m.t?`<p class="be-mor">${esc(m.t)}</p>`:""}${m.tips.length?`<ul class="be-tips">${m.tips.map(([a,b])=>`<li><b>${esc(a)}:</b> ${esc(b)}</li>`).join("")}</ul>`:""}${w[5]===1?'<p class="muted" style="font-size:12.5px">Esta palabra no está en el Texto Recibido que sigue la Reina-Valera.</p>':""}</div>`:""}
+   <div class="be-freq" id="befreq"><p class="muted">Contando en toda la Biblia…</p></div>
+   ${L&&L[6]?`<details class="be-def"><summary>Definición del léxico (en inglés)</summary><p>${esc(L[6]).replace(/\n/g,"<br>")}</p></details>`:""}
+   <div id="beper"></div>
+   <div class="row be-acts">${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.palabras?`<button class="btn primary" data-a="ia">Explicar con IA</button>`:""}<button class="btn" data-a="cuad">Guardar en cuaderno</button><button class="btn" data-a="conc">Buscar «${esc(String(es).split(",")[0])}» en la Biblia</button></div>
+   <p class="muted be-src">Léxico e interlineal: STEPBible.org (CC BY). Glosas en español hechas para esta app.</p>`;
+  box.onclick=e=>{const a=e.target.closest("[data-a]");if(a){const k2=a.dataset.a;
+      if(k2==="ia"){closeSheet();go("palabras",{prefill:{palabra:`${hb?beCleanHeb(lemma):lemma} (${tr}, Strong ${beStrongNum(k)}, «${es}»)`,pasaje:ref}});return}
+      if(k2==="cuad"){cuAddPick({tipo:"palabra",k,t:`${hb?beCleanHeb(lemma):lemma} · ${tr}`,n:`${es} (${beStrongNum(k)})${ref?" — "+ref:""}`});return}
+      if(k2==="conc"){closeSheet();go("concordancia",{q:String(es).split(",")[0].replace(/[¿?¡!()]/g,"").trim()});return}
+      if(k2==="per"){closeSheet();go("quien",{id:a.dataset.id});return}}
+    const r=e.target.closest("[data-ref]");if(r){const [b,c,v]=r.dataset.ref.split(".").map(Number);closeSheet();goBible(b,c,[v,v]);return}
+    const mo=e.target.closest("[data-more]");if(mo){beOccList(k,box,+mo.dataset.more)}};
+  beConc().then(C=>{const el=box.querySelector("#befreq");if(!el)return;const rs=(C[k]||"").split(" ").filter(Boolean);BE.occ=rs;
+    const by={};rs.forEach(s=>{const b=+s.split(".")[0];by[b]=(by[b]||0)+1});const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,8);const mx=top.length?top[0][1]:1;
+    el.innerHTML=`<p class="label">Aparece en ${rs.length} ${rs.length===1?"versículo":"versículos"}</p>${top.length>1?`<div class="be-bars">${top.map(([b,n])=>`<div class="be-bar"><span>${esc(bName(+b))}</span><i style="width:${Math.max(6,n/mx*100)}%"></i><b>${n}</b></div>`).join("")}</div>`:""}<div id="beocc"></div>`;
+    beOccList(k,box,12)}).catch(()=>{const el=box.querySelector("#befreq");if(el)el.innerHTML=""});
+  bePer().then(P=>{const u=P.i[k];const el=box.querySelector("#beper");if(!u||!el||!P.p[u])return;const p=P.p[u];
+    el.innerHTML=`<button class="be-perlink" data-a="per" data-id="${esc(u)}">${icon(p.t==="Place"?"geografia":"personajes","")}<span><b>${esc(p.n)}</b><small>${esc(quDesc(p))}</small></span><svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true">${ICO.adelante}</svg></button>`}).catch(()=>{})}
+function beOccList(k,box,n){const el=box.querySelector("#beocc");if(!el||!BE.occ)return;const rs=BE.occ;const shown=rs.slice(0,n);
+  el.innerHTML=`<div class="xlist">${shown.map(s=>`<button class="xrow" data-ref="${s}"><b>${esc(beRefLbl(s))}</b><span>${esc(stCut(beVerseTxt(s),150))}</span></button>`).join("")}</div>${rs.length>n?`<button class="btn small ghost" data-more="${n+40}">Ver más (${rs.length-n})</button>`:""}`}
+
+/* ---------- 4. Personajes y lugares conectados ---------- */
+const QU_ROL={"Man":"Hombre","Woman":"Mujer","Levite":"Levita","King":"Rey","Warrior":"Guerrero","Edomite":"Edomita","Priest":"Sacerdote","Prophet":"Profeta","Singer":"Cantor","High Priest":"Sumo sacerdote","Judge":"Juez","Apostle":"Apóstol","Pharaoh":"Faraón","Arabian":"Árabe","Emperor":"Emperador","Giant":"Gigante","Tetrarch":"Tetrarca","Moabite":"Moabita","Ammonite":"Amonita","Queen":"Reina","Ishmaelite":"Ismaelita","Persian":"Persa","Midianite":"Madianita","Ruler":"Gobernante","Prophetess":"Profetisa","Governor":"Gobernador","Syrian":"Sirio","Egyptian":"Egipcio","Prince":"Príncipe","Canaanite":"Cananeo","Ethnarch":"Etnarca","Warriors":"Guerreros"};
+const QU_EPO={"Divided Monarchy":"el reino dividido","Exile and Return":"el exilio y el regreso","Egypt and Wilderness":"Egipto y el desierto","United Monarchy":"el reino unido","the Patriarchs":"los patriarcas","the New Testament":"el Nuevo Testamento","Israel's Monarchy":"antes de los reyes de Israel","the Flood":"antes del diluvio","Conquest":"la conquista"};
+const QU_TIPO={Male:"Hombre",Female:"Mujer",Group:"Grupo o pueblo",Place:"Lugar"};
+function quTr(s){s=String(s||"");return s.replace(/^Tribe of /,"Tribu de ").replace(/\(\?\)/,"(probable)").replace("Early Patriarch","Patriarca antiguo").replace(/^Egypt$/,"Egipto").replace(/^Syria$/,"Siria").replace(/^Arabia$/,"Arabia").replace(/^Persia$/,"Persia").replace(/^Assyria$/,"Asiria").replace(/^Italy$/,"Italia").replace(/^Philistia$/,"Filistea").replace(/^Mesopotamia$/,"Mesopotamia").replace(/^Greece$/,"Grecia").replace(/^Cyprus$/,"Chipre")}
+function quDesc(p){if(p.t==="Place")return "Lugar"+(p.ar&&p.ar!==">"?" · "+quTr(p.ar):"");const d=String(p.de||"");
+  const m=d.match(/^(.*?) (?:living )?(?:at the time of|before) (.*?)(?:\s+-.*)?$/);let s=QU_TIPO[p.t]||"";
+  if(m){const r=m[1].trim();let rol=QU_ROL[r];if(!rol){const mm=r.match(/^(\w+)'s? (son|daughter|wife|brother|sister|father|mother|husband|compatriot|warrior|adversary|servant|relative|uncle|nephew)s?$/);
+      if(mm){const rel={son:"hijo",daughter:"hija",wife:"esposa",brother:"hermano",sister:"hermana",father:"padre",mother:"madre",husband:"esposo",compatriot:"compañero",warrior:"guerrero",adversary:"adversario",servant:"siervo",relative:"pariente",uncle:"tío",nephew:"sobrino"}[mm[2]];rol=rel[0].toUpperCase()+rel.slice(1)+" de "+mm[1]}}
+    const ep=QU_EPO[m[2].trim().replace(/^the time of /,"")]||QU_EPO[m[2].trim()];s=(rol||s)+(ep?(d.includes("before Israel")?" · "+ep:" · época de "+ep):"")}
+  if(p.tr&&p.tr!==">")s+=" · "+quTr(p.tr);return s}
+let QU={q:"",tipo:""};
+function viewQuien(v,opts={}){if(opts.id){QU.id=opts.id}
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Personajes y lugares</h1><p class="lede">Más de 4.000 personas y lugares de la Biblia, con su familia, sus versículos y su nombre en hebreo o griego. Sin internet.</p><div id="quw"><p class="muted">Cargando…</p></div>`;
+  bePer().then(P=>{if(CURRENT!=="quien")return;if(QU.id&&P.p[QU.id])return quDetail(v,P,QU.id);quList(v,P)}).catch(()=>{$("#quw").innerHTML=`<p>${esc(BE_SIN)}</p>`})}
+function quList(v,P){const w=$("#quw");if(!P._l){P._l=Object.entries(P.p).map(([u,p])=>({u,p,nn:norm(p.n+" "+p.en),n:(p.d||[]).length}))}
+  w.innerHTML=`<form class="row" id="quf" autocomplete="off"><input type="search" id="quq" value="${esc(QU.q)}" placeholder="Nombre: Abraham, Débora, Betel, Bernabé…" style="flex:1;min-width:200px" aria-label="Buscar personaje o lugar"><select id="qut" style="width:auto" aria-label="Tipo"><option value="">Todos</option><option value="P" ${QU.tipo==="P"?"selected":""}>Personas</option><option value="Place" ${QU.tipo==="Place"?"selected":""}>Lugares</option></select></form><div id="qur" class="qu-list"></div>`;
+  const draw=()=>{const q=norm(QU.q.trim());let L=P._l.filter(x=>(!QU.tipo||(QU.tipo==="P"?x.p.t!=="Place":x.p.t==="Place"))&&(!q||x.nn.includes(q)));
+    if(!q){const fam=["H0085","H3327","H3290","H3130G","H4872","H0175","H1732","H8010","H0452G","H3470G","H3414L","H1840G","G2491G","G4074G","G3972G","G3137G","H8283","H7354","H7327","H1683G","H3091G","H8050G","H3389","H1035G","G2424G"];L=fam.map(u=>P._l.find(x=>x.u===u)).filter(Boolean)}
+    else L.sort((a,b)=>(a.nn.startsWith(q)?0:1)-(b.nn.startsWith(q)?0:1)||a.p.n.localeCompare(b.p.n,"es"));
+    $("#qur").innerHTML=(q?"":`<p class="label">Algunos personajes y lugares</p>`)+(L.length?L.slice(0,80).map(x=>`<button class="hrow" data-u="${esc(x.u)}">${icon(x.p.t==="Place"?"geografia":"personajes","")}<span class="hrow-t"><b>${esc(x.p.n)}</b><small>${esc(quDesc(x.p))}</small></span><svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true">${ICO.adelante}</svg></button>`).join(""):`<p class="muted">No se encontró «${esc(QU.q)}».</p>`)};
+  draw();let tm;$("#quq").oninput=e=>{QU.q=e.target.value;clearTimeout(tm);tm=setTimeout(draw,150)};$("#quf").onsubmit=e=>{e.preventDefault();draw()};$("#qut").onchange=e=>{QU.tipo=e.target.value;draw()};
+  $("#qur").onclick=e=>{const r=e.target.closest("[data-u]");if(r){QU.id=r.dataset.u;quDetail(v,P,QU.id)}}}
+function quDetail(v,P,u){const p=P.p[u];const w=$("#quw");const link=ids=>(ids||[]).filter(x=>P.p[x]).map(x=>`<button class="chip" data-u="${esc(x)}">${esc(P.p[x].n)}</button>`).join("");
+  const fam=[["Padre",p.pa],["Madre",p.ma],["Hermanos",p.hn],["Esposo o esposa",p.co],["Hijos",p.hi],["Fundado por",p.fu],["Habitantes",p.hab]].filter(x=>x[1]&&x[1].some(y=>P.p[y]));
+  w.innerHTML=`<button class="btn ghost small" id="quback">${icon("atras","")}Todos los personajes y lugares</button>
+   <div class="card qu-card"><h2>${esc(p.n)}</h2><p class="muted">${esc(quDesc(p))}${p.en&&p.en!==p.n?` · en otras versiones: ${esc(p.en)}`:""}</p>
+   <div id="quorig" class="qu-orig"></div>
+   ${fam.length?`<div class="qu-fam">${fam.map(([t,ids])=>`<div><span class="label">${t}</span><div class="chips">${link(ids)}</div></div>`).join("")}</div>`:""}
+   <div class="row be-acts">${p.t==="Place"&&typeof viewLugares==="function"?`<button class="btn" data-a="mapa">Ver en el mapa</button>`:""}<button class="btn" data-a="buscar">Buscar en mis enseñanzas</button><button class="btn" data-a="cuad">Guardar en cuaderno</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.personajes?`<button class="btn primary" data-a="ia">Estudiar con IA</button>`:""}</div></div>
+   <div id="quvs"><p class="muted">Buscando sus versículos…</p></div>`;
+  window.scrollTo({top:0});
+  Promise.all((p.d||[]).map(k=>beLex(k).catch(()=>null))).then(Ls=>{const el=$("#quorig");if(!el)return;el.innerHTML=Ls.map((L,i)=>L?`<button class="chip" data-k="${esc(p.d[i])}"><span ${p.d[i][0]==="H"?'dir="rtl" lang="he"':'lang="grc"'}>${esc(beCleanHeb(L[0]))}</span> · ${esc(String(L[1]).replace(/\./g,""))} · ${esc(beStrongNum(p.d[i]))}</button>`:"").join("")});
+  beConc().then(C=>{const el=$("#quvs");if(!el)return;const rs=[...new Set((p.d||[]).flatMap(k=>(C[k]||"").split(" ").filter(Boolean)))].sort((a,b)=>{const x=a.split(".").map(Number),y=b.split(".").map(Number);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2]});
+    let n=30;const draw=()=>{el.innerHTML=`<div class="section-head"><h2>Dónde aparece</h2><span class="muted" style="font-size:13px">${rs.length} ${rs.length===1?"versículo":"versículos"}</span></div><div class="xlist">${rs.slice(0,n).map(s=>`<button class="xrow" data-ref="${s}"><b>${esc(beRefLbl(s))}</b><span>${esc(stCut(beVerseTxt(s),170))}</span></button>`).join("")}</div>${rs.length>n?`<button class="btn small ghost" id="qumore">Ver más (${rs.length-n})</button>`:""}`;const mb=$("#qumore");if(mb)mb.onclick=()=>{n+=60;draw()}};draw()}).catch(()=>{const el=$("#quvs");if(el)el.innerHTML=""});
+  w.onclick=e=>{if(e.target.closest("#quback")){QU.id=null;quList(v,P);return}const c=e.target.closest("[data-u]");if(c){QU.id=c.dataset.u;quDetail(v,P,QU.id);return}
+    const k=e.target.closest("[data-k]");if(k){beWord(k.dataset.k);return}
+    const r=e.target.closest("[data-ref]");if(r){const [b,c2,vv]=r.dataset.ref.split(".").map(Number);goBible(b,c2,[vv,vv]);return}
+    const a=e.target.closest("[data-a]");if(!a)return;const ak=a.dataset.a;
+    if(ak==="buscar")go("buscar",{q:p.n});
+    if(ak==="ia")go(p.t==="Place"&&TOOLS.geografia?"geografia":"personajes",p.t==="Place"&&TOOLS.geografia?{prefill:{lugar:p.n}}:{prefill:{nombre:p.n}});
+    if(ak==="cuad")cuAddPick({tipo:"persona",u,t:p.n,n:quDesc(p)});
+    if(ak==="mapa")stLug().then(L=>{const nn=norm(p.n),ne=norm(p.en);let i=L.findIndex(x=>x._n===nn);if(i<0)i=L.findIndex(x=>norm(x.e||"")===ne);if(i<0)i=L.findIndex(x=>x._n.startsWith(nn));if(i<0){toast("Este lugar no está en el mapa");return}go("lugares",{sel:i})}).catch(()=>toast("No se pudo abrir el mapa"))}}
+
+/* ---------- 5. Guía del pasaje ---------- */
+let GU=null;
+function guRange(opts){if(opts&&opts.b!=null)return {b:opts.b,c:opts.c,v1:opts.v1||1,v2:opts.v2||opts.v1||0};
+  if(GU&&GU.b===BSTATE.b&&GU.c===BSTATE.c)return GU;const s=(typeof SEL!=="undefined"&&SEL.length)?SEL:null;return {b:BSTATE.b,c:BSTATE.c,v1:s?s[0]:1,v2:s?s[s.length-1]:0}}
+function bePassPicker(r,idp){const ch=BIBLE[r.b].chs[r.c-1]||[];const nv=ch.length;
+  return `<div class="be-pass" id="${idp}"><select data-p="b" aria-label="Libro">${BIBLE.map((x,i)=>`<option value="${i}" ${i===r.b?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
+  <select data-p="c" aria-label="Capítulo">${BIBLE[r.b].chs.map((_,i)=>`<option value="${i+1}" ${i+1===r.c?"selected":""}>${i+1}</option>`).join("")}</select>
+  <span class="muted">vers.</span><select data-p="v1" aria-label="Desde el versículo">${ch.map((_,i)=>`<option value="${i+1}" ${i+1===r.v1?"selected":""}>${i+1}</option>`).join("")}</select>
+  <span class="muted">a</span><select data-p="v2" aria-label="Hasta el versículo"><option value="0">${nv} (fin)</option>${ch.map((_,i)=>`<option value="${i+1}" ${i+1===r.v2?"selected":""}>${i+1}</option>`).join("")}</select></div>`}
+function bePassWire(el,r,onChange){el.onchange=e=>{const s=e.target.closest("[data-p]");if(!s)return;const k=s.dataset.p;const val=+s.value;
+  if(k==="b"){r.b=val;r.c=1;r.v1=1;r.v2=0}else if(k==="c"){r.c=val;r.v1=1;r.v2=0}else if(k==="v1"){r.v1=val;if(r.v2&&r.v2<val)r.v2=val}else r.v2=val;onChange(r)}}
+const beRLbl=r=>{const nv=(BIBLE[r.b].chs[r.c-1]||[]).length;const v2=r.v2||nv;return `${bName(r.b)} ${r.c}`+(r.v1>1||v2<nv?`:${r.v1}${v2!==r.v1?"-"+v2:""}`:"")};
+function viewGuia(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargando la Biblia…</p>';return}const r=GU=guRange(opts);
+  const nv=(BIBLE[r.b].chs[r.c-1]||[]).length;const v2=r.v2||nv;
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Guía del pasaje</h1><p class="lede">Todo lo que la app sabe de un pasaje, reunido en una página: el libro, las palabras originales, las personas y lugares, las referencias, sus enseñanzas y sus notas.</p>
+  ${bePassPicker(r,"gupass")}
+  <div class="row be-acts" style="margin:10px 0 4px"><button class="btn" data-a="leer">Leer en la Biblia</button><button class="btn" data-a="esq">Esquema del pasaje</button><button class="btn" data-a="par">En paralelo</button><button class="btn" data-a="cuad">Guardar en cuaderno</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.comentario?`<button class="btn primary" data-a="ia">Comentario con IA</button>`:""}</div>
+  <div class="gu-grid">
+   <section class="card gu-sec" id="gulib"><p class="muted">…</p></section>
+   <section class="card gu-sec"><h2>${esc(beRLbl(r))}</h2><div class="gu-txt">${[...Array(v2-r.v1+1)].map((_,i)=>{const n=r.v1+i;const t=vText(r.b,r.c,n);return t?`<span><sup>${n}</sup>${esc(t)}</span> `:""}).join("")}</div><p class="muted" style="font-size:12px;margin:6px 0 0">${esc(BVER.name)}</p></section>
+   <section class="card gu-sec" id="gupal"><h2>Palabras clave del original</h2><p class="muted">Buscando…</p></section>
+   <section class="card gu-sec" id="guper"><h2>Personas y lugares</h2><p class="muted">Buscando…</p></section>
+   <section class="card gu-sec" id="guxr"><h2>Referencias cruzadas</h2><p class="muted">Buscando…</p></section>
+   <section class="card gu-sec" id="guens"><h2>En sus enseñanzas</h2><p class="muted">Buscando…</p></section>
+   <section class="card gu-sec" id="gunot"></section>
+  </div>`;
+  bePassWire($("#gupass"),r,()=>{BSTATE={b:r.b,c:r.c};ls.set("tp_biblia",BSTATE);go("guia")});
+  v.onclick=e=>{const a=e.target.closest("[data-a]");if(a){const k=a.dataset.a;const lbl=beRLbl(r);
+      if(k==="leer")goBible(r.b,r.c,r.v1>1||r.v2?[r.v1,r.v2||nv]:null);
+      if(k==="esq")go("esquema",{b:r.b,c:r.c,v1:r.v1,v2:r.v2});
+      if(k==="par"){BSTATE={b:r.b,c:r.c};go("paralelo")}
+      if(k==="ia")go("comentario",{prefill:{pasaje:lbl}});
+      if(k==="cuad")cuAddPick({tipo:"ref",ref:[r.b,r.c,r.v1,r.v2||nv],t:lbl,n:stCut([...Array((r.v2||nv)-r.v1+1)].map((_,i)=>vText(r.b,r.c,r.v1+i)).join(" "),400)});
+      if(k==="intro")beIntroSheet(r.b);return}
+    const w=e.target.closest("[data-k]");if(w){beWord(w.dataset.k,w.dataset.ref?{b:r.b,c:r.c,v:+w.dataset.ref}:{});return}
+    const u=e.target.closest("[data-u]");if(u){go("quien",{id:u.dataset.u});return}
+    const x=e.target.closest(".xrow");if(x&&x.dataset.xb){goBible(+x.dataset.xb,+x.dataset.xc,[+x.dataset.xv,+x.dataset.xv2]);return}
+    const rr=e.target.closest(".refrow");if(rr&&GU._ens){const inf=refSrcInfo(GU._ens[+rr.dataset.k]);inf&&inf.open()}};
+  /* libro */
+  beIntros().then(I=>{const el=$("#gulib");const it=I[r.b];if(!el||!it)return;el.innerHTML=`<h2>El libro de ${esc(bName(r.b))}</h2><dl class="gu-dl"><dt>Autor</dt><dd>${esc(it.a)}</dd><dt>Época</dt><dd>${esc(it.f)}</dd><dt>Tema</dt><dd>${esc(it.t)}</dd></dl><p>${esc(stCut(it.p,260))}</p><button class="btn small" data-a="intro">Leer la introducción completa</button>`}).catch(()=>{const el=$("#gulib");if(el)el.innerHTML=`<h2>El libro de ${esc(bName(r.b))}</h2><p class="muted">${esc(BE_SIN)}</p>`});
+  /* palabras clave y personas */
+  Promise.all([beIL(r.b),beLexAll(r.b>=NT_START?"G":"H"),bePer().catch(()=>null)]).then(([D,LX,P])=>{const cap=D[r.c-1]||[];const cnt=new Map();const first=new Map();const per=new Map();
+    for(let n=r.v1;n<=v2;n++)for(const w of (cap[n-1]||[])){const k=w[2];if(!k||BE_FUNC.has(k))continue;const L=LX[k];if(!L)continue;
+      if(P&&P.i[k]){const u=P.i[k];if(P.p[u]&&!per.has(u))per.set(u,P.p[u]);continue}
+      if(/Prep|Conj|Part|Pron|Art|Intg|Neg|Rel|Dem|Pers/.test(L[2]))continue;cnt.set(k,(cnt.get(k)||0)+1);if(!first.has(k))first.set(k,n)}
+    const tot=r.b>=NT_START?138000:305000;const sc=[...cnt.entries()].map(([k,n])=>[k,n*Math.log(tot/Math.max(1,LX[k][5]))]).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const el=$("#gupal");if(el)el.innerHTML=`<h2>Palabras clave del original</h2>${sc.length?`<div class="gu-words">${sc.map(([k])=>{const L=LX[k];return `<button class="gu-w" data-k="${esc(k)}" data-ref="${first.get(k)}"><span class="ilo" ${k[0]==="H"?'dir="rtl" lang="he"':'lang="grc"'}>${esc(beCleanHeb(L[0]))}</span><b>${esc(L[3]||L[4])}</b><small>${esc(String(L[1]).replace(/\./g,""))} · ${esc(beStrongNum(k))} · ${L[5]} veces</small></button>`}).join("")}</div><p class="muted" style="font-size:12px">Las más propias de este pasaje: aparecen aquí y poco en el resto de la Biblia.</p>`:'<p class="muted">No hay palabras destacadas.</p>'}`;
+    const ep=$("#guper");if(ep)ep.innerHTML=`<h2>Personas y lugares</h2>${per.size?`<div class="qu-list">${[...per.entries()].map(([u,p])=>`<button class="hrow" data-u="${esc(u)}">${icon(p.t==="Place"?"geografia":"personajes","")}<span class="hrow-t"><b>${esc(p.n)}</b><small>${esc(quDesc(p))}</small></span></button>`).join("")}</div>`:'<p class="muted">No se nombran personas ni lugares en este pasaje.</p>'}`;
+  }).catch(()=>{[["gupal","Palabras clave del original"],["guper","Personas y lugares"]].forEach(([id,h])=>{const el=$("#"+id);if(el)el.innerHTML=`<h2>${h}</h2><p class="muted">${esc(BE_SIN)}</p>`})});
+  /* referencias cruzadas */
+  stXref().then(X=>{const el=$("#guxr");if(!el)return;const out=[];const seen=new Set();for(let n=r.v1;n<=v2&&out.length<14;n++){for(const s of String(X[`${r.b}.${r.c}.${n}`]||"").split(";").filter(Boolean).slice(0,4)){const m=s.match(/^(\d+)\.(\d+)\.(\d+)(?:-(?:(\d+)\.)?(\d+))?$/);if(!m||seen.has(s))continue;seen.add(s);out.push({b:+m[1],c:+m[2],v:+m[3],v2:m[4]&&+m[4]!==+m[2]?+m[3]:(m[5]?+m[5]:+m[3]),from:n});if(out.length>=14)break}}
+    el.innerHTML=`<h2>Referencias cruzadas</h2>${out.length?`<div class="xlist">${out.map(x=>`<button class="xrow" data-xb="${x.b}" data-xc="${x.c}" data-xv="${x.v}" data-xv2="${x.v2}"><b>${esc(bName(x.b))} ${x.c}:${x.v}${x.v2!==x.v?"-"+x.v2:""} <small class="muted">(de v. ${x.from})</small></b><span>${esc(stCut(vText(x.b,x.c,x.v),150))}</span></button>`).join("")}</div><p class="muted" style="font-size:11.5px">OpenBible.info (CC BY).</p>`:'<p class="muted">Sin referencias registradas.</p>'}`}).catch(()=>{const el=$("#guxr");if(el)el.innerHTML=`<h2>Referencias cruzadas</h2><p class="muted">No se pudieron abrir.</p>`});
+  /* enseñanzas */
+  if(typeof refIdxBuild==="function")refIdxBuild().then(idx=>{const el=$("#guens");if(!el)return;const m=idx.get(r.b+":"+r.c);const rows=m?[...m.entries()].filter(([s,e])=>e.whole||[...e.vs].some(x=>x>=r.v1&&x<=v2)).sort((a,b)=>b[1].vs.size-a[1].vs.size):[];GU._ens=rows.map(x=>x[0]);
+    el.innerHTML=`<h2>En sus enseñanzas</h2>${rows.length?`<div class="reflist">${rows.slice(0,20).map(([s],k)=>{const inf=refSrcInfo(s);return inf?`<button class="refrow" data-k="${k}"><b>${esc(inf.t)}</b><span>${esc(inf.f)}</span></button>`:""}).join("")}</div>`:`<p class="muted">Ninguna de sus enseñanzas cita ${esc(beRLbl(r))} todavía.</p>`}`}).catch(()=>{const el=$("#guens");if(el)el.innerHTML=`<h2>En sus enseñanzas</h2><p class="muted">Abra la biblioteca una vez para ver aquí sus enseñanzas.</p>`});
+  /* notas y subrayados */
+  {const o=typeof mkAll==="function"?mkAll():{};const ns=[];for(let n=r.v1;n<=v2;n++){const mk=o[`${r.b}.${r.c}.${n}`];if(mk&&(mk.n||mk.c))ns.push([n,mk])}
+   const cu=cuAll().flatMap(c=>c.items.filter(x=>x.tipo==="ref"&&x.ref&&x.ref[0]===r.b&&x.ref[1]===r.c).map(x=>[c,x]));const el=$("#gunot");
+   if(el)el.innerHTML=`<h2>Sus notas</h2>${ns.length?ns.map(([n,mk])=>`<p class="gu-note"><b>v. ${n}</b> ${mk.c?`<i class="gu-mk" style="--mk:${(MKC[mk.c]||["",""])[1]}"></i>`:""}${esc(mk.n||"Subrayado")}</p>`).join(""):""}${cu.length?`<p class="label">En sus cuadernos</p>${cu.map(([c,x])=>`<p class="gu-note"><b>${esc(c.t)}</b> · ${esc(x.t)}</p>`).join("")}`:""}${!ns.length&&!cu.length?'<p class="muted">Todavía no tiene notas en este pasaje. Toque un versículo en la Biblia para anotarlo.</p>':""}`}
+}
+function beIntroSheet(b){beIntros().then(I=>{const it=I[b];if(!it)return;const box=beSheet(beHead(esc(bName(b)),"Introducción al libro"));
+  box.insertAdjacentHTML("beforeend",beIntroHTML(it,b))}).catch(()=>toast("La introducción no está guardada todavía"))}
+function beIntroHTML(it,b){return `<dl class="gu-dl"><dt>Autor</dt><dd>${esc(it.a)}</dd><dt>Época</dt><dd>${esc(it.f)}</dd><dt>Escrito para</dt><dd>${esc(it.d)}</dd><dt>Tema</dt><dd>${esc(it.t)}</dd><dt>Versículo clave</dt><dd>${esc(it.k)}</dd></dl>
+  <h3>Propósito</h3><p>${esc(it.p)}</p><h3>Bosquejo</h3><ol class="gu-ol">${(it.o||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol><h3>Cristo en ${esc(bName(b))}</h3><p>${esc(it.c)}</p>`}
+
+/* ---------- 6. Biblias en paralelo ---------- */
+const PA_COLS=()=>{const own=bvList().filter(x=>bvGet(x.abbr)).map(x=>[x.abbr,x.abbr+" · "+x.name]);return [["RV1909","RV1909 · Reina-Valera 1909"],...own.filter(x=>x[0]!=="RV1909"),["orig","Hebreo o griego original"],["il","Palabra por palabra (español)"]]};
+function paSel(){let s=ls.get("tp_paralelo",null);const ok=new Set(PA_COLS().map(x=>x[0]));if(!Array.isArray(s))s=[BVER.abbr,"orig"];s=s.filter(x=>ok.has(x));if(!s.length)s=["RV1909","orig"];return s.slice(0,3)}
+async function paRV(){if(typeof RV1909!=="undefined"&&RV1909)return RV1909;const r=await fetch("rv1909.json");RV1909=await r.json();return RV1909}
+function viewParalelo(v){if(!BIBLE){v.innerHTML='<p class="muted">Cargando la Biblia…</p>';return}const {b,c}=BSTATE;const cols=paSel();const all=PA_COLS();
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Biblia</p><h1>Biblias en paralelo</h1><p class="lede">Compare versículo por versículo sus versiones de la Biblia y el texto original. ${bvList().length?"":"Puede cargar más versiones en Ajustes → Texto bíblico."}</p>
+   <div class="be-pass" id="papass"><select data-p="b" aria-label="Libro">${BIBLE.map((x,i)=>`<option value="${i}" ${i===b?"selected":""}>${esc(x.name)}</option>`).join("")}</select><select data-p="c" aria-label="Capítulo">${BIBLE[b].chs.map((_,i)=>`<option value="${i+1}" ${i+1===c?"selected":""}>${i+1}</option>`).join("")}</select>
+   <span class="be-nav"><button class="ibtn" data-nav="-1" aria-label="Capítulo anterior">${icon("atras","")}</button><button class="ibtn" data-nav="1" aria-label="Capítulo siguiente">${icon("adelante","")}</button></span></div>
+   <div class="pa-cols">${[0,1,2].map(i=>`<label><span class="label">Columna ${i+1}</span><select data-col="${i}"><option value="">—</option>${all.map(([k,n])=>`<option value="${esc(k)}" ${cols[i]===k?"selected":""}>${esc(n)}</option>`).join("")}</select></label>`).join("")}</div>
+   <div id="pat" class="pa-t"><p class="muted">Cargando…</p></div>`;
+  $("#papass").onchange=e=>{const s=e.target.closest("[data-p]");if(!s)return;BSTATE=s.dataset.p==="b"?{b:+s.value,c:1}:{b:BSTATE.b,c:+s.value};ls.set("tp_biblia",BSTATE);go("paralelo")};
+  $("#papass").onclick=e=>{const n=e.target.closest("[data-nav]");if(!n)return;const d=+n.dataset.nav;let {b:B,c:C}=BSTATE;C+=d;if(C<1){if(B>0){B--;C=BIBLE[B].chs.length}else C=1}else if(C>BIBLE[B].chs.length){if(B<65){B++;C=1}else C--}BSTATE={b:B,c:C};ls.set("tp_biblia",BSTATE);go("paralelo")};
+  v.querySelector(".pa-cols").onchange=e=>{const s=e.target.closest("[data-col]");if(!s)return;const cur=[0,1,2].map(i=>v.querySelector(`[data-col="${i}"]`).value).filter(Boolean);ls.set("tp_paralelo",cur.length?cur:["RV1909"]);paDraw(v,b,c)};
+  paDraw(v,b,c)}
+async function paDraw(v,b,c){const el=$("#pat");const cols=paSel();const data=[];const nt=b>=NT_START;
+  for(const k of cols){try{if(k==="RV1909"){const R=await paRV();data.push(R[b][2][c-1]||[])}else if(k==="orig"||k==="il"){const D=await beIL(b);const cap=D[c-1]||[];data.push(cap.map(ws=>({ws,k})))}else data.push(bvChapter(k,b,c)||[])}catch(e){data.push(null)}}
+  if(CURRENT!=="paralelo")return;const nv=Math.max(...data.map(d=>d?d.length:0),(BIBLE[b].chs[c-1]||[]).length);const lbl=Object.fromEntries(PA_COLS());
+  const cell=(d,n)=>{if(d==null)return `<span class="muted">${esc(BE_SIN)}</span>`;const x=d[n-1];if(x==null)return '<span class="muted">—</span>';
+    if(typeof x==="string")return esc(x);if(x.k==="orig")return `<span class="pa-o" ${nt?'lang="grc"':'dir="rtl" lang="he"'}>${x.ws.map((w,i)=>`<button class="pa-w" data-wi="${n}.${i}">${esc(nt?w[0]:beCleanHeb(w[0]))}</button>`).join(" ")}</span>`;
+    return `<span class="pa-il">${x.ws.map((w,i)=>`<button class="pa-w" data-wi="${n}.${i}">${esc(String(w[4]||"·").split(", ")[0])}</button>`).join(" ")}</span>`};
+  el.style.setProperty("--pac",cols.length);
+  el.innerHTML=`<div class="pa-row pa-hd"><span></span>${cols.map(k=>`<b>${esc(k==="orig"?(nt?"Griego":"Hebreo"):k==="il"?"Palabra por palabra":k)}</b>`).join("")}</div>`+[...Array(nv)].map((_,i)=>`<div class="pa-row"><sup>${i+1}</sup>${data.map(d=>`<div class="pa-c">${cell(d,i+1)}</div>`).join("")}</div>`).join("")+`<p class="muted" style="font-size:11.5px">Original e interlineal: STEPBible.org (CC BY).</p>`;
+  el.onclick=e=>{const w=e.target.closest("[data-wi]");if(!w)return;const [n,i]=w.dataset.wi.split(".").map(Number);beIL(b).then(D=>{const x=(D[c-1]||[])[n-1][i];beWord(x[2],{b,c,v:n,w:x})})}}
+
+/* ---------- 7. Esquema del pasaje ---------- */
+const ES_ROL=[["","Sin etiqueta"],["idea","Idea principal"],["mand","Mandato"],["prom","Promesa"],["razon","Razón (porque)"],["prop","Propósito (para que)"],["res","Resultado (así que)"],["contr","Contraste (pero)"],["cond","Condición (si)"],["tiem","Tiempo (cuando)"],["ej","Ejemplo o ilustración"],["adv","Advertencia"],["ora","Oración o alabanza"]];
+const ES_COL={idea:"#1D3F72",mand:"#B3412F",prom:"#1F6B57",razon:"#7A5A1E",prop:"#5B3F8C",res:"#2F6F8F",contr:"#A0522D",cond:"#8C6D1F",tiem:"#4F6B2F",ej:"#6B6B6B",adv:"#9B2C2C",ora:"#A9843A"};
+function esAll(){const o=ls.get("tp_esquemas",{});return o&&typeof o==="object"?o:{}}
+function esSave(k,d){const o=esAll();if(d)o[k]=d;else delete o[k];ls.set("tp_esquemas",o)}
+const esKey=r=>`${r.b}.${r.c}.${r.v1}-${r.v2}`;
+function esInit(r){const out=[];for(let n=r.v1;n<=r.v2;n++){const t=vText(r.b,r.c,n);if(!t)continue;const parts=t.match(/[^,;:.?!]+[,;:.?!]*\s*/g)||[t];let acc="";
+    parts.forEach((p,i)=>{acc+=p;if(acc.trim().split(/\s+/).length>=3||i===parts.length-1){out.push({v:n,s:acc.trim(),n:0,r:"",c:""});acc=""}});if(acc.trim())out.push({v:n,s:acc.trim(),n:0,r:"",c:""})}return out}
+let ESQ={sel:-1,split:false};
+function viewEsquema(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargando la Biblia…</p>';return}
+  let r=opts.b!=null?{b:opts.b,c:opts.c,v1:opts.v1||1,v2:opts.v2||0}:(ESQ.r||guRange());const nv=(BIBLE[r.b].chs[r.c-1]||[]).length;if(!r.v2)r.v2=Math.min(nv,r.v1+9);ESQ.r=r;
+  const k=esKey(r);let d=esAll()[k];if(!d){d={t:beRLbl(r),l:esInit(r)};}
+  const save=()=>{d.f=new Date().toISOString().slice(0,10);esSave(k,d)};
+  const draw=()=>{const L=d.l;const tl=$("#estool");if(tl)$("#esl").parentElement.appendChild(tl);$("#esl").innerHTML=L.map((x,i)=>`<div class="es-line${i===ESQ.sel?" on":""}" data-i="${i}" style="--ind:${x.n}">${x.r?`<span class="es-tag" style="--c:${ES_COL[x.r]}">${esc(ES_ROL.find(y=>y[0]===x.r)[1])}</span>`:""}<span class="es-t"><sup>${x.v}</sup>${ESQ.split&&i===ESQ.sel?x.s.split(/\s+/).map((w,j)=>`<button class="es-sp" data-j="${j}">${esc(w)}</button>`).join(" "):esc(x.s)}</span>${x.c?`<span class="es-c">${esc(x.c)}</span>`:""}</div>`).join("");
+    const t=$("#estool");const s=L[ESQ.sel];t.hidden=!s;const on=$("#esl .es-line.on");if(on)on.after(t);if(s){t.querySelector("#esrol").value=s.r||"";t.querySelector("#escom").value=s.c||"";t.querySelector("[data-e=split]").classList.toggle("on",ESQ.split)}};
+  const lista=Object.entries(esAll()).filter(([kk])=>kk!==k).sort((a,b)=>(b[1].f||"").localeCompare(a[1].f||"")).slice(0,12);
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Esquema del pasaje</h1><p class="lede">Divida el pasaje en frases, sangre las ideas que dependen de otras y márquelas: así se ve la estructura y nace el bosquejo. Se guarda solo.</p>
+   ${bePassPicker(r,"espass")}
+   <div class="row be-acts" style="margin:10px 0"><button class="btn" data-e="txt">Copiar como texto</button><button class="btn" data-e="add">Añadir a una enseñanza</button><button class="btn" data-e="cuad">Guardar en cuaderno</button><button class="btn ghost" data-e="reset">Empezar de nuevo</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.bosquejo?`<button class="btn primary" data-e="ia">Bosquejo con IA</button>`:""}</div>
+   <div class="card es-box"><div id="esl" class="es-list"></div>
+   <div id="estool" class="es-tool" hidden><button class="ibtn" data-e="out" aria-label="Quitar sangría" title="Quitar sangría">${icon("atras","")}</button><button class="ibtn" data-e="in" aria-label="Sangrar" title="Sangrar">${icon("adelante","")}</button>
+     <select id="esrol" aria-label="Etiqueta">${ES_ROL.map(([a,b])=>`<option value="${a}">${b}</option>`).join("")}</select>
+     <button class="btn small" data-e="split" title="Toque luego la palabra donde quiere cortar">Dividir</button><button class="btn small" data-e="join">Unir con la anterior</button><button class="btn small" data-e="up">Subir</button><button class="btn small" data-e="down">Bajar</button>
+     <input type="text" id="escom" placeholder="Nota de esta línea (opcional)" aria-label="Nota de esta línea"></div></div>
+   <p class="muted" style="font-size:13px">Toque una línea para trabajarla. Las flechas la sangran o la sacan; «Dividir» corta la línea en la palabra que toque.</p>
+   ${lista.length?`<div class="section-head"><h2>Otros esquemas</h2></div><div class="qu-list">${lista.map(([kk,x])=>`<button class="hrow" data-k="${esc(kk)}">${icon("bosquejo","")}<span class="hrow-t"><b>${esc(x.t)}</b><small>${esc(x.f||"")}</small></span></button>`).join("")}</div>`:""}`;
+  bePassWire($("#espass"),r,nr=>{ESQ={sel:-1,split:false,r:{...nr,v2:0}};go("esquema")});
+  draw();
+  v.onclick=e=>{const sp=e.target.closest(".es-sp");if(sp){const i=ESQ.sel;const x=d.l[i];const ws=x.s.split(/\s+/);const j=+sp.dataset.j;if(j>0){d.l.splice(i,1,{...x,s:ws.slice(0,j).join(" ")},{...x,s:ws.slice(j).join(" "),r:"",c:""})}ESQ.split=false;save();draw();return}
+    const ln=e.target.closest(".es-line");if(ln){ESQ.sel=+ln.dataset.i;ESQ.split=false;draw();return}
+    const hk=e.target.closest("[data-k]");if(hk){const [bb,cc,rg]=hk.dataset.k.split(".");const [a1,a2]=rg.split("-").map(Number);ESQ={sel:-1,split:false,r:{b:+bb,c:+cc,v1:a1,v2:a2}};go("esquema");return}
+    const b=e.target.closest("[data-e]");if(!b)return;const a=b.dataset.e;const i=ESQ.sel;const x=d.l[i];
+    if(a==="in"&&x){x.n=Math.min(6,x.n+1);save();draw()}
+    if(a==="out"&&x){x.n=Math.max(0,x.n-1);save();draw()}
+    if(a==="split"&&x){ESQ.split=!ESQ.split;draw()}
+    if(a==="join"&&x&&i>0){const p=d.l[i-1];p.s=p.s+" "+x.s;d.l.splice(i,1);ESQ.sel=i-1;save();draw()}
+    if(a==="up"&&x&&i>0){[d.l[i-1],d.l[i]]=[d.l[i],d.l[i-1]];ESQ.sel=i-1;save();draw()}
+    if(a==="down"&&x&&i<d.l.length-1){[d.l[i+1],d.l[i]]=[d.l[i],d.l[i+1]];ESQ.sel=i+1;save();draw()}
+    if(a==="reset"){d={t:beRLbl(r),l:esInit(r)};esSave(k,null);ESQ.sel=-1;draw();toast("Esquema reiniciado")}
+    if(a==="txt")copyText(esText(d));
+    if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Esquema del pasaje",titulo:d.t,texto:esText(d)}));
+    if(a==="cuad")cuAddPick({tipo:"nota",t:"Esquema de "+d.t,n:esText(d)});
+    if(a==="ia")go("bosquejo",{prefill:{pasaje:d.t}})};
+  $("#esrol").onchange=e=>{const x=d.l[ESQ.sel];if(x){x.r=e.target.value;save();draw()}};
+  let tm;$("#escom").oninput=e=>{const x=d.l[ESQ.sel];if(!x)return;x.c=e.target.value;clearTimeout(tm);tm=setTimeout(()=>{save();const ln=v.querySelector(`.es-line[data-i="${ESQ.sel}"]`);if(ln){let c=ln.querySelector(".es-c");if(!c&&x.c){c=document.createElement("span");c.className="es-c";ln.appendChild(c)}if(c)c.textContent=x.c}},400)}}
+function esText(d){return d.t+"\n\n"+d.l.map(x=>"    ".repeat(x.n)+(x.r?"["+ES_ROL.find(y=>y[0]===x.r)[1]+"] ":"")+x.s+(x.c?"  — "+x.c:"")).join("\n")}
+
+/* ---------- 8. Cuadernos de estudio ---------- */
+function cuAll(){const l=ls.get("tp_cuadernos",[]);return Array.isArray(l)?l:[]}
+function cuSave(l){ls.set("tp_cuadernos",l)}
+const cuId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function cuAddPick(item){const L=cuAll();item={id:cuId(),f:new Date().toISOString().slice(0,10),...item};
+  const box=beSheet(beHead("Guardar en un cuaderno",esc(item.t)));
+  box.insertAdjacentHTML("beforeend",`<div class="qu-list">${L.map((c,i)=>`<button class="hrow" data-i="${i}">${icon("cuadernos","")}<span class="hrow-t"><b>${esc(c.t)}</b><small>${c.items.length} ${c.items.length===1?"entrada":"entradas"}</small></span></button>`).join("")}</div>
+   <form class="row" id="cunew" style="margin-top:12px"><input type="text" id="cunt" placeholder="O cree un cuaderno nuevo: «La gracia», «Serie de Josué»…" style="flex:1"><button class="btn primary">Crear y guardar</button></form>`);
+  box.onclick=e=>{const r=e.target.closest("[data-i]");if(r){const L2=cuAll();L2[+r.dataset.i].items.unshift(item);L2[+r.dataset.i].f=item.f;cuSave(L2);closeSheet();toast("Guardado en «"+L2[+r.dataset.i].t+"»")}};
+  box.querySelector("#cunew").onsubmit=e=>{e.preventDefault();const t=box.querySelector("#cunt").value.trim()||"Cuaderno nuevo";const L2=cuAll();L2.unshift({id:cuId(),t,f:item.f,items:[item]});cuSave(L2);closeSheet();toast("Guardado en «"+t+"»")}}
+let CU={i:-1};
+function viewCuadernos(v){const L=cuAll();if(CU.i>=L.length)CU.i=-1;
+  if(CU.i<0){v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Cuadernos de estudio</h1><p class="lede">Junte en un solo lugar versículos, palabras originales, personajes, esquemas y sus propias notas sobre un tema o una serie. Desde casi cualquier parte de la app puede tocar «Guardar en cuaderno».</p>
+     <form class="row" id="cunew" autocomplete="off"><input type="text" id="cunt" placeholder="Nombre del cuaderno nuevo" style="flex:1;min-width:200px"><button class="btn primary">Crear cuaderno</button></form>
+     <div class="qu-list" style="margin-top:14px">${L.length?L.map((c,i)=>`<button class="hrow" data-i="${i}">${icon("cuadernos","")}<span class="hrow-t"><b>${esc(c.t)}</b><small>${c.items.length} ${c.items.length===1?"entrada":"entradas"}${c.f?" · "+esc(c.f):""}</small></span><svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true">${ICO.adelante}</svg></button>`).join(""):`<div class="empty-note">${icon("cuadernos","")}<span>Todavía no tiene cuadernos. Cree uno arriba o guarde algo desde la Biblia, una palabra o un personaje.</span></div>`}</div>`;
+    $("#cunew").onsubmit=e=>{e.preventDefault();const t=$("#cunt").value.trim();if(!t){$("#cunt").focus();return}const L2=cuAll();L2.unshift({id:cuId(),t,f:new Date().toISOString().slice(0,10),items:[]});cuSave(L2);CU.i=0;go("cuadernos")};
+    v.onclick=e=>{const r=e.target.closest("[data-i]");if(r){CU.i=+r.dataset.i;go("cuadernos")}};return}
+  const c=L[CU.i];const ico={nota:"editar",ref:"biblia",palabra:"palabras",persona:"personajes"};
+  v.innerHTML=`<button class="btn ghost small" data-c="back">${icon("atras","")}Todos los cuadernos</button><h1 class="cu-h"><input id="cutit" value="${esc(c.t)}" aria-label="Nombre del cuaderno"></h1>
+   <form class="card cu-add" id="cuform"><textarea id="cutx" rows="3" placeholder="Escriba una nota, una idea o un bosquejo. Si escribe una cita (por ejemplo Juan 3:16) se guarda con su texto."></textarea><div class="row"><button class="btn primary">Añadir</button></div></form>
+   <div class="cu-items">${c.items.length?c.items.map((x,j)=>`<div class="cu-it card" data-j="${j}"><div class="cu-ih">${icon(ico[x.tipo]||"editar","")}<b>${esc(x.t||"Nota")}</b><span class="muted">${x.f?esc(fmtDate(x.f)):""}</span><button class="ibtn" data-c="del" aria-label="Borrar entrada">${icon("cerrar","")}</button></div>${x.n?`<p>${esc(x.n).replace(/\n/g,"<br>")}</p>`:""}${x.tipo==="ref"||x.tipo==="palabra"||x.tipo==="persona"?`<button class="btn small ghost" data-c="open">Abrir</button>`:""}</div>`).join(""):'<p class="muted">Este cuaderno está vacío.</p>'}</div>
+   <div class="row be-acts"><button class="btn" data-c="copy">Copiar todo</button><button class="btn" data-c="add">Añadir a una enseñanza</button><button class="btn ghost" data-c="delall">Borrar cuaderno</button></div>`;
+  const upd=f=>{const L2=cuAll();f(L2[CU.i]);L2[CU.i].f=new Date().toISOString().slice(0,10);cuSave(L2)};
+  $("#cutit").onchange=e=>upd(x=>x.t=e.target.value.trim()||"Cuaderno");
+  $("#cuform").onsubmit=e=>{e.preventDefault();const t=$("#cutx").value.trim();if(!t)return;let item={id:cuId(),tipo:"nota",t:"Nota",n:t,f:new Date().toISOString().slice(0,10)};
+    try{const r=parseRef(t);if(r&&r.b!=null&&t.length<40){const v1=r.v1||1,v2=r.v2||r.v1||(BIBLE[r.b].chs[r.c-1]||[]).length;item={...item,tipo:"ref",ref:[r.b,r.c,v1,v2],t:refLabel(r),n:[...Array(Math.min(v2-v1+1,30))].map((_,i)=>vText(r.b,r.c,v1+i)).join(" ")}}}catch(e){}
+    upd(x=>x.items.unshift(item));go("cuadernos")};
+  const txt=()=>c.t+"\n\n"+c.items.map(x=>`• ${x.t||"Nota"}${x.n?"\n  "+x.n.replace(/\n/g,"\n  "):""}`).join("\n\n");
+  v.onclick=e=>{const b=e.target.closest("[data-c]");if(!b)return;const a=b.dataset.c;const it=b.closest("[data-j]");const x=it?c.items[+it.dataset.j]:null;
+    if(a==="back"){CU.i=-1;go("cuadernos")}
+    if(a==="del"&&x){upd(y=>y.items.splice(+it.dataset.j,1));go("cuadernos")}
+    if(a==="open"&&x){if(x.tipo==="ref")goBible(x.ref[0],x.ref[1],[x.ref[2],x.ref[3]]);if(x.tipo==="palabra")beWord(x.k);if(x.tipo==="persona")go("quien",{id:x.u})}
+    if(a==="copy")copyText(txt());
+    if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Cuaderno de estudio",titulo:c.t,texto:txt()}));
+    if(a==="delall"){if(b.dataset.ok){const L2=cuAll();L2.splice(CU.i,1);cuSave(L2);CU.i=-1;go("cuadernos");toast("Cuaderno borrado")}else{b.dataset.ok="1";b.textContent="Toque otra vez para borrarlo"}}}}
+
+/* ---------- 9. Biblioteca de consulta: léxico, introducciones y sus libros en PDF ---------- */
+let LB={tab:"lex",q:""};
+function viewLibros(v,opts={}){if(opts.tab)LB.tab=opts.tab;
+  v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Biblioteca de consulta</h1><p class="lede">Obras de consulta que viajan dentro de la app y los libros en PDF que usted añada. Todo se lee sin internet.</p>
+   <div class="seg2" role="tablist">${[["lex","Léxico hebreo y griego"],["intro","Introducciones"],["pdf","Mis libros"],["guardar","Sin internet"]].map(([k,n])=>`<button data-tab="${k}" ${LB.tab===k?'aria-current="page"':""}>${n}</button>`).join("")}</div><div id="lbw" style="margin-top:14px"></div>`;
+  v.querySelector(".seg2").onclick=e=>{const t=e.target.closest("[data-tab]");if(t){LB.tab=t.dataset.tab;go("libros")}};
+  ({lex:lbLex,intro:lbIntro,pdf:lbPdf,guardar:lbGuardar}[LB.tab]||lbLex)($("#lbw"))}
+function lbLex(w){w.innerHTML=`<form class="row" id="lbf" autocomplete="off"><input type="search" id="lbq" value="${esc(LB.q)}" placeholder="Busque en español, en inglés, transliterado o por número: gracia, agape, H7225, G26…" style="flex:1;min-width:220px" aria-label="Buscar en el léxico"></form><div id="lbr" class="qu-list"><p class="muted">Cargando el léxico…</p></div><p class="muted" style="font-size:12px">Léxico breve de STEPBible.org (CC BY), con glosas en español hechas para esta app.</p>`;
+  Promise.all([beLexAll("H"),beLexAll("G")]).then(([H,G])=>{const all=[...Object.entries(H),...Object.entries(G)];
+    const draw=()=>{const q=norm(LB.q.trim());const qs=q.replace(/\s+/g,"");let L;
+      if(!q){L=all.filter(([k,x])=>x[5]>=80&&!/Prep|Conj|Part|Pron|Art/.test(x[2])&&!BE_FUNC.has(k)).sort((a,b)=>b[1][5]-a[1][5]).slice(0,40)}
+      else if(/^[hg]\d+[a-z]?$/i.test(qs)){const m=qs.match(/^([hg])(\d+)([a-z]?)$/i);const base=m[1].toUpperCase()+m[2].padStart(4,"0");L=all.filter(([k])=>k.startsWith(base)&&(!m[3]||k.endsWith(m[3].toUpperCase())))}
+      else L=all.filter(([k,x])=>norm(x[3]).includes(q)||norm(x[4]).includes(q)||norm(String(x[1]).replace(/\./g,"")).includes(qs)).sort((a,b)=>b[1][5]-a[1][5]).slice(0,80);
+      $("#lbr").innerHTML=(q?"":`<p class="label">Palabras importantes más frecuentes</p>`)+(L.length?L.map(([k,x])=>`<button class="hrow" data-k="${esc(k)}"><span class="lb-o" ${k[0]==="H"?'dir="rtl" lang="he"':'lang="grc"'}>${esc(beCleanHeb(x[0]))}</span><span class="hrow-t"><b>${esc(x[3]||x[4])}</b><small>${esc(String(x[1]).replace(/\./g,""))} · ${esc(beStrongNum(k))} · ${esc(bePOS(x[2]))} · ${x[5]} veces</small></span></button>`).join(""):`<p class="muted">No se encontró «${esc(LB.q)}».</p>`)};
+    draw();let tm;$("#lbq").oninput=e=>{LB.q=e.target.value;clearTimeout(tm);tm=setTimeout(draw,200)};$("#lbf").onsubmit=e=>{e.preventDefault();draw()};
+    $("#lbr").onclick=e=>{const r=e.target.closest("[data-k]");if(r)beWord(r.dataset.k)}}).catch(()=>{$("#lbr").innerHTML=`<p>${esc(BE_SIN)}</p>`})}
+function lbIntro(w){beIntros().then(I=>{w.innerHTML=`<p class="muted">Introducción breve a cada libro: autor, época, propósito, bosquejo y cómo se revela Cristo en él.</p><div class="bkgrid lb-bk">${BIBLE.map((x,i)=>`<button class="bk" data-b="${i}">${esc(x.name)}</button>`).join("")}</div><div id="lbi"></div>`;
+    w.onclick=e=>{const b=e.target.closest("[data-b]");if(!b)return;const i=+b.dataset.b;w.querySelectorAll(".bk").forEach(x=>x.classList.toggle("on",x===b));$("#lbi").innerHTML=`<article class="card lb-intro"><h2>${esc(bName(i))}</h2>${beIntroHTML(I[i],i)}<div class="row be-acts"><button class="btn" data-go2="${i}">Leer ${esc(bName(i))}</button><button class="btn" data-cu="${i}">Guardar en cuaderno</button></div></article>`;$("#lbi").scrollIntoView({behavior:"smooth",block:"start"});
+      $("#lbi").onclick=ev=>{const g=ev.target.closest("[data-go2]");if(g){ev.stopPropagation();BSTATE={b:i,c:1};go("biblia");return}const cu=ev.target.closest("[data-cu]");if(cu){ev.stopPropagation();const it=I[i];cuAddPick({tipo:"nota",t:"Introducción a "+bName(i),n:`${it.t}\nAutor: ${it.a}\nÉpoca: ${it.f}\n${it.p}`})}}}}).catch(()=>{w.innerHTML=`<p>${esc(BE_SIN)}</p>`})}
+/* --- Mis libros (PDF guardados en este equipo) --- */
+const PDB={db:null};
+function pdbOpen(){if(PDB.db)return Promise.resolve(PDB.db);return new Promise((res,rej)=>{const r=indexedDB.open("tp-libros",1);r.onupgradeneeded=()=>{r.result.createObjectStore("pdf",{keyPath:"id"})};r.onsuccess=()=>{PDB.db=r.result;res(PDB.db)};r.onerror=()=>rej(r.error)})}
+function pdbTx(mode,f){return pdbOpen().then(db=>new Promise((res,rej)=>{const t=db.transaction("pdf",mode);const s=t.objectStore("pdf");const out=f(s);t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)}))}
+const pdbList=()=>pdbOpen().then(db=>new Promise((res,rej)=>{const out=[];const t=db.transaction("pdf","readonly");const c=t.objectStore("pdf").openCursor();c.onsuccess=()=>{const x=c.result;if(x){const {blob,...m}=x.value;out.push(m);x.continue()}else res(out.sort((a,b)=>(b.a||0)-(a.a||0)))};c.onerror=()=>rej(c.error)}));
+const pdbGet=id=>pdbOpen().then(db=>new Promise((res,rej)=>{const r=db.transaction("pdf","readonly").objectStore("pdf").get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+function lbPdf(w){w.innerHTML=`<p class="muted">Añada libros, comentarios o estudios en PDF. Se guardan solo en este equipo (no se suben a internet ni a la sincronización) y se leen sin conexión.</p>
+   <label class="btn primary lb-add">Añadir un PDF<input type="file" id="lbfile" accept="application/pdf,.pdf" multiple hidden></label><div id="lbpl" class="qu-list" style="margin-top:12px"><p class="muted">Cargando…</p></div>`;
+  const draw=()=>pdbList().then(L=>{const el=$("#lbpl");if(!el)return;el.innerHTML=L.length?L.map(x=>`<div class="hrow lb-pdf"><button class="lb-open" data-id="${esc(x.id)}">${icon("libros","")}<span class="hrow-t"><b>${esc(x.n)}</b><small>${(x.s/1048576).toFixed(1)} MB${x.p?" · "+x.p+" páginas":""}${x.last?" · iba en la página "+x.last:""}</small></span></button><button class="ibtn" data-del="${esc(x.id)}" aria-label="Quitar este libro">${icon("cerrar","")}</button></div>`).join(""):`<div class="empty-note">${icon("libros","")}<span>Todavía no ha añadido libros.</span></div>`}).catch(()=>{$("#lbpl").innerHTML='<p class="muted">Este navegador no deja guardar libros.</p>'});
+  draw();
+  $("#lbfile").onchange=async e=>{const fs=[...e.target.files];for(const f of fs){if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name))continue;try{await pdbTx("readwrite",s=>s.put({id:cuId(),n:f.name.replace(/\.pdf$/i,""),s:f.size,a:Date.now(),blob:f}));toast("Libro añadido")}catch(err){toast("No hay espacio para este libro")}}draw()};
+  w.onclick=async e=>{const o=e.target.closest(".lb-open");if(o){pdfOpen(o.dataset.id);return}const d=e.target.closest("[data-del]");if(d){if(d.dataset.ok){await pdbTx("readwrite",s=>s.delete(d.dataset.del));draw();toast("Libro quitado")}else{d.dataset.ok="1";toast("Toque otra vez la × para quitarlo")}}}}
+let PDFJS_P=null;
+function pdfjsLoad(){if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);if(PDFJS_P)return PDFJS_P;
+  PDFJS_P=new Promise((res,rej)=>{const s=document.createElement("script");s.src=beURL("pdfjs/pdf.min.js");s.onload=()=>{try{pdfjsLib.GlobalWorkerOptions.workerSrc=beURL("pdfjs/pdf.worker.min.js");res(pdfjsLib)}catch(e){rej(e)}};s.onerror=()=>{PDFJS_P=null;rej(new Error("pdfjs"))};document.head.appendChild(s)});return PDFJS_P}
+async function pdfOpen(id){const sh=$("#sheet");sh.innerHTML=`<div class="pdfv" role="dialog" aria-modal="true" aria-label="Lector de PDF"><div class="pdfv-bar"><button class="ibtn" data-x aria-label="Cerrar">${icon("cerrar","")}</button><b id="pdft">Abriendo…</b><span class="sp"></span><form id="pdfsf" class="pdfv-s"><input type="search" id="pdfq" placeholder="Buscar en el libro" aria-label="Buscar en el libro"></form><button class="ibtn" data-z="-1" aria-label="Letra más pequeña">−</button><button class="ibtn" data-z="1" aria-label="Letra más grande">+</button><span id="pdfpg" class="muted"></span></div><div id="pdfres" class="pdfv-res" hidden></div><div class="pdfv-pages" id="pdfpages"></div></div>`;sh.hidden=false;
+  const rec=await pdbGet(id);if(!rec){closeSheet();return}$("#pdft").textContent=rec.n;let lib;
+  try{lib=await pdfjsLoad()}catch(e){$("#pdfpages").innerHTML=`<p style="padding:20px">${esc(BE_SIN)}</p>`;return}
+  let doc;try{doc=await lib.getDocument({data:new Uint8Array(await rec.blob.arrayBuffer())}).promise}catch(e){$("#pdfpages").innerHTML='<p style="padding:20px">No se pudo abrir este PDF.</p>';return}
+  if(!rec.p){rec.p=doc.numPages;pdbTx("readwrite",s=>s.put(rec)).catch(()=>{})}
+  let zoom=ls.get("tp_pdfzoom",1);const pages=$("#pdfpages");const W=()=>Math.min(pages.clientWidth-16,1100)*zoom;
+  const ph=[];pages.innerHTML=[...Array(doc.numPages)].map((_,i)=>`<div class="pdfv-p" data-p="${i+1}"><span class="muted">Página ${i+1}</span></div>`).join("");
+  const p1=await doc.getPage(1);const vp1=p1.getViewport({scale:1});const ratio=vp1.height/vp1.width;
+  const sizeAll=()=>pages.querySelectorAll(".pdfv-p").forEach(d=>{d.style.width=W()+"px";d.style.height=(W()*ratio)+"px"});sizeAll();
+  const drawn=new Set();const render=async n=>{if(drawn.has(n))return;drawn.add(n);const pg=await doc.getPage(n);const vp0=pg.getViewport({scale:1});const sc=W()/vp0.width;const dpr=Math.min(2,window.devicePixelRatio||1);const vp=pg.getViewport({scale:sc*dpr});
+    const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;cv.style.width="100%";cv.style.height="100%";await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;const d=pages.querySelector(`[data-p="${n}"]`);if(d){d.innerHTML="";d.appendChild(cv);d.style.height=(vp0.height*sc)+"px"}};
+  const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){const n=+e.target.dataset.p;render(n);$("#pdfpg").textContent=`${n} / ${doc.numPages}`;const m=ls.get("tp_pdfpag",{});m[id]=n;ls.set("tp_pdfpag",m);rec.last=n}},{root:pages,rootMargin:"400px 0px"});
+  pages.querySelectorAll(".pdfv-p").forEach(d=>io.observe(d));
+  const last=(ls.get("tp_pdfpag",{})||{})[id];if(last>1){const d=pages.querySelector(`[data-p="${last}"]`);if(d)setTimeout(()=>d.scrollIntoView(),60)}
+  const close=()=>{io.disconnect();pdbTx("readwrite",s=>s.put(rec)).catch(()=>{});doc.destroy&&doc.destroy();closeSheet();if(CURRENT==="libros")go("libros")};
+  sh.onclick=e=>{if(e.target.closest("[data-x]")){close();return}const z=e.target.closest("[data-z]");if(z){zoom=Math.max(.6,Math.min(2.4,zoom+(+z.dataset.z)*.2));ls.set("tp_pdfzoom",zoom);drawn.clear();sizeAll();pages.querySelectorAll(".pdfv-p").forEach(d=>{d.innerHTML=`<span class="muted">Página ${d.dataset.p}</span>`;io.unobserve(d);io.observe(d)});return}
+    const g=e.target.closest("[data-go-p]");if(g){$("#pdfres").hidden=true;const d=pages.querySelector(`[data-p="${g.dataset.goP}"]`);d&&d.scrollIntoView()}};
+  $("#pdfsf").onsubmit=async e=>{e.preventDefault();const q=norm($("#pdfq").value.trim());const res=$("#pdfres");if(!q){res.hidden=true;return}res.hidden=false;res.innerHTML='<p class="muted">Buscando…</p>';const hits=[];
+    for(let n=1;n<=doc.numPages&&hits.length<60;n++){if(!rec._t)rec._t={};if(!rec._t[n]){const tc=await (await doc.getPage(n)).getTextContent();rec._t[n]=tc.items.map(x=>x.str).join(" ")}const t=rec._t[n];const k=norm(t).indexOf(q);if(k>=0)hits.push([n,t.slice(Math.max(0,k-60),k+q.length+80)])}
+    res.innerHTML=hits.length?hits.map(([n,t])=>`<button class="xrow" data-go-p="${n}"><b>Página ${n}</b><span>${esc(t)}</span></button>`).join(""):'<p class="muted">No se encontró en este libro.</p>'}}
+/* --- guardar todo para usar sin internet --- */
+async function beCachedCount(){try{const c=await caches.open(BE_CACHE);let n=0;for(const f of BE_FILES()){if(await c.match(beURL(f)))n++}return n}catch(e){return -1}}
+function lbGuardar(w){w.innerHTML=`<div class="card"><h2>Guardar todo para usar sin internet</h2><p>El interlineal, el léxico, los personajes y las introducciones ocupan unos 40 MB. Cada libro de la Biblia se guarda solo la primera vez que lo abre con internet; con este botón se guardan todos de una vez, para predicar o estudiar donde no haya señal.</p><p id="lbst" class="muted">Revisando…</p><div class="lectbar" id="lbbar" hidden><i style="width:0%"></i></div><div class="row" style="margin-top:10px"><button class="btn primary" id="lbgo">Guardar todo</button></div></div>
+   <p class="muted" style="font-size:12.5px;margin-top:14px">Fuentes: interlineal, léxico, concordancia de Strong y personajes de STEPBible.org, basados en el trabajo de Tyndale House Cambridge (CC BY 4.0), resumidos y con glosas en español hechas para esta app; nombres en español de la Reina-Valera 1909. Lector de PDF: pdf.js de Mozilla (Apache 2.0).</p>`;
+  const tot=BE_FILES().length;const st=()=>beCachedCount().then(n=>{const el=$("#lbst");if(!el)return;el.textContent=n<0?"Este navegador no permite guardar para usar sin internet.":n>=tot?"Todo está guardado en este equipo. Funciona sin internet.":`Guardado: ${n} de ${tot} partes.`;if(n>=tot)$("#lbgo").textContent="Revisar de nuevo"});st();
+  $("#lbgo").onclick=async()=>{const b=$("#lbgo");b.disabled=true;const bar=$("#lbbar");bar.hidden=false;let ok=0,bad=0;const fs=BE_FILES();
+    for(let i=0;i<fs.length;i++){try{const c=await caches.open(BE_CACHE);if(!(await c.match(beURL(fs[i])))){const r=await fetch(beURL(fs[i]));if(!r.ok)throw 0;if(!(await c.match(beURL(fs[i]))))await c.put(beURL(fs[i]),r)}ok++}catch(e){bad++}bar.firstElementChild.style.width=((i+1)/fs.length*100)+"%";const el=$("#lbst");if(el)el.textContent=`Guardando… ${i+1} de ${fs.length}`}
+    b.disabled=false;toast(bad?"Faltaron "+bad+" partes: revise la conexión":"Listo: todo guardado para usar sin internet");st()}}
+
+/* la tarjeta «Interlineal» de Estudio abre la Biblia con el original visible */
+document.addEventListener("click",e=>{if(e.target.closest("[data-il]"))ls.set("tp_interlineal",true)},true);
+
+/* ---------- 10. Estilos ---------- */
+(function(){const s=document.createElement("style");s.textContent=`
+.bib-txt.il-on .vs{display:block;margin:0 0 14px}
+.ilrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;padding:6px 0 0;border-top:1px dashed var(--line)}
+.ilrow.heb{direction:rtl}
+.ilc{all:unset;cursor:pointer;display:grid;justify-items:center;gap:1px;padding:5px 7px;border-radius:10px;background:var(--sunk);min-width:44px;text-align:center;direction:ltr}
+.ilc:hover,.ilc:focus-visible{outline:2px solid var(--oro)}
+.ilc.ilv{opacity:.6;border:1px dashed var(--line)}
+.ilo{font-family:"SBL Hebrew","Taamey Frank CLM","Times New Roman","Arial Hebrew",serif;font-size:21px;line-height:1.25;color:var(--ink)}
+[lang=grc].ilo,.ilo[lang=grc]{font-family:"Gentium Plus","Times New Roman",Georgia,serif;font-size:18px}
+.ilt{font-size:11.5px;color:var(--muted);font-style:italic}
+.ile{font-size:12.5px;color:var(--azul);font-weight:600;max-width:120px;line-height:1.2}
+:root[data-skin=noche] .ile{color:#9FC1EA}
+.ils{font-size:10px;color:var(--muted);letter-spacing:.02em}
+.ilnote{font-size:12.5px;margin:10px 0 0}.ilnote span{opacity:.8}
+.bib-il.on{background:var(--oro-soft);color:var(--oro-t,var(--oro))}
+.be-sheet{max-height:88vh}
+.be-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.be-h h2{margin:0}.be-h .muted{margin:2px 0 0;font-size:13.5px}
+.be-lem{font-family:"SBL Hebrew","Times New Roman","Arial Hebrew",serif;font-size:30px;font-weight:500}
+.be-lem[lang=grc]{font-family:"Gentium Plus","Times New Roman",Georgia,serif;font-size:26px}
+.be-mean{font-size:19px;margin:6px 0 12px}.be-mean b{color:var(--azul)}
+:root[data-skin=noche] .be-mean b{color:#9FC1EA}
+.be-ctx{padding:12px 14px;margin:0 0 12px}.be-ctx .label{margin:0 0 4px}
+.be-form{margin:0;font-size:17px}.be-form span{font-family:"SBL Hebrew","Times New Roman",serif;font-size:21px}
+.be-mor{margin:6px 0 0;font-weight:600;font-size:14.5px}
+.be-tips{margin:6px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink2,var(--muted))}.be-tips li{margin:3px 0}
+.be-bars{display:grid;gap:4px;margin:4px 0 10px}
+.be-bar{display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:8px;font-size:13px}
+.be-bar i{display:block;height:8px;border-radius:4px;background:var(--azul);opacity:.75}.be-bar b{text-align:right;font-weight:600}
+.be-def{margin:10px 0;font-size:14px}.be-def summary{cursor:pointer;font-weight:600}.be-def p{color:var(--muted);line-height:1.5}
+.be-perlink{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:6px 0}
+.be-perlink span{display:grid;flex:1}.be-perlink small{color:var(--muted)}
+.be-acts{gap:8px;flex-wrap:wrap}
+.be-src{font-size:11.5px;margin:12px 0 0}
+.be-pass{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.be-pass select{width:auto;min-width:64px}.be-nav{display:inline-flex;gap:4px}
+.gu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px;margin-top:14px}
+.gu-sec h2{margin:0 0 8px;font-size:19px}
+.gu-txt{font-family:var(--f-read);font-size:16.5px;line-height:1.65}.gu-txt sup{color:var(--oro);font-size:11px;margin-right:2px}
+.gu-dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 8px;font-size:14.5px}.gu-dl dt{color:var(--muted)}.gu-dl dd{margin:0}
+.gu-words{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.gu-w{all:unset;cursor:pointer;display:grid;gap:2px;padding:8px 10px;border-radius:12px;background:var(--sunk)}.gu-w b{font-size:14.5px}.gu-w small{font-size:11.5px;color:var(--muted)}
+.gu-note{margin:4px 0;font-size:14.5px}.gu-mk{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--mk);margin-right:4px}
+.gu-ol{margin:4px 0 10px;padding-left:22px}.gu-ol li{margin:3px 0}
+.qu-list{display:grid;gap:2px}
+.qu-card h2{margin:0;font-size:26px}.qu-orig{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.qu-fam{display:grid;gap:10px;margin:10px 0}.qu-fam .label{margin:0 0 4px;display:block}
+.pa-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.pa-cols select{width:100%}
+.pa-t{display:grid;gap:0}
+.pa-row{display:grid;grid-template-columns:28px repeat(var(--pac,2),minmax(0,1fr));gap:12px;padding:8px 0;border-top:1px solid var(--line);font-family:var(--f-read);font-size:15.5px;line-height:1.55}
+.pa-row sup{color:var(--oro);font-family:var(--f-ui);font-size:12px;padding-top:4px}
+.pa-hd{font-family:var(--f-ui);font-size:13px;color:var(--muted);border-top:0}
+.pa-o{font-family:"SBL Hebrew","Times New Roman","Arial Hebrew",serif;font-size:19px;line-height:1.7}.pa-o[lang=grc]{font-family:"Gentium Plus","Times New Roman",serif;font-size:17px}
+.pa-w{all:unset;cursor:pointer;border-radius:4px}.pa-il .pa-w+.pa-w::before{content:"· ";color:var(--muted)}.pa-w:hover{background:var(--mark)}
+@media (max-width:700px){.pa-cols{grid-template-columns:1fr}.pa-row{grid-template-columns:22px minmax(0,1fr)}.pa-row .pa-c{grid-column:2}.pa-hd{display:none}.pa-c+.pa-c{border-top:1px dotted var(--line);padding-top:6px}}
+.es-box{padding:10px 8px}
+.es-list{display:grid;gap:2px}
+.es-line{cursor:pointer;padding:7px 10px 7px calc(10px + var(--ind)*26px);border-radius:10px;font-family:var(--f-read);font-size:16px;line-height:1.5;position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.es-line::before{content:"";position:absolute;left:calc(4px + var(--ind)*26px);top:8px;bottom:8px;width:2px;background:var(--line);border-radius:2px}
+.es-line.on{background:var(--oro-soft)}
+.es-t sup{color:var(--oro);font-family:var(--f-ui);font-size:11px;margin-right:3px}
+.es-tag{font-family:var(--f-ui);font-size:11px;font-weight:700;letter-spacing:.03em;color:#fff;background:var(--c);padding:2px 8px;border-radius:999px}
+.es-c{flex-basis:100%;font-family:var(--f-ui);font-size:13px;color:var(--muted);font-style:italic}
+.es-sp{all:unset;cursor:pointer;padding:0 2px;border-bottom:2px solid var(--oro)}
+.es-tool{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px;padding:8px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.es-tool select{width:auto}.es-tool input{flex:1;min-width:180px}.es-tool .on{background:var(--oro-soft)}
+.cu-h input{all:unset;font:inherit;width:100%;border-bottom:1px dashed var(--line)}
+.cu-add{display:grid;gap:8px;margin:10px 0 14px}
+.cu-items{display:grid;gap:10px}.cu-it{padding:12px 14px}.cu-it p{margin:6px 0 0;font-size:15px;line-height:1.5}
+.cu-ih{display:flex;gap:8px;align-items:center}.cu-ih b{flex:1}.cu-ih .muted{font-size:12px}
+.lb-bk{margin:10px 0}.lb-intro{margin-top:12px}.lb-intro h3{margin:14px 0 4px;font-size:16px}
+.lb-o{font-family:"SBL Hebrew","Times New Roman","Arial Hebrew",serif;font-size:22px;min-width:64px;text-align:center}
+.lb-o[lang=grc]{font-family:"Gentium Plus","Times New Roman",serif;font-size:19px}
+.lb-add{display:inline-flex}
+.lb-pdf{display:flex;align-items:center;gap:6px}.lb-open{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;flex:1}
+.pdfv{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:60}
+.pdfv-bar{display:flex;gap:8px;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+.pdfv-bar b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}.pdfv-bar .sp{flex:1}
+.pdfv-s input{width:170px}
+.pdfv-res{max-height:40vh;overflow:auto;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pdfv-pages{flex:1;overflow:auto;display:grid;justify-content:center;gap:12px;padding:12px 8px calc(20px + env(safe-area-inset-bottom,0px))}
+.pdfv-p{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15);display:grid;place-items:center;max-width:100%}
+@media (max-width:600px){.pdfv-s input{width:110px}}
 `;document.head.appendChild(s)})();
 
 /* ============ Escuchar: la Biblia y las enseñanzas en voz alta (nov 2026) ============
@@ -3074,13 +3603,21 @@ const ICO={
  compartir:'<path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M6 11.5v8h12v-8"/>',
  editar:'<path d="M4.5 19.5 5.5 15 16 4.5l3.5 3.5L9 18.5z"/><path d="M13.5 7l3.5 3.5"/>',
  marcador:'<path d="M7 3.5h10v17l-5-3.5-5 3.5z"/>',
- cerrar:'<path d="M6 6l12 12M18 6 6 18"/>'};
+ cerrar:'<path d="M6 6l12 12M18 6 6 18"/>',
+ guia:'<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/><circle cx="16.3" cy="10" r="1.6"/>',
+ paralelo:'<rect x="3.5" y="4.5" width="7.5" height="15" rx="1.2"/><rect x="13" y="4.5" width="7.5" height="15" rx="1.2"/><path d="M5.5 8.5h3.5M5.5 11.5h3.5M15 8.5h3.5M15 11.5h3.5"/>',
+ esquema:'<path d="M4.5 5.5h8M7.5 10h8M10.5 14.5h8M7.5 19h8"/><path d="M4.5 5.5v13.5"/>',
+ cuadernos:'<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M8.5 3.5v17M11.5 8h4.5M11.5 11.5h4.5"/>',
+ libros:'<path d="M5 4.5h3.5v15H5zM10 4.5h3.5v15H10z"/><path d="m15.2 5.3 3.3-.8 2.8 14.4-3.3.8z"/>',
+ quien:'<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.6-3.2 2.7-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.3"/><path d="M15.5 14.4c2.6-.4 4.5 1.2 5 4.1"/>',
+ original:'<path d="M4 6h7M7.5 6v12M14 18l3-12 3 12M15 14.5h4"/>'};
 const icon=(k,c)=>`<svg class="${c||"ico"}" viewBox="0 0 24 24" aria-hidden="true">${ICO[k]||""}</svg>`;
 const TABS=[["inicio","Inicio"],["sermones","Enseñanzas"],["biblia","Biblia"],["estudio","Estudio"],["diapositivas","Diapositivas"]];
-function tabOf(id){if(["biblia","concordancia","marcas","lectura"].includes(id))return "biblia";if(["lugares","cronologia"].includes(id))return "estudio";if(["sermones","armar","biblioteca","nuevas","nuevacmp","calendario","series"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
+function tabOf(id){if(["biblia","concordancia","marcas","lectura","paralelo"].includes(id))return "biblia";if(["lugares","cronologia","guia","quien","esquema","cuadernos","libros"].includes(id))return "estudio";if(["sermones","armar","biblioteca","nuevas","nuevacmp","calendario","series"].includes(id))return "sermones";if(id==="estudio"||id==="consulta"||TOOLS[id])return "estudio";return id}
 const NAV=[
   {grupo:"",items:[["inicio","Inicio"]]},
-  {grupo:"Escritura",items:[["biblia","Biblia"],["concordancia","Concordancia"],["marcas","Subrayados y notas"],["lectura","Plan de lectura"]]},
+  {grupo:"Escritura",items:[["biblia","Biblia"],["paralelo","Biblias en paralelo"],["concordancia","Concordancia"],["marcas","Subrayados y notas"],["lectura","Plan de lectura"]]},
+  {grupo:"Estudiar el pasaje",items:[["guia","Guía del pasaje"],["esquema","Esquema del pasaje"],["quien","Personajes y lugares"],["cuadernos","Cuadernos de estudio"],["libros","Biblioteca de consulta"]]},
   {grupo:"Estudio",items:[["lugares","Lugares bíblicos"],["cronologia","Línea de tiempo"],["palabras","Palabras originales"],["diccionario","Diccionario bíblico"],["geografia","Geografía bíblica"],["personajes","Personajes"],["temas","Biblia temática"],["paralelos","Referencias cruzadas"]]},
   {grupo:"Preparación",items:[["comentario","Comentario bíblico"],["bosquejo","Exégesis y homilética"],["consulta","Consulta libre"],["banco","Banco de ilustraciones"]]},
   {grupo:"Mis enseñanzas",items:[["sermones","Mis enseñanzas"],["calendario","Calendario de predicación"],["series","Series para predicar"]]},
@@ -3119,6 +3656,12 @@ function _go(id,opts={}){
   if(id==="lectura"&&typeof viewLectura==="function")return viewLectura(v,opts);
   if(id==="buscar"&&typeof viewBuscar==="function")return viewBuscar(v,opts);
   if(id==="banco"&&typeof viewBanco==="function")return viewBanco(v,opts);
+  if(id==="guia"&&typeof viewGuia==="function")return viewGuia(v,opts);
+  if(id==="quien"&&typeof viewQuien==="function")return viewQuien(v,opts);
+  if(id==="paralelo"&&typeof viewParalelo==="function")return viewParalelo(v,opts);
+  if(id==="esquema"&&typeof viewEsquema==="function")return viewEsquema(v,opts);
+  if(id==="cuadernos"&&typeof viewCuadernos==="function")return viewCuadernos(v,opts);
+  if(id==="libros"&&typeof viewLibros==="function")return viewLibros(v,opts);
   if(TOOLS[id])return viewTool(v,id,opts);
   viewInicio(v);
 }
@@ -3320,6 +3863,7 @@ function viewEstudio(v){
   (groups["Preparación"]=groups["Preparación"]||[]).push(["consulta","Consulta libre","Pregunte lo que necesite para su preparación."]);
   v.innerHTML=`<h1>Estudio</h1><p class="lede">Herramientas para estudiar el pasaje antes de predicar. Las responde Claude (necesitan internet y su clave de la IA); lo que encuentre lo puede guardar en la enseñanza que está preparando.</p>
   ${Object.entries(groups).map(([g,items])=>`<div class="section-head tgroup"><h2>${esc(g)}</h2></div><div class="grid2" style="margin-top:12px">${items.map(([id,n,d])=>`<button class="tool-card" data-go="${id}">${ICO[id]?icon(id,"ico"):""}<b>${esc(n)}</b><span>${esc(d)}</span></button>`).join("")}</div>`).join("")}
+  ${typeof viewGuia==="function"?`<div class="section-head tgroup"><h2>Estudiar el pasaje, sin internet</h2></div><div class="grid2" style="margin-top:12px">${[["guia","Guía del pasaje","El libro, las palabras originales, personas, referencias, sus enseñanzas y sus notas de un pasaje."],["original","Interlineal hebreo y griego","Cada palabra del original con su significado, su gramática y dónde más aparece."],["quien","Personajes y lugares","Más de 4.000, con su familia, sus versículos y su nombre original."],["paralelo","Biblias en paralelo","Sus versiones y el texto original, versículo por versículo."],["esquema","Esquema del pasaje","Divida el pasaje en frases y vea su estructura para el bosquejo."],["cuadernos","Cuadernos de estudio","Junte versículos, palabras, personajes y notas por tema o serie."],["libros","Biblioteca de consulta","Léxico, introducciones a los 66 libros y sus libros en PDF."]].map(([id,n,d])=>`<button class="tool-card" data-go="${id==="original"?"biblia":id}" ${id==="original"?'data-il="1"':""}>${icon(id,"ico")}<b>${n}</b><span>${d}</span></button>`).join("")}</div>`:""}
   <div class="section-head tgroup"><h2>En la Biblia, sin internet</h2></div><div class="grid2" style="margin-top:12px"><button class="tool-card" data-go="concordancia"><b>Concordancia</b><span>Busque cualquier palabra en toda la Biblia, con conteo por libro.</span></button>${typeof viewLugares==="function"?`<button class="tool-card" data-go="lugares"><b>Lugares bíblicos</b><span>Más de mil lugares en el mapa, con sus versículos y sus enseñanzas.</span></button><button class="tool-card" data-go="cronologia"><b>Línea de tiempo</b><span>En qué época va cada libro, rey y profeta.</span></button><button class="tool-card" data-go="marcas"><b>Subrayados y notas</b><span>Lo que subrayó y anotó en la Biblia, con referencias cruzadas.</span></button><button class="tool-card" data-go="lectura"><b>Plan de lectura</b><span>La Biblia en un año, el Nuevo Testamento en 90 días y otros.</span></button>`:""}${typeof viewBanco==="function"?`<button class="tool-card" data-go="banco"><b>Banco de ilustraciones</b><span>Frases de impacto, ejemplos e historias para sus mensajes.</span></button>`:""}</div>`;
 }
 function renderRecent(){const el=$("#recent");if(!el)return;
@@ -3358,6 +3902,7 @@ function viewBiblia(v,opts){
     <button class="ibtn bib-aa" id="baa" type="button" aria-label="Tamaño y espacio del texto" title="Tamaño del texto">Aa</button>
     <button class="ibtn" data-voz="biblia" type="button" aria-label="Escuchar el capítulo" title="Escuchar">${icon("escuchar","")}</button>
     <button class="ibtn" data-go="concordancia" type="button" aria-label="Buscar palabras en la Biblia" title="Buscar palabras">${icon("buscar","")}</button>
+    ${typeof beToggleIL==="function"?`<button class="ibtn bib-il" id="bil" type="button" aria-pressed="false" aria-label="Ver el hebreo o griego original palabra por palabra" title="Original palabra por palabra">${icon("original","")}</button>`:""}
     <button class="ibtn bib-jt${BJ.ref?" on":""}" id="bjunto" type="button" aria-pressed="${BJ.ref?"true":"false"}" aria-label="Biblia junto a una enseñanza" title="Junto a una enseñanza"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M12 4.5v15M6 9h3M6 12h3M15 9h3M15 12h3"/></svg></button>
   </div>
   <div class="bib-body">
@@ -3379,6 +3924,7 @@ function viewBiblia(v,opts){
   $(".chapter",v).onclick=e=>{const s=e.target.closest(".vs");if(!s)return;const n=+s.dataset.v;SEL=SEL.includes(n)?SEL.filter(x=>x!==n):[...SEL,n].sort((a,b)=>a-b);s.classList.toggle("sel");updateActionbar();const hn=$(".bib-hint");if(hn)hn.textContent=SEL.length?"":"Toque un versículo para estudiarlo, subrayarlo o anotarlo.";refPanel(b,c,SEL);if(typeof vstudy==="function")vstudy(b,c,SEL)};
   $(".chapter",v).onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("vs"))e.target.click()};
   updateActionbar();refPanel(b,c,SEL);if(typeof vstudy==="function")vstudy(b,c,SEL);if(typeof bibMarks==="function")bibMarks(v,b,c);
+  if(typeof beAfterBiblia==="function"){const bi=$("#bil");if(bi)bi.onclick=beToggleIL;beAfterBiblia(v,b,c)}
   if(SEL.length){$(`.vs[data-v="${SEL[0]}"]`)?.scrollIntoView({block:"center"})}
 }
 /* ---- Biblia: elegir libro y capítulo ---- */
@@ -3442,13 +3988,14 @@ function updateActionbar(){
   bar.innerHTML=`<span class="ref">${esc(label)}</span>
    <button class="btn small" data-a="copy">Copiar</button><button class="btn small" data-a="add">Añadir a un sermón</button>
    <button class="btn small" data-a="comentario">Comentario</button><button class="btn small" data-a="bosquejo">Exégesis y homilética</button><button class="btn small" data-a="paralelos">Referencias cruzadas</button>
-   <button class="btn small" data-a="cmpv">Comparar versiones</button>
+   <button class="btn small" data-a="cmpv">Comparar versiones</button>${typeof viewGuia==="function"?`<button class="btn small" data-a="guia">Guía del pasaje</button><button class="btn small" data-a="esquema">Esquema</button>`:""}
    <button class="btn small ghost" data-a="clear">Quitar marcas</button>`;
   bar.hidden=false;
   bar.onclick=e=>{const a=e.target.closest("[data-a]")?.dataset.a;if(!a)return;const {b,c}=BSTATE;const ch=BIBLE[b].chs[c-1];const txt=SEL.map(n=>`${n} ${ch[n-1]}`).join("\n");
     if(a==="copy")copyText(`${label} (${BVER.abbr})\n${txt}`);
     if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:label+" ("+BVER.abbr+")",texto:SEL.map(n=>`**${n}** ${ch[n-1]}`).join(" ")}));
     if(a==="cmpv")return compareVersions(r);
+    if(a==="guia"||a==="esquema")return go(a,{b,c,v1:SEL[0],v2:SEL[SEL.length-1]});
     if(a==="clear"){SEL=[];document.querySelectorAll(".vs.sel").forEach(x=>x.classList.remove("sel"));updateActionbar();refPanel(b,c,[])}
     if(["comentario","bosquejo","paralelos"].includes(a))go(a,{prefill:{pasaje:rangeLabel}});
   };

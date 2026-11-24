@@ -1,0 +1,3 @@
+Datos del interlineal, léxico, concordancia y personajes: STEPBible.org, basados en el trabajo de Tyndale House Cambridge (CC BY 4.0).
+Fuente: https://github.com/STEPBible/STEPBible-Data
+Cambios: resumidos y reorganizados para esta app; glosas en español hechas para esta app; nombres en español tomados de la Reina-Valera 1909.
