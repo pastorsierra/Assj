@@ -1491,6 +1491,173 @@ ACT2.v26ipuc=e=>v26UseIpuc(e.dataset.v);
 const v26LogoHTML0=v26LogoHTML;
 v26LogoHTML=function(){const d=curDeck()||{};const dark=v26IsDark(d.th||'medianoche');if(dark&&S.set.logoDark&&IMG[S.set.logoDark]){const keep=S.set.logo;S.set.logo=S.set.logoDark;try{return v26LogoHTML0()}finally{S.set.logo=keep}}return v26LogoHTML0()};
 
+/* ---------- 12. Presentaciones listas para usar (nov 2026) ----------
+   Vienen dentro de la app y funcionan sin internet. Al tocar «Usar» se crea una copia
+   en «Mis presentaciones» (deck:<id> en taller-predicador, igual que las demás) que se puede
+   editar sin tocar el original. La copia lleva d.lista con la clave para reconocerla. */
+const LST_RV='RVR1960';
+const LISTAS=[
+{k:'liderazgo',t:'Liderazgo cristiano',g:'Escuela de líderes',d:'Llamado, confirmación y condiciones del líder que Dios usa',s:[
+ ['portada',{kicker:'Escuela de líderes',title:'Liderazgo cristiano',sub:'Conocer el camino, andar en él y mostrarlo'},1,'Basado en la presentación «Liderazgo cristiano», rehecha para la iglesia.'],
+ ['frase',{text:'Un líder es aquel que conoce el camino, anda en el camino y muestra el camino.',by:'John C. Maxwell'},1,'El que guía tiene que haber caminado primero. Nadie puede mostrar con autoridad un camino que no ha andado.'],
+ ['versiculo',{ref:'2 Timoteo 3:16-17',text:'{16}Toda la Escritura es inspirada por Dios, y útil para enseñar, para redargüir, para corregir, para instruir en justicia, {17}a fin de que el hombre de Dios sea perfecto, enteramente preparado para toda buena obra.'},2,'Este es el objetivo del taller: que cada líder quede preparado para toda buena obra, y que esa preparación venga de la Palabra.'],
+ ['seccion',{num:'A',title:'¿Qué es un líder?',sub:'El que va adelante. Dirige a otros, y ellos lo siguen de buena voluntad.'},1,'La palabra clave es «voluntad». Al líder no lo siguen por obligación; lo siguen porque confían en él.'],
+ ['punto',{title:'¿Se nace o se hace?',items:'Se dice que los líderes nacen y no se hacen\nEs verdad en parte: hay niños que desde pequeños guían a otros\nEl líder cristiano se forma: Dios lo llama, lo trata y lo prepara',hl:''},3,'Hay rasgos que se traen, pero Moisés pasó cuarenta años en el desierto antes de guiar a Israel. Dios forma a sus siervos.'],
+ ['seccion',{num:'B',title:'El liderazgo en la Biblia',sub:'Dios levantó hombres para guiar a su pueblo en cada época.'},1,''],
+ ['punto',{title:'Hombres que Dios levantó',items:'Patriarcas: Noé, Abraham y José\nCaudillos y reyes: Moisés, Josué, Gedeón y David\nProfetas: Samuel, Daniel y Juan el Bautista\nApóstoles: Pedro y Pablo',hl:''},3,'Ninguno fue perfecto. Lo que tuvieron en común fue un corazón dispuesto delante de Dios.'],
+ ['versiculo',{ref:'1 Samuel 16:7',text:'Y Jehová respondió a Samuel: No mires a su parecer, ni a lo grande de su estatura, porque yo lo desecho; porque Jehová no mira lo que mira el hombre; pues el hombre mira lo que está delante de sus ojos, pero Jehová mira el corazón.'},2,'Samuel miraba la estatura de Eliab. Dios estaba mirando a un muchacho que cuidaba ovejas en el campo.'],
+ ['pasos',{title:'Lo que Dios hace con sus líderes',items:'Los elige y los llama. Hechos 9:15\nLos capacita. Éxodo 4:12\nPelea por ellos. Éxodo 14:14\nLos guía para que guíen a otros. Juan 16:13\nDecide cuándo termina su carrera. 2 Timoteo 4:7'},4,'Más pasajes para el maestro: Éxodo 3:10; Lucas 12:12; Jeremías 1:19; Salmo 48:14; Deuteronomio 32:50. Todo empieza y termina en Dios. Él llama, él capacita, él respalda y él dice cuándo se acaba la tarea.'],
+ ['frase',{text:'Los líderes son necesarios, pero no imprescindibles. Solo Dios lo es.',by:''},1,'Esto nos guarda del orgullo. La obra sigue cuando nosotros pasamos.'],
+ ['seccion',{num:'C',title:'El llamado divino',sub:'Dios sigue llamando hoy, y lo hace de muchas maneras.'},1,''],
+ ['punto',{title:'¿Cómo llama Dios?',items:'Hablando al corazón. Oseas 2:14\nCon voz audible, como a Moisés, a Samuel y a Pablo\nPor sueños, como a Jacob y a José\nPor medio de profetas y de su Palabra\nPor hermanos guiados por su Espíritu',hl:''},4,'Pregunte a la clase cómo los llamó Dios a ellos. Casi siempre aparece la Palabra y la voz de un hermano.'],
+ ['seccion',{num:'D',title:'La confirmación del llamado',sub:'Hay que estar seguro de que el llamado viene de Dios.'},1,'Pedir confirmación no es falta de fe cuando se hace con un corazón sincero.'],
+ ['personaje',{name:'Gedeón',ref:'Jueces 6:11-24',role:'Dios lo llamó mientras sacudía el trigo escondido de los madianitas.',items:'El ángel le dijo: Jehová está contigo, varón esforzado y valiente\nGedeón pidió una señal, y Dios no se ofendió\nFuego salió de la peña y consumió la ofrenda\nCuando Dios llama, también confirma'},3,'Gedeón se veía pequeño: «mi familia es pobre en Manasés, y yo el menor en la casa de mi padre». Dios lo llamó valiente antes de que lo fuera.'],
+ ['seccion',{num:'E',title:'Los liderazgos en la iglesia',sub:'Dios pone a cada miembro en su lugar para edificar el cuerpo.'},1,''],
+ ['versiculo',{ref:'Efesios 4:11-12',text:'{11}Y él mismo constituyó a unos, apóstoles; a otros, profetas; a otros, evangelistas; a otros, pastores y maestros, {12}a fin de perfeccionar a los santos para la obra del ministerio, para la edificación del cuerpo de Cristo.'},2,'Los ministerios no son títulos para lucir. Existen para perfeccionar a los santos.'],
+ ['versiculo',{ref:'1 Corintios 12:11',text:'Pero todas estas cosas las hace uno y el mismo Espíritu, repartiendo a cada uno en particular como él quiere.'},1,'Uno y el mismo Espíritu: el único Dios es quien reparte los dones y dirige su iglesia.'],
+ ['seccion',{num:'F',title:'Lo que Dios pide al líder',sub:'Siete condiciones que Dios espera ver.'},1,''],
+ ['punto',{title:'Condiciones del líder (1)',items:'Obediencia. Hechos 9:6\nHumildad. Mateo 20:26\nSantidad. 1 Timoteo 3:2\nLealtad. 1 Samuel 24:10',hl:''},3,'David tuvo a Saúl en sus manos y no lo tocó. La lealtad se prueba cuando sería fácil traicionar.'],
+ ['punto',{title:'Condiciones del líder (2)',items:'Fidelidad. Daniel 3:17-18\nValentía. Josué 1:6\nHonestidad. 1 Pedro 5:2',hl:'El siervo del Señor no debe ser contencioso, sino amable para con todos. 2 Timoteo 2:24'},3,''],
+ ['seccion',{num:'G',title:'Para responder',sub:'Cinco preguntas para conversar en grupo.'},1,''],
+ ['reflexion',{label:'Pregunta 1 de 5',text:'¿Ha sentido el llamado a un liderazgo o a un ministerio específico?'},2,''],
+ ['reflexion',{label:'Pregunta 2 de 5',text:'¿Se ha asegurado de que se trata de un llamado genuino?'},2,''],
+ ['reflexion',{label:'Pregunta 3 de 5',text:'Si todavía no lo ha hecho, ¿cómo buscaría la confirmación de Dios?'},2,''],
+ ['reflexion',{label:'Pregunta 4 de 5',text:'¿Está trabajando ahora en algún área de la iglesia?'},2,''],
+ ['reflexion',{label:'Pregunta 5 de 5',text:'Si aún no ha sentido un llamado, ¿en qué área le gustaría servir?'},2,''],
+ ['seccion',{num:'H',title:'Reflexión final',sub:'Lo que se ve en el líder que Dios usa.'},1,''],
+ ['punto',{title:'El líder que Dios usa (1)',items:'Escucha un buen consejo\nSe deja ayudar\nDelega lo que otros pueden hacer\nValora, anima e inspira a sus ayudantes\nDeja que los nuevos líderes crezcan',hl:''},3,'Moisés aprendió a delegar por el consejo de Jetro. Éxodo 18:17-23.'],
+ ['punto',{title:'El líder que Dios usa (2)',items:'Soporta la crítica con paciencia\nSabe que puede ser traicionado, aun por quien menos espera\nNo busca aplausos ni agradar a los hombres\nTiene los ojos puestos en Jesús. Hebreos 12:2\nAdmite sus errores y es considerado con los ajenos',hl:''},3,''],
+ ['versiculo',{ref:'Gálatas 1:10',text:'Pues, ¿busco ahora el favor de los hombres, o el de Dios? ¿O trato de agradar a los hombres? Pues si todavía agradara a los hombres, no sería siervo de Cristo.'},2,''],
+ ['versiculo',{ref:'1 Timoteo 4:12',text:'Ninguno tenga en poco tu juventud, sino sé ejemplo de los creyentes en palabra, conducta, amor, espíritu, fe y pureza.'},2,'Pablo le escribe a un joven. El respeto del líder se gana con el ejemplo, no con la edad.'],
+ ['punto',{title:'Descubra el líder que hay en usted',items:'Dentro de cada seguidor de Jesús hay alguien que puede guiar a otros\nNací para servir y guiar, pero tengo que formarme\nEl liderazgo verdadero se nota en el servicio',hl:''},3,''],
+ ['cierre',{title:'Conocer el camino, andar en él y mostrarlo',sub:'Puestos los ojos en Jesús, el autor y consumador de la fe.',ref:'Hebreos 12:2'},1,'']]},
+
+{k:'lidersiervo',t:'El ministerio del líder siervo',g:'Principios de liderazgo',d:'Alcanzar la madurez espiritual: el maduro y el inmaduro, y siete rasgos del líder maduro',s:[
+ ['portada',{kicker:'Principios de liderazgo cristiano',title:'El ministerio del líder siervo',sub:'Alcanzando la madurez en el ministerio'},1,'Basado en «Principios de liderazgo cristiano 13: Ministerio del Lidersiervo» (F. Cataño, AGAPE), rehecho para la iglesia.'],
+ ['punto',{title:'Muchos quieren ser líderes',items:'Pocos están dispuestos a esforzarse para servir con madurez\nEl líder siervo obedece la Palabra, pone a Cristo en el centro y trabaja en el poder del Espíritu\nEsta tarea pide madurez física, mental y espiritual',hl:''},3,''],
+ ['versiculo',{ref:'1 Corintios 13:11',text:'Cuando yo era niño, hablaba como niño, pensaba como niño, juzgaba como niño; mas cuando ya fui hombre, dejé lo que era de niño.'},2,'Crecer es dejar cosas. Hay maneras de hablar y de reaccionar que ya no le quedan a un siervo de Dios.'],
+ ['punto',{title:'El problema en muchas iglesias',items:'Insistimos en la conversión y descuidamos el crecimiento\nMuchos no crecen, no colaboran y solo ocupan una banca\nArrastran la vida vieja: orgullo, resentimiento, chisme, desobediencia y pereza para servir',hl:'Hace falta una visión clara de lo que es la madurez en Cristo.'},3,''],
+ ['punto',{title:'¿Sabemos definirla?',items:'Un estudio del Grupo Barna en Estados Unidos encontró que muchos cristianos, líderes y pastores no saben definir la madurez espiritual\nCasi todos los pastores dijeron que la falta de madurez es uno de los mayores problemas de la iglesia\nPocos la medían por la relación personal con Jesús',hl:''},3,'No fue en Latinoamérica, pero nos obliga a preguntarnos qué entendemos nosotros por un cristiano maduro.'],
+ ['pasos',{title:'Antes de seguir, pregúntese',items:'¿Qué es para mí un cristiano maduro?\n¿Cómo reconozco a una persona espiritualmente madura?\n¿Qué me enseñaron sobre esto mis padres y mis líderes?\n¿Qué textos de la Biblia hablan de crecer?\n¿Qué se debe ver en la vida de un creyente maduro?'},4,'Deje unos minutos para que la clase responda en voz alta o por escrito.'],
+ ['seccion',{num:'I',title:'¿Qué es la madurez espiritual?',sub:'Crecer hasta la estatura de Cristo.'},1,''],
+ ['versiculo',{ref:'Efesios 4:13',text:'hasta que todos lleguemos a la unidad de la fe y del conocimiento del Hijo de Dios, a un varón perfecto, a la medida de la estatura de la plenitud de Cristo;'},2,'La medida no es el hermano más antiguo de la iglesia. La medida es Cristo.'],
+ ['versiculo',{ref:'Romanos 8:29',text:'Porque a los que antes conoció, también los predestinó para que fuesen hechos conformes a la imagen de su Hijo, para que él sea el primogénito entre muchos hermanos.'},2,''],
+ ['frase',{text:'La persona madura vive en armonía con Dios, con su prójimo y consigo misma, con equilibrio en el cuerpo, la mente, los afectos y el espíritu.',by:'Diccionario hispanoamericano de la misión (adaptado)'},2,''],
+ ['punto',{title:'Señales de un creyente maduro',items:'Ora y vive en la Palabra\nTestifica de Cristo y anda lleno del Espíritu Santo\nEs buen mayordomo y sirve en un ministerio\nAma a la iglesia y obedece',hl:''},3,'Félix Ortiz, en «Claves para un ministerio bíblico, fuerte y en crecimiento», resume la madurez en estas áreas.'],
+ ['seccion',{num:'II',title:'¿Qué es la inmadurez espiritual?',sub:'La Biblia la describe con claridad.'},1,''],
+ ['versiculo',{ref:'1 Corintios 14:20',text:'Hermanos, no seáis niños en el modo de pensar, sino sed niños en la malicia, pero maduros en el modo de pensar.'},2,''],
+ ['versiculo',{ref:'Efesios 4:14-15',text:'{14}para que ya no seamos niños fluctuantes, llevados por doquiera de todo viento de doctrina, por estratagema de hombres que para engañar emplean con astucia las artimañas del error, {15}sino que siguiendo la verdad en amor, crezcamos en todo en aquel que es la cabeza, esto es, Cristo,'},2,'El inmaduro se deja llevar por cualquier viento. El maduro tiene raíces en la verdad.'],
+ ['versiculo',{ref:'Hebreos 5:12-13',text:'{12}Porque debiendo ser ya maestros, después de tanto tiempo, tenéis necesidad de que se os vuelva a enseñar cuáles son los primeros rudimentos de las palabras de Dios; y habéis llegado a ser tales que tenéis necesidad de leche, y no de alimento sólido. {13}Y todo aquel que participa de la leche es inexperto en la palabra de justicia, porque es niño;'},2,''],
+ ['versiculo',{ref:'Hebreos 5:14',text:'pero el alimento sólido es para los que han alcanzado madurez, para los que por el uso tienen los sentidos ejercitados en el discernimiento del bien y del mal.'},2,'«Por el uso». La madurez se ejercita, como un músculo.'],
+ ['seccion',{num:'III',title:'El maduro y el inmaduro',sub:'Se conocen por su fruto: con Dios, con la iglesia y con los que no creen.'},1,''],
+ ['versiculo',{ref:'Gálatas 5:22-23',text:'{22}Mas el fruto del Espíritu es amor, gozo, paz, paciencia, benignidad, bondad, fe, {23}mansedumbre, templanza; contra tales cosas no hay ley.'},2,''],
+ ['columnas',{title:'Con Dios',aT:'El maduro',aItems:'Busca la comunión con Cristo\nMira lo que le pasa desde la perspectiva de Dios',bT:'El inmaduro',bItems:'No tiene tiempo para Dios, la Biblia ni la oración\nCulpa a Dios de todo lo que le pasa'},3,''],
+ ['columnas',{title:'Con la iglesia (1)',aT:'El maduro',aItems:'Busca la comunión con los hermanos\nEs un agente de paz\nTiene su lugar y su ministerio',bT:'El inmaduro',bItems:'No conoce el perdón que nace de la comunión\nLleva a conflictos y divisiones\nNo sirve en nada y asiste de vez en cuando'},3,''],
+ ['columnas',{title:'Con la iglesia (2)',aT:'El maduro',aItems:'Ordena su vida alrededor de la Palabra y la iglesia\nQuiere trabajar y servir',bT:'El inmaduro',bItems:'Ordena su vida alrededor del dinero y la profesión\nEspera que los líderes lo entretengan'},3,''],
+ ['columnas',{title:'Con los que no creen',aT:'El maduro',aItems:'Invita siempre a personas nuevas\nVe en cada incrédulo un futuro discípulo y un futuro líder',bT:'El inmaduro',bItems:'Se encierra en su grupo de amigos\nVe en cada incrédulo un problema'},3,''],
+ ['seccion',{num:'IV',title:'La meta: la madurez',sub:'A Dios le interesa más nuestra madurez que nuestra comodidad.'},1,''],
+ ['original',{q:'',w:'τέλειος',tr:'téleios',st:'G5046',mean:'Maduro, completo, que llegó a su fin',ref:'Mateo 5:48',note:'En la Biblia, perfecto no quiere decir sin defectos. Quiere decir maduro.'},2,''],
+ ['versiculo',{ref:'Mateo 5:48',text:'Sed, pues, vosotros perfectos, como vuestro Padre que está en los cielos es perfecto.'},1,''],
+ ['seccion',{num:'V',title:'Siete rasgos del líder maduro',sub:'Lo que se espera de quien quiere ser un líder espiritual.'},1,''],
+ ['punto',{title:'Rasgos del líder maduro (1)',items:'Amor incondicional: ama a la persona aunque no apruebe lo que hace. 1 Corintios 13:4-8\nDisponibilidad: pone su tiempo, sus fuerzas y sus bienes al servicio de la obra. Hechos 2:44-45\nTransparencia: habla la verdad en amor y no lo encierra todo en sí mismo. Efesios 4:15; Santiago 5:16',hl:''},4,''],
+ ['punto',{title:'Rasgos del líder maduro (2)',items:'Apertura: escucha, revisa las costumbres y recibe buenas ideas\nResponsabilidad: cumple con fidelidad la tarea que le encomendaron\nSujeción: se somete a la autoridad de la iglesia y cuida la unidad. Efesios 4:11-16\nIntegridad: es honesto, no se deja comprar y cumple lo que promete',hl:''},4,''],
+ ['frase',{text:'Nuestra tarea como líderes siervos es dar a cada creyente la oportunidad y el conocimiento para crecer a la imagen de Cristo.',by:''},1,''],
+ ['frase',{text:'La madurez no llega en un día ni con el solo paso de los años. Hay que conocer sus rasgos y moldear la conducta en esa dirección.',by:''},1,''],
+ ['versiculo',{ref:'Filipenses 3:12',text:'No que lo haya alcanzado ya, ni que ya sea perfecto; sino que prosigo, por ver si logro asir aquello para lo cual fui también asido por Cristo Jesús.'},1,''],
+ ['versiculo',{ref:'Filipenses 3:13-14',text:'{13}Hermanos, yo mismo no pretendo haberlo ya alcanzado; pero una cosa hago: olvidando ciertamente lo que queda atrás, y extendiéndome a lo que está delante, {14}prosigo a la meta, al premio del supremo llamamiento de Dios en Cristo Jesús.'},2,'Pablo, después de tantos años de ministerio, dice que todavía no ha llegado. El maduro sabe que le falta.'],
+ ['cierre',{title:'Prosigo a la meta',sub:'Al premio del supremo llamamiento de Dios en Cristo Jesús.',ref:'Filipenses 3:14'},1,'']]},
+
+{k:'servicio1',t:'El servicio que Dios quiere',g:'Servicio a Dios · 1',d:'Un servicio que nace de la misericordia, de corazón, en santidad y con humildad',s:[
+ ['portada',{kicker:'Servicio a Dios · 1',title:'El servicio que Dios quiere',sub:''},1,''],
+ ['versiculo',{ref:'Romanos 12:1',text:'Así que, hermanos, os ruego por las misericordias de Dios, que presentéis vuestros cuerpos en sacrificio vivo, santo, agradable a Dios, que es vuestro culto racional.'},2,'Pablo no empieza pidiendo. Empieza recordando las misericordias de Dios. Todo el servicio sale de ahí.'],
+ ['original',{q:'',w:'λατρεία',tr:'latreía',st:'G2999',mean:'Servicio, culto: lo que se ofrece a Dios',ref:'Romanos 12:1',note:'Servir a Dios y adorarle se dicen con la misma palabra.'},2,'Barrer el templo, enseñar a los niños o cantar en el coro también es culto delante de Dios.'],
+ ['seccion',{num:'I',title:'Nace de la misericordia',sub:'Primero Dios nos alcanzó. Después nosotros le servimos.'},1,''],
+ ['punto',{title:'Le servimos porque él nos sirvió primero',items:'Nos libró de la potestad de las tinieblas. Colosenses 1:13\nVino a servir y a dar su vida en rescate. Marcos 10:45\nAl que mucho se le perdona, mucho ama. Lucas 7:47',hl:''},3,'Dios mismo, manifestado en carne, se hizo siervo. Quien entiende eso no sirve por obligación.'],
+ ['versiculo',{ref:'Marcos 10:45',text:'Porque el Hijo del Hombre no vino para ser servido, sino para servir, y para dar su vida en rescate por muchos.'},2,''],
+ ['seccion',{num:'II',title:'Con todo el corazón',sub:'Dios no recibe un servicio a medias.'},1,''],
+ ['versiculo',{ref:'Deuteronomio 10:12',text:'Ahora, pues, Israel, ¿qué pide Jehová tu Dios de ti, sino que temas a Jehová tu Dios, que andes en todos sus caminos, y que lo ames, y sirvas a Jehová tu Dios con todo tu corazón y con toda tu alma;'},2,''],
+ ['punto',{title:'Lo que Dios mira cuando servimos',items:'El ánimo voluntario. 1 Crónicas 28:9\nLa alegría. Salmo 100:2\nLa fidelidad en lo poco. Lucas 16:10',hl:'Dios escudriña los corazones y entiende todo intento de los pensamientos.'},3,'David le dijo a Salomón: «sírvele con corazón perfecto y con ánimo voluntario». Lo que se hace a regañadientes pierde su olor grato.'],
+ ['versiculo',{ref:'Salmo 100:2',text:'Servid a Jehová con alegría; venid ante su presencia con regocijo.'},1,''],
+ ['seccion',{num:'III',title:'En santidad',sub:'Lo que hago en el altar vale lo que vale mi vida en la casa.'},1,''],
+ ['versiculo',{ref:'Lucas 1:74-75',text:'{74}Que, librados de nuestros enemigos, sin temor le serviríamos {75}en santidad y en justicia delante de él, todos nuestros días.'},2,''],
+ ['punto',{title:'Manos limpias, corazón puro',items:'Los sacerdotes se lavaban antes de entrar a servir. Éxodo 30:20\nIsaías fue purificado antes de decir: Heme aquí. Isaías 6:7-8\nEl que sirve en la casa de Dios cuida su vida fuera de ella',hl:''},3,'El carbón encendido tocó los labios de Isaías. Primero la limpieza, después el envío.'],
+ ['seccion',{num:'IV',title:'Con humildad',sub:'El Señor tomó la toalla.'},1,''],
+ ['punto',{title:'El ejemplo del aposento alto',items:'Se levantó de la cena, se quitó el manto y se ciñó una toalla. Juan 13:4\nLavó también los pies de Judas\nEl mayor en el reino es el que sirve. Lucas 22:26-27',hl:''},3,'Las manos que formaron al hombre del polvo estaban lavando el polvo de los pies de sus discípulos.'],
+ ['versiculo',{ref:'Juan 13:14-15',text:'{14}Pues si yo, el Señor y el Maestro, he lavado vuestros pies, vosotros también debéis lavaros los pies los unos a los otros. {15}Porque ejemplo os he dado, para que como yo os he hecho, vosotros también hagáis.'},2,''],
+ ['seccion',{num:'V',title:'Un servicio que permanece',sub:'Nada de lo que se hace para el Señor se pierde.'},1,''],
+ ['versiculo',{ref:'1 Corintios 15:58',text:'Así que, hermanos míos amados, estad firmes y constantes, creciendo en la obra del Señor siempre, sabiendo que vuestro trabajo en el Señor no es en vano.'},2,''],
+ ['reflexion',{label:'Para pensar',text:'¿Qué le estoy dando a Dios: lo primero de mi vida o lo que me sobra?'},2,''],
+ ['cierre',{title:'Heme aquí, envíame a mí',sub:'',ref:'Isaías 6:8'},1,'']]},
+
+{k:'servicio2',t:'Los enemigos del servicio',g:'Servicio a Dios · 2',d:'La pereza, el orgullo, la envidia, el afán, el desánimo y el amor al mundo',s:[
+ ['portada',{kicker:'Servicio a Dios · 2',title:'Los enemigos del servicio',sub:''},1,''],
+ ['versiculo',{ref:'1 Corintios 16:9',text:'porque se me ha abierto puerta grande y eficaz, y muchos son los adversarios.'},2,'Pablo no se quedó en Éfeso a pesar de los adversarios. Se quedó por causa de la puerta abierta.'],
+ ['frase',{text:'Donde Dios abre una puerta, también aparecen adversarios. Conocerlos es parte de la victoria.',by:''},1,''],
+ ['seccion',{num:'1',title:'La pereza',sub:'Siempre encuentra una excusa.'},1,''],
+ ['versiculo',{ref:'Romanos 12:11',text:'En lo que requiere diligencia, no perezosos; fervientes en espíritu, sirviendo al Señor;'},1,''],
+ ['punto',{title:'El perezoso',items:'Dice: El león está fuera; seré muerto en la calle. Proverbios 22:13\nEl siervo malo y negligente enterró el talento. Mateo 25:25-26\nLo que no se usa para Dios, se pierde',hl:''},3,'El perezoso no dice «no quiero». Dice «hay un león». Las excusas siempre suenan razonables.'],
+ ['seccion',{num:'2',title:'El orgullo',sub:'Sirve para ser visto.'},1,''],
+ ['punto',{title:'Cuando el orgullo entra',items:'Diótrefes quería tener el primer lugar. 3 Juan 9\nUzías se enalteció y entró a quemar incienso. 2 Crónicas 26:16\nEl orgulloso se ofende cuando no lo toman en cuenta',hl:''},3,'Uzías fue un buen rey mientras buscó a Dios. Cuando se hizo fuerte, su corazón se enalteció para su ruina.'],
+ ['versiculo',{ref:'Santiago 4:6',text:'Pero él da mayor gracia. Por esto dice: Dios resiste a los soberbios, y da gracia a los humildes.'},1,''],
+ ['seccion',{num:'3',title:'La envidia y la contienda',sub:'Mirar al hermano en vez de mirar la obra.'},1,''],
+ ['punto',{title:'Celos entre los que sirven',items:'Los discípulos discutían quién sería el mayor. Lucas 22:24\nMaría y Aarón murmuraron contra Moisés. Números 12:1-2\nDonde hay celos y contención, allí hay perturbación. Santiago 3:16',hl:''},3,'Discutían quién sería el mayor la misma noche en que el Señor les lavó los pies.'],
+ ['seccion',{num:'4',title:'El afán',sub:'Muchos quehaceres y poca comunión.'},1,''],
+ ['personaje',{name:'Marta',ref:'Lucas 10:38-42',role:'Recibió a Jesús en su casa y se afanó sirviendo.',items:'Servía, pero se distraía con muchos quehaceres\nTerminó reclamando: Señor, ¿no te da cuidado?\nJesús le mostró que una sola cosa es necesaria\nEl servicio sin comunión se vuelve una carga'},3,'Marta no estaba haciendo nada malo. Estaba sirviendo al Señor, pero sin el Señor.'],
+ ['seccion',{num:'5',title:'El desánimo',sub:'Cuando el siervo se sienta bajo el enebro.'},1,''],
+ ['punto',{title:'Elías bajo el enebro',items:'Después de la victoria en el Carmelo, pidió morirse. 1 Reyes 19:4\nDios lo alimentó, lo dejó dormir y le habló en un silbo apacible\nLo levantó con una tarea nueva. 1 Reyes 19:15-16',hl:''},3,'Dios no lo regañó. Le dio pan, agua y descanso, y después lo volvió a enviar.'],
+ ['versiculo',{ref:'Gálatas 6:9',text:'No nos cansemos, pues, de hacer bien; porque a su tiempo segaremos, si no desmayamos.'},1,''],
+ ['seccion',{num:'6',title:'El amor al dinero y al mundo',sub:'Un corazón dividido no puede servir bien.'},1,''],
+ ['punto',{title:'Los que se quedaron en el camino',items:'Demas desamparó a Pablo, amando este mundo. 2 Timoteo 4:10\nGiezi corrió detrás de los regalos de Naamán. 2 Reyes 5:20\nJudas vendió al Maestro por treinta piezas de plata. Mateo 26:15',hl:''},3,''],
+ ['versiculo',{ref:'Mateo 6:24',text:'Ninguno puede servir a dos señores; porque o aborrecerá al uno y amará al otro, o estimará al uno y menospreciará al otro. No podéis servir a Dios y a las riquezas.'},2,''],
+ ['pasos',{title:'Cómo vencerlos',items:'Velar y orar. Mateo 26:41\nVestirse de humildad. 1 Pedro 5:5\nSentarse a sus pies primero. Lucas 10:39\nFortalecerse en Dios. 1 Samuel 30:6\nMirar las cosas de arriba. Colosenses 3:2'},4,''],
+ ['reflexion',{label:'Para pensar',text:'¿Cuál de estos enemigos ha entrado en mi servicio, y qué voy a hacer hoy para sacarlo?'},2,''],
+ ['cierre',{title:'Más que vencedores',sub:'Por medio de aquel que nos amó.',ref:'Romanos 8:37'},1,'']]},
+
+{k:'servicio3',t:'Sirviendo a Dios y no a los hombres',g:'Servicio a Dios · 3',d:'Servir para ser vistos, el temor de los hombres y la recompensa del que sirve a Dios',s:[
+ ['portada',{kicker:'Servicio a Dios · 3',title:'Sirviendo a Dios y no a los hombres',sub:''},1,''],
+ ['versiculo',{ref:'Colosenses 3:23-24',text:'{23}Y todo lo que hagáis, hacedlo de corazón, como para el Señor y no para los hombres; {24}sabiendo que del Señor recibiréis la recompensa de la herencia, porque a Cristo el Señor servís.'},2,'Pablo les escribe esto a siervos, a gente que trabajaba para amos de este mundo. Hasta el trabajo más humilde se puede hacer para el Señor.'],
+ ['versiculo',{ref:'Gálatas 1:10',text:'Pues, ¿busco ahora el favor de los hombres, o el de Dios? ¿O trato de agradar a los hombres? Pues si todavía agradara a los hombres, no sería siervo de Cristo.'},2,''],
+ ['seccion',{num:'I',title:'Servir para ser vistos',sub:'El aplauso puede convertirse en el patrón.'},1,''],
+ ['versiculo',{ref:'Mateo 6:1',text:'Guardaos de hacer vuestra justicia delante de los hombres, para ser vistos de ellos; de otra manera no tendréis recompensa de vuestro Padre que está en los cielos.'},2,''],
+ ['original',{q:'',w:'ὀφθαλμοδουλία',tr:'ofthalmodoulía',st:'G3787',mean:'Servir al ojo',ref:'Efesios 6:6; Colosenses 3:22',note:'Trabajar bien solo cuando el amo está mirando.'},2,''],
+ ['versiculo',{ref:'Efesios 6:6-7',text:'{6}no sirviendo al ojo, como los que quieren agradar a los hombres, sino como siervos de Cristo, de corazón haciendo la voluntad de Dios; {7}sirviendo de buena voluntad, como al Señor y no a los hombres,'},2,''],
+ ['punto',{title:'Señales de que estoy sirviendo a los hombres',items:'Me duele más que no me vean que no agradar a Dios\nSirvo con ganas solo cuando hay público\nDejo de servir cuando no me dan las gracias\nCallo la verdad para no perder el aprecio',hl:''},3,'Sea honesto con la congregación: todos hemos sentido alguna de estas cosas.'],
+ ['seccion',{num:'II',title:'El temor de los hombres',sub:'Un lazo que ha atrapado a muchos siervos.'},1,''],
+ ['versiculo',{ref:'Proverbios 29:25',text:'El temor del hombre pondrá lazo; mas el que confía en Jehová será exaltado.'},1,''],
+ ['personaje',{name:'Saúl',ref:'1 Samuel 15:24',role:'Primer rey de Israel, desechado por Dios.',items:'Recibió una orden clara de parte de Dios\nObedeció a medias y guardó lo mejor del botín\nConfesó: Temí al pueblo y consentí a la voz de ellos\nPerdió el reino por agradar a la gente'},3,'Saúl quería quedar bien con el pueblo. Hasta después de pecar le pidió a Samuel que lo honrara delante de los ancianos. 1 Samuel 15:30.'],
+ ['seccion',{num:'III',title:'Los que eligieron a Dios',sub:'Les costó, pero Dios los respaldó.'},1,''],
+ ['punto',{title:'Ellos sirvieron a Dios',items:'Daniel oró con las ventanas abiertas. Daniel 6:10\nTres jóvenes no se inclinaron. Daniel 3:18\nMicaías habló lo que Dios le dijo. 1 Reyes 22:14\nLos apóstoles no callaron el nombre de Jesús. Hechos 5:42',hl:''},3,''],
+ ['versiculo',{ref:'Hechos 5:29',text:'Respondiendo Pedro y los apóstoles, dijeron: Es necesario obedecer a Dios antes que a los hombres.'},1,'Les habían prohibido enseñar en el nombre de Jesús. Ese nombre era el centro de su predicación, y no lo iban a callar.'],
+ ['seccion',{num:'IV',title:'Dios ve en lo secreto',sub:'El que sirve a Dios no pierde su recompensa.'},1,''],
+ ['versiculo',{ref:'Mateo 6:3-4',text:'{3}Mas cuando tú des limosna, no sepa tu izquierda lo que hace tu derecha, {4}para que sea tu limosna en secreto; y tu Padre que ve en lo secreto te recompensará en público.'},2,''],
+ ['punto',{title:'Lo que gana el que sirve a Dios',items:'Dios ve lo que nadie ve. Mateo 6:4\nDios no olvida el trabajo de amor. Hebreos 6:10\nSi alguno me sirviere, mi Padre le honrará. Juan 12:26',hl:''},3,''],
+ ['frase',{text:'Cuando el aplauso se apaga, el que sirvió a Dios sigue en pie.',by:''},1,''],
+ ['reflexion',{label:'Para pensar',text:'Si nadie se diera cuenta de lo que hago en la iglesia, ¿seguiría haciéndolo con el mismo amor?'},2,''],
+ ['cierre',{title:'Como para el Señor',sub:'Y no para los hombres.',ref:'Colosenses 3:23'},1,'']]}
+];
+const LST_TH='t26-ipuc';
+function lstThemeOk(){return THEMES.some(t=>t.id===LST_TH)?LST_TH:v26Th()}
+function lstBuild(L){const sl=L.s.map(([ty,f,m,n])=>{const f2=Object.assign({},f);['items','hl','aItems','bItems'].forEach(x=>{if(f2[x])f2[x]=f2[x].replace(/\b([123]) (?=[A-ZÁÉÍÓÚ])/g,'$1\u00a0').replace(/ (?=\d{1,3}:\d)/g,'\u00a0')});const s=blank(ty,f2);s.min=m;s.notes=n||'';if(ty==='versiculo'&&!s.f.ver1)s.f.ver1=LST_RV;return s});
+  const d=newDeck(L.t,lstThemeOk(),null,sl);d.target=Math.max(10,Math.round(planned(d)/5)*5);d.lista=L.k;return d}
+function lstCopy(k){return Object.values(S.decks).find(d=>d.lista===k&&!d.temp)}
+function lstPreview(L){const s=blank('portada',Object.assign({},L.s[0][1]));return fitHTML(s,{deck:{th:lstThemeOk(),slides:[s]},i:0,n:L.s.length})}
+function lstMin(L){return L.s.reduce((a,x)=>a+(+x[2]||0),0)}
+function lstHTML(){return '<div class="lst"><div class="lst-hd"><div class="lbl">Presentaciones listas</div><p class="hint">Talleres ya preparados. Al tocar «Usar» se guarda una copia en sus presentaciones para ajustarla a su gusto.</p></div><div class="cards">'+
+  LISTAS.map(L=>{const c=lstCopy(L.k);return '<div class="card lst-c"><div class="th" data-act="lstuse" data-k="'+L.k+'">'+lstPreview(L)+'</div><div class="bd"><span class="lst-g">'+esc(L.g)+'</span><b>'+esc(L.t)+'</b><div class="meta">'+L.s.length+' diapositivas · '+lstMin(L)+' min</div><p class="lst-d">'+esc(L.d)+'</p><div class="row">'+
+   (c?'<button class="btn sm pri" data-act="open" data-id="'+c.id+'">Abrir mi copia</button><button class="btn sm gold" data-act="v26play" data-id="'+c.id+'">'+ic('play')+'Proyectar</button><button class="btn sm" data-act="lstnew" data-k="'+L.k+'">Otra copia</button>'
+     :'<button class="btn sm pri" data-act="lstuse" data-k="'+L.k+'">Usar</button><button class="btn sm gold" data-act="lstplay" data-k="'+L.k+'">'+ic('play')+'Proyectar</button>')+'</div></div></div>'}).join('')+'</div></div>'}
+function lstMake(k,force){const L=LISTAS.find(x=>x.k===k);if(!L)return null;const c=!force&&lstCopy(k);if(c)return c;const d=lstBuild(L);if(force)d.title=L.t+' (copia)';S.decks[d.id]=d;saveDeck(d);return d}
+Object.assign(window.ACT2,{
+  lstuse:e=>{const c=lstCopy(e.dataset.k);const d=lstMake(e.dataset.k);if(!d)return;openDeck(d.id);if(!c)toast('Listo: «'+d.title+'» ya está en sus presentaciones')},
+  lstnew:e=>{const d=lstMake(e.dataset.k,true);if(d){openDeck(d.id);toast('Se creó otra copia')}},
+  lstplay:e=>{const d=lstMake(e.dataset.k);if(d){openDeck(d.id);setTimeout(()=>startPresent('p'),60)}}});
+const lstRenderLib0=renderLib;
+renderLib=function(){lstRenderLib0();const lib=$('#lib');if(lib&&!V26L.q)lib.insertAdjacentHTML('beforeend',lstHTML())};
+(function(){const st=document.createElement('style');st.textContent=
+ '.lst{margin-top:28px;padding-top:20px;border-top:1px solid var(--line)}.lst-hd{margin-bottom:12px}.lst-hd .hint{margin:4px 0 0;font-size:14px}'+
+ '.lst-g{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:600}.lst-d{margin:2px 0 4px;font-size:13px;color:var(--mute);line-height:1.4}';
+ document.head.appendChild(st)})();
+
 /* ===== Arranque ===== */
 (async function boot(){
   try{IDBX=await idbOpen()}catch(e){IDBX=null}
