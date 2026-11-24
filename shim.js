@@ -2,7 +2,7 @@
    Reemplaza lo que daba Claude: la IA (API de Anthropic con su clave), las descargas y el almacenamiento en el equipo. */
 (function(){
 "use strict";
-const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"c130b28f"};
+const TP=window.TP={kv:new Map(),cfgKey:"tp_cfg",version:"cccab513"};
 /* ---------- almacenamiento: IndexedDB con copia en memoria ---------- */
 let idb=null;
 /* Safari en iPad/iPhone a veces deja «dormido» IndexedDB al pasar de una página a otra (por ejemplo, al volver

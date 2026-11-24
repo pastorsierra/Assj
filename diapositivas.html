@@ -1479,6 +1479,18 @@ toast=function(msg,ms){document.querySelectorAll('.toast').forEach(x=>x.remove()
 document.addEventListener('pointerup',e=>{if(e.target.closest&&e.target.closest('#pres #sheet'))e.stopPropagation()},true);
 (function(){const st=document.createElement('style');st.textContent='#pres #sheet{color:var(--ink);user-select:text;-webkit-user-select:text}#pres #sheet .btn{background:var(--panel);color:var(--ink);border-color:var(--line)}#pres #sheet .btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}#pres #sheet .btn.gold{background:var(--gold);color:#16110a}';document.head.appendChild(st)})();
 
+/* ---------- 13. Logo oficial de la IPUC (viene en la app) ---------- */
+const V26IPUC={color:['marca/ipuc-color.png','A color (fondos claros)'],oscuro:['marca/ipuc-color-oscuro.png','A color (fondos oscuros)'],blanco:['marca/ipuc-blanco.png','Blanco'],negro:['marca/ipuc-negro.png','Negro'],gris:['marca/ipuc-gris.png','Gris suave (marca de agua)']};
+const v26IsDark=th=>{const t=THEMES.find(x=>x.id===th);const m=t&&String(t.vars).match(/--bg1:\s*#([0-9a-f]{6})/i);if(!m)return true;const n=parseInt(m[1],16);return ((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000<128};
+async function v26UseIpuc(v){const get=async u=>{const r=await fetch(u);if(!r.ok)throw 0;const b=await r.blob();return addImage(new File([b],'ipuc.png',{type:'image/png'}),'logo')};
+  toast('Poniendo el logo de la IPUC…',1500);try{S.set.logo=await get(V26IPUC[v][0]);S.set.ipuc=v;S.set.logoDark=(v==='color'||v==='negro'||v==='gris')?await get(V26IPUC.oscuro[0]):null;saveSettings();openSheet(identHTML());if(S.view==='studio')refreshAll();else renderLib();toast('Listo: logo de la IPUC')}catch(e){toast('No se pudo leer el logo. Abra la app una vez con internet.',4000)}}
+const v26ident0=identHTML;
+identHTML=function(){return v26ident0().replace('<div class="row"><button class="btn" data-act="pickLogo">','<div class="fld"><span class="lbl">Logo de la IPUC (oficial)</span><div class="row">'+Object.entries(V26IPUC).filter(([k])=>k!=='oscuro').map(([k,[u,n]])=>'<button class="btn sm'+(S.set.ipuc===k?' pri':'')+'" data-act="v26ipuc" data-v="'+k+'"><img src="'+u+'" alt="" style="height:26px;'+(k==='blanco'?'background:#15305B;border-radius:4px;padding:2px':'')+'">'+n+'</button>').join('')+'</div><span class="hint">En los diseños oscuros, «Solo el logo» usa sola la versión para fondo oscuro.</span></div><div class="row"><button class="btn" data-act="pickLogo">')};
+ACT2.v26ipuc=e=>v26UseIpuc(e.dataset.v);
+/* «Solo el logo»: versión correcta según el fondo */
+const v26LogoHTML0=v26LogoHTML;
+v26LogoHTML=function(){const d=curDeck()||{};const dark=v26IsDark(d.th||'medianoche');if(dark&&S.set.logoDark&&IMG[S.set.logoDark]){const keep=S.set.logo;S.set.logo=S.set.logoDark;try{return v26LogoHTML0()}finally{S.set.logo=keep}}return v26LogoHTML0()};
+
 /* ===== Arranque ===== */
 (async function boot(){
   try{IDBX=await idbOpen()}catch(e){IDBX=null}
