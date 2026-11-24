@@ -968,6 +968,517 @@ Object.assign(window.ACT2,{fromens:()=>fromEnsSheet(),enstab:e=>{ENSTAB=e.datase
   pickens:e=>createFromEns(e.dataset.id),
   picklib:async e=>{const it=(await libItems()).find(x=>x.i===+e.dataset.i);if(it)await makeDeck(libMd(it),{titulo:it.t})}});
 
+/* ================= Diapositivas · Diseño 2026 (nov 2026) =================
+   Mismo aspecto que el Taller, biblioteca con búsqueda, tipos de diapositiva nuevos,
+   diseños 2026, fondo con foto, letra que se ajusta sola, proyección rápida desde la Biblia,
+   versículo al vuelo, solo el logo, control remoto desde el iPhone, imágenes para WhatsApp
+   y hoja con líneas para apuntes. Se inserta dentro del script principal de diapositivas. */
+
+/* ---------- 1. Tema de la app igual que el Taller (tp_skin2) ---------- */
+function v26Skin(){let k='auto';try{k=localStorage.getItem('tp_skin2')||'auto'}catch(e){}
+  if(k==='oscuro')k='noche';if(k==='auto'||k==='claro'){k=(k==='auto'&&matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'noche':'hojas'}
+  if(!['hojas','noche','pergamino'].includes(k))k='hojas';const r=document.documentElement;r.setAttribute('data-skin',k);r.setAttribute('data-theme',k==='noche'?'dark':'light');r.setAttribute('data-v26','1')}
+v26Skin();addEventListener('storage',e=>{if(/tp_skin|tp_ui/.test(e.key||''))v26Skin()});addEventListener('pageshow',v26Skin);
+
+(function(){const st=document.createElement('style');st.id='v26css';st.textContent=`
+@font-face{font-family:"Cormorant Garamond";src:url("taller-titulos.woff") format("woff");font-weight:500 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Cormorant Garamond";src:url("taller-titulos-italica.woff") format("woff");font-weight:500 700;font-style:italic;font-display:swap}
+@font-face{font-family:"Literata";src:url("taller-lectura.woff") format("woff");font-weight:400 600;font-style:normal;font-display:swap}
+@font-face{font-family:"Literata";src:url("taller-lectura-italica.woff") format("woff");font-weight:400 600;font-style:italic;font-display:swap}
+html:root[data-v26]{--ui:-apple-system,"SF Pro Text",BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;--head:"Cormorant Garamond",Georgia,serif;--read:"Literata",Georgia,serif;--r:16px}
+html:root[data-v26][data-skin="hojas"]{--bg:#F7F8FA;--panel:#FFFFFF;--ink:#13233F;--mute:#5C6678;--line:#E2E7EF;--brand:#15305B;--brand-ink:#FFFFFF;--gold:#B5862F;--gold-t:#8A6418;--gold-soft:#F7EFDC;--sunk:#EEF2F8;--danger:#A8392C;--shadow:0 1px 2px rgba(19,35,63,.05),0 6px 18px rgba(19,35,63,.06);color-scheme:light}
+html:root[data-v26][data-skin="noche"]{--bg:#0A1120;--panel:#131D33;--ink:#EDE6D4;--mute:#9AA3B4;--line:#232F48;--brand:#E3C77E;--brand-ink:#10192C;--gold:#D6B25E;--gold-t:#D9B868;--gold-soft:#2B2516;--sunk:#192540;--danger:#E59088;--shadow:0 1px 2px rgba(0,0,0,.35);color-scheme:dark}
+html:root[data-v26][data-skin="pergamino"]{--bg:#F2EADB;--panel:#FBF6EC;--ink:#2A2216;--mute:#6B5E48;--line:#DDCFB5;--brand:#1E3557;--brand-ink:#FFFFFF;--gold:#9C7423;--gold-t:#7A5714;--gold-soft:#F3E6C4;--sunk:#EAE0CC;--danger:#9E3426;--shadow:0 1px 2px rgba(60,45,20,.06),0 6px 18px rgba(60,45,20,.05);color-scheme:light}
+[data-v26] body{font-family:var(--ui);font-size:16px;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+[data-v26] h1,[data-v26] h2,[data-v26] h3{font-family:var(--head);font-weight:600;color:var(--brand)}
+[data-v26][data-skin="noche"] h1,[data-v26][data-skin="noche"] h2{color:var(--ink)}
+[data-v26] .lbl{color:var(--gold-t);letter-spacing:.14em}
+[data-v26] .btn{border-radius:12px;min-height:44px;font-weight:600;background:var(--panel);border-color:var(--line)}
+[data-v26] .btn.sm{min-height:36px;border-radius:10px}
+[data-v26] .btn.icon{width:44px}[data-v26] .btn.icon.sm{width:36px}
+[data-v26] .btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+[data-v26] .btn.gold{background:var(--gold);border-color:var(--gold);color:#16110a}
+[data-v26] .fld input[type=text],[data-v26] .fld input[type=number],[data-v26] .fld input[type=date],[data-v26] .fld textarea,[data-v26] .fld select,[data-v26] .inp{border-radius:12px;background:var(--panel);border:1px solid var(--line);min-height:44px}
+[data-v26] .chip{background:var(--gold-soft)}
+/* barra superior */
+[data-v26] #top{background:color-mix(in srgb,var(--bg) 92%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line);min-height:64px}
+[data-v26] #top .ttl{font-family:var(--head);font-weight:600;font-size:24px;color:var(--brand)}
+[data-v26][data-skin="noche"] #top .ttl{color:var(--ink)}
+[data-v26] .brand{font-family:var(--head);font-weight:600;font-size:24px;color:var(--brand)}
+[data-v26][data-skin="noche"] .brand{color:var(--ink)}
+/* biblioteca */
+[data-v26] #lib{max-width:1180px;padding-top:26px}
+[data-v26] .lib-head h1{font-size:clamp(30px,4.2vw,42px);line-height:1.08}
+.v26-new{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:6px 0 22px}
+.v26-new button{all:unset;cursor:pointer;display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);min-height:56px}
+.v26-new button .ic{width:22px;height:22px;color:var(--gold)}
+.v26-new button b{display:block;font-size:15px}.v26-new button small{display:block;font-size:12.5px;color:var(--mute);margin-top:2px}
+.v26-new button.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}.v26-new button.on .ic{color:var(--brand-ink)}.v26-new button.on small{color:inherit;opacity:.8}
+.v26-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.v26-tools input{flex:1;min-width:200px;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:11px 14px;font-size:16px}
+.v26-seg{display:inline-flex;background:var(--sunk);border-radius:12px;padding:3px}
+.v26-seg button{all:unset;cursor:pointer;padding:8px 14px;border-radius:10px;font-weight:600;font-size:14px;color:var(--mute)}
+.v26-seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+[data-v26] .card{border-radius:18px}
+[data-v26] .card .bd b{font-family:var(--head);font-weight:600;font-size:21px;line-height:1.15;color:var(--brand)}
+[data-v26][data-skin="noche"] .card .bd b{color:var(--ink)}
+.v26-shown{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:600;color:var(--gold-t);background:var(--gold-soft);border-radius:99px;padding:2px 9px}
+/* estudio: escenario fijo y columnas con su propio desplazamiento */
+@media (min-width:701px){
+  [data-v26] #studio{height:calc(100dvh - 66px - env(safe-area-inset-top,0px));padding-bottom:12px;align-items:stretch}
+  [data-v26] #rail{overflow:auto;padding-right:4px}
+  [data-v26] #insp{overflow:auto;align-self:stretch;max-height:100%}
+  [data-v26] #stage{overflow:auto}
+  html[data-v26],[data-v26] body{overscroll-behavior:none}
+}
+[data-v26] #insp{border-radius:18px;background:var(--panel)}
+[data-v26] .canvas{border-radius:16px}
+[data-v26] .sitem.on{border-color:var(--gold)}
+[data-v26] .type-grid button{border-radius:14px;background:var(--panel);min-height:54px}
+.v26-tg{margin:4px 0 2px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-t)}
+[data-v26] #sheet .box{border-radius:22px 22px 0 0}
+[data-v26] .toast{border-radius:14px;background:var(--brand);color:var(--brand-ink)}
+.v26-find{display:flex;gap:8px;flex-wrap:nowrap}.v26-find input{flex:1;min-width:0}
+.v26-res{display:grid;gap:6px;max-height:240px;overflow:auto}
+.v26-res button{all:unset;cursor:pointer;display:grid;gap:2px;padding:8px 10px;border-radius:10px;background:var(--sunk)}
+.v26-res button small{color:var(--mute);font-size:12px}
+.v26-hb{display:flex;gap:6px;align-items:center}
+/* proyección: botones nuevos */
+#pres .hud .btn{min-height:40px}
+html body #sheet{z-index:86}
+#rem .btn{background:#18233d;border-color:#34446a;color:#F3EEE2}#rem .btn.gold{background:#E3C77E;border-color:#E3C77E;color:#16110a}#rem .rbtns .btn{min-height:96px}
+#pres .plogo{position:absolute;inset:0;z-index:5;display:none}
+#pres .plogo.on{display:block}
+#pres .pfly{position:absolute;inset:0;z-index:4;display:none;place-items:center;background:#000}
+#pres .pfly.on{display:grid}
+#pres .pfly .fx{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:14px;z-index:2}
+.v26-qr{display:grid;place-items:center;gap:10px;text-align:center}
+.v26-qr canvas,.v26-qr img{width:min(320px,80vw);height:auto;image-rendering:pixelated;background:#fff;padding:12px;border-radius:14px}
+.v26-cam{position:relative;width:min(360px,90vw);aspect-ratio:1;border-radius:16px;overflow:hidden;background:#000;margin:0 auto}
+.v26-cam video{width:100%;height:100%;object-fit:cover}
+.v26-cam::after{content:"";position:absolute;inset:18%;border:3px solid #E3C77E;border-radius:14px}
+`;document.head.appendChild(st)})();
+
+/* ---------- 2. Biblia: también la RV1909 que trae la app ---------- */
+const v26ensureBib0=ensureBib;
+ensureBib=async function(id){if(id==='RV1909'){if(BIB.RV1909)return BIB.RV1909;try{const r=await fetch('rv1909.json');const j=await r.json();BIB.RV1909={id:'RV1909',name:'RV1909',books:j.map(b=>b[2])};return BIB.RV1909}catch(e){return null}}return v26ensureBib0(id)};
+const v26loadBibles0=loadBibles;
+loadBibles=async function(){await v26loadBibles0();if(!BVLIST.some(x=>x.abbr==='RV1909'))BVLIST.push({abbr:'RV1909',name:'Reina-Valera 1909'});if(!S.set.b1)S.set.b1=BVLIST.find(x=>x.abbr!=='RV1909')?BVLIST.find(x=>x.abbr!=='RV1909').abbr:'RV1909'};
+async function v26Verse(ref,bid){bid=bid||S.set.b1;const B=await ensureBib(bid);if(!B)return null;const r=lookup(ref,bid);return r?{...r,ver:B.name}:null}
+
+/* ---------- 3. Biblioteca de presentaciones ---------- */
+let V26L={q:'',f:'todas'};
+const v26Ago=t=>{if(!t)return '';const d=new Date(t);return d.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:d.getFullYear()!==new Date().getFullYear()?'numeric':undefined})};
+renderLib=function(){
+  const all=Object.values(S.decks).filter(d=>!d.temp);const q=nq(V26L.q.trim());
+  let ds=all.filter(d=>!q||nq(d.title+' '+d.slides.map(s=>Object.values(s.f||{}).join(' ')).join(' ')).includes(q));
+  if(V26L.f==='proy')ds=ds.filter(d=>d.shown);
+  ds.sort((a,b)=>V26L.f==='proy'?(b.shown||0)-(a.shown||0):b.updated-a.updated);
+  const nb=(a,i,t,s)=>'<button data-act="'+a+'">'+ic(i)+'<span><b>'+t+'</b><small>'+s+'</small></span></button>';
+  app().innerHTML='<div id="top"><a class="btn" href="index.html" aria-label="Volver al Taller">'+ic('left')+'<span class="t">Taller</span></a><div class="brand">Diapositivas</div><span class="grow"></span>'+
+   '<button class="btn" data-act="remoteJoin">'+ic('phone')+'<span class="t">Usar como control remoto</span></button><button class="btn" data-act="bible">'+ic('book')+'<span class="t">Biblia</span></button><button class="btn" data-act="ident">'+ic('user')+'<span class="t">Identidad</span></button></div>'+
+   '<div id="lib"><div class="lib-head"><div><div class="lbl">Mis presentaciones</div><h1>Prepare, proyecte y comparta su enseñanza</h1></div></div>'+
+   '<div class="v26-new">'+nb('fromens','file','Desde una enseñanza','Sus puntos, frases y versículos')+nb('frombib','book','Desde la Biblia','Uno o varios versículos')+nb('newsheet','grid','Con una plantilla','Estudio, taller, mensaje…')+nb('ai','spark','Generar con IA','Un esqueleto para ajustar')+'</div>'+
+   '<div class="v26-tools"><input type="search" id="v26q" placeholder="Buscar en sus presentaciones" value="'+esc(V26L.q)+'" aria-label="Buscar presentaciones"><div class="v26-seg" role="tablist"><button data-act="v26f" data-f="todas" class="'+(V26L.f==='todas'?'on':'')+'">Recientes</button><button data-act="v26f" data-f="proy" class="'+(V26L.f==='proy'?'on':'')+'">Ya proyectadas</button></div></div>'+
+   '<div class="cards">'+(ds.length?ds.map(d=>'<div class="card"><div class="th" data-act="open" data-id="'+d.id+'">'+fitHTML(d.slides[0]||blank('portada'),{deck:d,i:0,n:d.slides.length})+'</div><div class="bd"><b>'+esc(d.title)+'</b><div class="meta">'+d.slides.length+' diapositivas · '+planned(d)+' min · '+esc(THEMES.find(t=>t.id===d.th)?.name||'')+'</div>'+(d.shown?'<span class="v26-shown">'+ic('play')+'Proyectada el '+esc(v26Ago(d.shown))+'</span>':'')+'<div class="row"><button class="btn sm pri" data-act="open" data-id="'+d.id+'">Abrir</button><button class="btn sm gold" data-act="v26play" data-id="'+d.id+'">'+ic('play')+'Proyectar</button><button class="btn sm" data-act="dup" data-id="'+d.id+'" aria-label="Duplicar">'+ic('copy')+'</button><button class="btn sm danger" data-act="deldeck" data-id="'+d.id+'" aria-label="Eliminar">'+ic('trash')+'</button></div></div></div>').join('')
+     :(all.length?'<p class="hint" style="grid-column:1/-1;font-size:15px">No encontré presentaciones con «'+esc(V26L.q)+'».</p>':'<div class="card" style="padding:18px;gap:10px;grid-column:1/-1"><b style="font-family:var(--head);font-size:22px">Todavía no tiene presentaciones</b><p class="hint" style="margin:0;font-size:15px">La forma más rápida: toque <b>Desde una enseñanza</b>. La app arma las diapositivas con sus puntos, sus frases y los versículos de su Biblia. Después las ajusta y proyecta.</p></div>'))+'</div></div>';
+  const qi=$('#v26q');if(qi){qi.oninput=()=>{V26L.q=qi.value;clearTimeout(qi._t);qi._t=setTimeout(()=>{const p=qi.selectionStart;renderLib();const n=$('#v26q');n.focus();try{n.setSelectionRange(p,p)}catch(e){}},250)}}};
+ICONS.phone='<rect x="7" y="3" width="10" height="18" rx="2.2"/><path d="M11 18h2"/>';
+ICONS.map='<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>';
+ICONS.time='<path d="M3 12h18"/><circle cx="7" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17" cy="12" r="1.6"/>';
+ICONS.word='<path d="M4 6h7M7.5 6v12M14 18l3-12 3 12M15 14.5h4"/>';
+ICONS.family='<circle cx="12" cy="6" r="2.4"/><circle cx="6" cy="17" r="2.2"/><circle cx="18" cy="17" r="2.2"/><path d="M12 8.5V13M6 14.8V13h12v1.8"/>';
+ICONS.compare='<rect x="3.5" y="4.5" width="7.5" height="15" rx="1.2"/><rect x="13" y="4.5" width="7.5" height="15" rx="1.2"/>';
+ICONS.blank='<rect x="3.5" y="5" width="17" height="12" rx="1.5"/><path d="M7 11h3M12 11h5M7 14h6"/>';
+ICONS.vf='<path d="m4.5 12.5 3 3 6-7"/><path d="m15 9 5 5M20 9l-5 5"/>';
+ICONS.timer='<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/>';
+ICONS.mega='<path d="M4 10v4h3l6 4V6L7 10z"/><path d="M16.5 9a4 4 0 0 1 0 6"/>';
+ICONS.share='<path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M6 11.5v8h12v-8"/>';
+ICONS.wa='<path d="M4.5 19.5 5.6 16A7.8 7.8 0 1 1 8.4 18.6z"/><path d="M9.2 9.4c.3 2.4 2.5 4.6 5 5l1-1.3-1.7-1-.8.6c-.9-.4-1.6-1.1-2-2l.6-.8-1-1.7z"/>';
+Object.assign(window.ACT2,{v26f:e=>{V26L.f=e.dataset.f;renderLib()},
+  v26play:e=>{openDeck(e.dataset.id);setTimeout(()=>startPresent('p'),60)}});
+/* registrar cuándo se proyectó cada presentación */
+const v26startPresent0=startPresent;
+startPresent=function(mode){const d=curDeck();if(d&&!d.temp){d.shown=Date.now()}const r=v26startPresent0(mode);v26HudExtra();return r};
+
+/* ---------- 4. Tipos de diapositiva nuevos ---------- */
+Object.assign(TYPES,{
+  original:{n:'Palabra original',i:'word',vars:2},familia:{n:'Personaje y su familia',i:'family',vars:1},mapa:{n:'Lugar en el mapa',i:'map',vars:1},
+  linea:{n:'Línea de tiempo',i:'time',vars:1},comparar:{n:'Comparar versiones',i:'compare',vars:1},completar:{n:'Completar la frase',i:'blank',vars:1},
+  vf:{n:'Verdadero o falso',i:'vf',vars:1},cuenta:{n:'Cuenta regresiva',i:'timer',vars:1},anuncio:{n:'Anuncio',i:'mega',vars:2}});
+Object.assign(FIELDS,{
+  original:[['q','Buscar la palabra (en español, transliterada o número Strong)','findorig',''],['w','Palabra en hebreo o griego','text',''],['tr','Cómo se pronuncia','text',''],['st','Número Strong','text',''],['mean','Significado','area',''],['ref','Pasaje donde aparece','text',''],['note','Explicación breve (opcional)','area','']],
+  familia:[['q','Buscar el personaje','findper',''],['name','Nombre','text',''],['desc','Quién fue','area',''],['pa','Padres','text',''],['co','Esposo o esposa','text',''],['hn','Hermanos','text',''],['hi','Hijos','text','']],
+  mapa:[['q','Buscar el lugar','findlug',''],['name','Lugar principal','text',''],['more','Otros lugares para marcar (uno por línea)','lines',''],['sub','Texto breve (opcional)','area',''],['ref','Pasaje (opcional)','text','']],
+  linea:[['title','Título','area','Época de los patriarcas'],['items','Una línea por momento: fecha | lo que pasó','lines','']],
+  comparar:[['ref','Referencia','refcmp','Juan 3:16'],['vA','Versión 1','text',''],['tA','Texto 1','area',''],['vB','Versión 2','text',''],['tB','Texto 2','area',''],['vC','Versión 3 (opcional)','text',''],['tC','Texto 3','area','']],
+  completar:[['label','Etiqueta','text','Complete la frase'],['text','Frase: ponga entre == == lo que la congregación debe completar','area',''],['by','Pasaje (opcional)','text','']],
+  vf:[['title','Título','text','¿Verdadero o falso?'],['items','Una afirmación por línea; termine con | V o | F','lines','']],
+  cuenta:[['title','Título','text','Comenzamos en'],['mins','Minutos','text','5'],['sub','Texto breve (opcional)','text','']],
+  anuncio:[['kicker','Etiqueta','text','Anuncio'],['title','Título','area',''],['when','Fecha y hora','text',''],['where','Lugar','text',''],['sub','Detalles','area','']]});
+const v26blank0=blank;
+blank=function(type,f){const o=v26blank0(type,f);if(['original','familia','mapa','comparar','linea','vf'].includes(type))o.min=2;if(type==='cuenta')o.min=0;return o};
+const v26steps0=stepsOf;
+stepsOf=function(s){const f=s.f||{};if(s.type==='linea')return lines(f.items).length;if(s.type==='vf')return lines(f.items).length;if(s.type==='completar')return 1;if(s.type==='original')return f.note?2:1;return v26steps0(s)};
+const v26Heb=w=>/[֐-׿]/.test(w||'');
+let V26MAP=null,V26LUG=null;
+fetch('mapa.json').then(r=>r.json()).then(m=>{V26MAP=m}).catch(()=>{});
+fetch('lugares.json').then(r=>r.json()).then(l=>{V26LUG=l}).catch(()=>{});
+const v26norm=s=>nq(s).replace(/[^a-z0-9ñ ]/g,'').trim();
+function v26Place(n){if(!V26LUG||!n)return null;const k=v26norm(n);return V26LUG.find(p=>v26norm(p.n)===k)||V26LUG.find(p=>v26norm(p.e||'')===k)||V26LUG.find(p=>v26norm(p.n).startsWith(k))}
+function v26MapSVG(f){const M=V26MAP;if(!M)return '<div class="mapmiss">El mapa se está cargando…</div>';
+  const pts=[f.name,...lines(f.more)].map(v26Place).filter(Boolean);if(!pts.length)return '<div class="mapmiss">Escriba un lugar de la Biblia: Jerusalén, Betel, Nínive…</div>';
+  const xy=p=>[(p.x-M.lon0)*M.k*M.cx,(M.lat1-p.y)*M.k];const P=pts.map(xy);
+  let x0=Math.min(...P.map(p=>p[0])),x1=Math.max(...P.map(p=>p[0])),y0=Math.min(...P.map(p=>p[1])),y1=Math.max(...P.map(p=>p[1]));
+  let w=Math.max(x1-x0,14),h=Math.max(y1-y0,10);const cx=(x0+x1)/2,cy=(y0+y1)/2;w*=1.7;h*=1.7;const r=1.25;if(w/h>r)h=w/r;else w=h*r;const vb=[cx-w/2,cy-h/2,w,h];const u=w/100;
+  return '<svg class="msvg" viewBox="'+vb.map(n=>n.toFixed(2)).join(' ')+'" preserveAspectRatio="xMidYMid slice"><rect x="'+vb[0]+'" y="'+vb[1]+'" width="'+w+'" height="'+h+'" class="ms"/><path class="ml" d="'+M.land+'"/><path class="mk2" d="'+M.lakes+'"/><path class="mr" d="'+M.rivers+'" style="stroke-width:'+(u*.25)+'"/>'+
+   P.map((p,i)=>'<g><circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(u*(i?1.1:1.7))+'" class="'+(i?'mp':'mp0')+'"/><text x="'+(p[0]+u*2.2)+'" y="'+(p[1]+u*1)+'" style="font-size:'+(u*(i?3.6:4.6))+'px">'+esc(pts[i].n)+'</text></g>').join('')+'</svg>'}
+const v26slideHTML0=slideHTML;
+slideHTML=function(sl,o){if(!['original','familia','mapa','linea','comparar','completar','vf','cuenta','anuncio'].includes(sl.type))return v26slideHTML0(sl,o);
+  /* se reutiliza el armado general (fondo, borde, marca de agua, pie) con un cuerpo propio */
+  const tmp={...sl,type:'frase',f:{text:'@@V26@@'}};let html=v26slideHTML0(tmp,o);
+  const f=sl.f||{};let R=0;const rv=()=>' rv" data-r="'+(++R);let body='';
+  switch(sl.type){
+  case'original':{const hb=v26Heb(f.w);body='<div class="in o26">'+(f.ref?'<div class="k">'+esc(f.ref)+'</div>':'')+'<div class="ow'+(hb?' heb':'')+'"'+(hb?' dir="rtl"':'')+'>'+esc(f.w||'λόγος')+'</div><div class="otr">'+esc(f.tr||'')+(f.st?' · <span>'+esc(f.st)+'</span>':'')+'</div><div class="rule"></div><div class="om'+rv()+'">'+rich(f.mean||'Significado')+'</div>'+(f.note?'<div class="on'+rv()+'">'+rich(f.note)+'</div>':'')+'</div>';break}
+  case'familia':{const ch=(t,v)=>v?'<div class="fb"><span class="fl">'+t+'</span><span class="fv">'+esc(v)+'</span></div>':'';
+    body='<div class="in f26"><div class="fc"><div class="fn h">'+esc(f.name||'Nombre')+'</div>'+(f.desc?'<div class="sub">'+rich(f.desc)+'</div>':'')+'</div><div class="fg">'+ch('Padres',f.pa)+ch('Esposo o esposa',f.co)+ch('Hermanos',f.hn)+ch('Hijos',f.hi)+'</div></div>';break}
+  case'mapa':body='<div class="in m26"><div class="mt"><div class="k">'+esc(f.ref||'Lugar')+'</div><div class="h">'+esc(f.name||'')+'</div>'+(f.sub?'<div class="sub">'+rich(f.sub)+'</div>':'')+'</div><div class="mbox">'+v26MapSVG(f)+'</div></div>';break;
+  case'linea':{const it=lines(f.items).map(x=>{const [a,...b]=x.split('|');return b.length?[a.trim(),b.join('|').trim()]:['',a.trim()]});
+    body='<div class="in l26"><h2 class="h">'+rich(f.title||'Línea de tiempo')+'</h2><div class="tl" style="--n:'+Math.max(1,it.length)+'">'+it.map(([a,b])=>'<div class="te'+rv()+'"><span class="td">'+esc(a)+'</span><i></i><span class="tt">'+rich(b)+'</span></div>').join('')+'</div></div>';break}
+  case'comparar':{const cols=[['vA','tA'],['vB','tB'],['vC','tC']].filter(([v,t])=>f[t]);
+    body='<div class="in c26"><div class="ref">'+esc(f.ref||'Referencia')+'</div><div class="cc" style="--n:'+Math.max(1,cols.length)+'">'+(cols.length?cols.map(([v,t],i)=>'<div class="cv c'+i+'"><span class="vlb">'+esc(f[v]||'')+'</span><div class="ct">'+rich(f[t])+'</div></div>').join(''):'<div class="vt miss">Escriba la cita y toque Buscar.</div>')+'</div></div>';break}
+  case'completar':body='<div class="in q26">'+(f.label?'<div class="k">'+esc(f.label)+'</div>':'')+'<div class="qt">'+rich(f.text||'El justo por la ==fe== vivirá').replace(/<mark>(.*?)<\/mark>/g,'<span class="qb rv" data-r="1"><span>$1</span></span>')+'</div>'+(f.by?'<div class="ref">'+esc(f.by)+'</div>':'')+'</div>';break;
+  case'vf':{const it=lines(f.items).map(x=>{const m=x.match(/^(.*?)\s*\|\s*([VvFf])\w*\s*$/);return m?[m[1],/^[Vv]/.test(m[2])]:[x,null]});
+    body='<div class="in vf26"><h2 class="h">'+rich(f.title||'¿Verdadero o falso?')+'</h2><ol>'+it.map(([t,v])=>'<li><span class="vq">'+rich(t)+'</span>'+(v==null?'':'<b class="va '+(v?'si':'no')+rv()+'">'+(v?'Verdadero':'Falso')+'</b>')+'</li>').join('')+'</ol></div>';break}
+  case'cuenta':{const m=Math.max(0,parseFloat(f.mins)||0);body='<div class="in k26"><div class="k">'+esc(f.title||'Comenzamos en')+'</div><div class="cd" data-mins="'+m+'">'+String(Math.floor(m)).padStart(2,'0')+':'+String(Math.round((m%1)*60)).padStart(2,'0')+'</div>'+(f.sub?'<div class="sub">'+rich(f.sub)+'</div>':'')+'</div>';break}
+  case'anuncio':body='<div class="in a26">'+(f.kicker?'<div class="k">'+esc(f.kicker)+'</div>':'')+'<h1 class="h">'+rich(f.title||'Título del anuncio')+'</h1><div class="rule"></div><div class="ad">'+(f.when?'<div><span class="al">Cuándo</span>'+esc(f.when)+'</div>':'')+(f.where?'<div><span class="al">Dónde</span>'+esc(f.where)+'</div>':'')+'</div>'+(f.sub?'<div class="sub">'+rich(f.sub)+'</div>':'')+'</div>';break
+  }
+  html=html.replace(/ t-frase /,' t-'+sl.type+' ');const a=html.indexOf('<div class="in">');let b=html.indexOf('<div class="ft">');if(b<0)b=html.lastIndexOf('</div>');html=html.slice(0,a)+body+html.slice(b);
+  return html};
+const V26SLIDECSS=`
+.sl.t-original .o26{align-items:center;text-align:center;gap:1.6u}
+.sl.t-original .ow{font-family:"Times New Roman","Gentium Plus",Georgia,serif;font-size:13u;line-height:1.1;color:var(--ac)}
+.sl.t-original .ow.heb{font-family:"SBL Hebrew","Times New Roman","Arial Hebrew",serif;font-size:15u}
+.sl.t-original .otr{font-size:3u;font-style:italic;color:var(--mut)}.t-original .otr span{font-style:normal;letter-spacing:.08em}
+.sl.t-original .om{font-family:var(--fd);font-size:calc(5.4u*var(--hm,1));font-weight:var(--tw);text-transform:var(--tt);letter-spacing:var(--ls);color:var(--fg)}
+.sl.t-original .on{font-size:2.7u;color:var(--mut);max-width:70u}
+.sl.t-familia .f26{flex-direction:column;align-items:stretch;gap:3u}
+.sl.t-familia .fc{display:flex;flex-direction:column;gap:1.4u}
+.sl.t-familia .fn{font-size:calc(7.4u*var(--hm,1))}
+.sl.t-familia .fg{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:2u}
+.sl.t-familia .fb{background:var(--card);border:.2u solid var(--line2);border-radius:1.4u;padding:2u 2.4u;display:flex;flex-direction:column;gap:.6u}
+.sl.t-familia .fl{font-size:1.6u;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);font-weight:700}.t-familia .fv{font-size:2.7u;line-height:1.3}
+.sl.t-mapa .m26{flex-direction:row;align-items:stretch;gap:4u;padding:6u 6u 8u 8u}
+.sl.t-mapa .mt{flex:0 0 34%;display:flex;flex-direction:column;justify-content:center;gap:1.8u}.t-mapa .mt .h{font-size:calc(6.4u*var(--hm,1))}
+.sl.t-mapa .mbox{flex:1;border-radius:1.6u;overflow:hidden;border:.25u solid var(--line2);min-height:0}
+.sl.t-mapa .msvg{width:100%;height:100%;display:block}
+.msvg .ms{fill:#AFC8DE}.msvg .ml{fill:#EFE5CC;stroke:#C9B68B;stroke-width:.06}.msvg .mk2{fill:#AFC8DE}.msvg .mr{fill:none;stroke:#8DB3D3}
+.msvg .mp0{fill:#B3261E;stroke:#fff;stroke-width:.25}.msvg .mp{fill:#15305B;stroke:#fff;stroke-width:.2}
+.msvg text{fill:#1A2233;font-family:var(--fb);font-weight:700;paint-order:stroke;stroke:#FFF8E8;stroke-width:.5}
+.sl.t-mapa .mapmiss{display:grid;place-items:center;height:100%;font-size:2.4u;color:var(--mut);padding:3u;text-align:center}
+.sl.t-linea .l26{gap:5u}.t-linea .h{font-size:calc(5.4u*var(--hm,1))}
+.sl.t-linea .tl{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:1.6u;position:relative}
+.sl.t-linea .tl::before{content:"";position:absolute;left:0;right:0;top:5.6u;height:.4u;background:var(--ac);opacity:.6}
+.sl.t-linea .te{display:flex;flex-direction:column;align-items:center;text-align:center;gap:1.2u}
+.sl.t-linea .td{font-family:var(--fd);font-weight:var(--tw);color:var(--ac);font-size:2.4u;min-height:3.4u}
+.sl.t-linea .te i{width:2.4u;height:2.4u;border-radius:50%;background:var(--ac);border:.5u solid var(--bg1);box-shadow:0 0 0 .3u var(--ac)}
+.sl.t-linea .tt{font-size:2.3u;line-height:1.3}
+.sl.t-comparar .c26{gap:2.6u}.t-comparar .ref{font-family:var(--fd);font-size:calc(3.6u*var(--hm,1));color:var(--ac);font-weight:var(--tw);text-transform:var(--tt);letter-spacing:var(--ls)}
+.sl.t-comparar .cc{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:2.4u}
+.sl.t-comparar .cv{background:var(--card);border:.2u solid var(--line2);border-radius:1.4u;padding:2.6u;display:flex;flex-direction:column;gap:1.4u}
+.sl.t-comparar .vlb{font-size:1.45u;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ac)}
+.sl.t-comparar .ct{font-size:2.6u;line-height:1.38;color:var(--vc)}.t-comparar .c1 .ct{color:var(--v2)}
+.sl.t-completar .q26{align-items:center;text-align:center;gap:3u}
+.sl.t-completar .qt{font-family:var(--fd);font-size:calc(6.4u*var(--hm,1));line-height:1.25;font-weight:var(--tw);text-transform:var(--tt);letter-spacing:var(--ls)}
+.sl.t-completar .qb{display:inline-block;min-width:16u;border-bottom:.5u solid var(--ac);color:var(--ac)}
+.sl.t-completar .ref{font-size:2.6u;color:var(--mut)}
+.sl.t-vf .vf26{gap:3u}.t-vf .h{font-size:calc(5.2u*var(--hm,1))}
+.sl.t-vf ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1.8u;counter-reset:q}
+.sl.t-vf li{display:flex;gap:2u;align-items:center;font-size:2.9u;counter-increment:q}
+.sl.t-vf li::before{content:counter(q);flex:none;width:4.2u;height:4.2u;border-radius:50%;background:var(--ac);color:var(--onac);display:grid;place-items:center;font-weight:700;font-size:2.2u}
+.sl.t-vf .vq{flex:1}.t-vf .va{flex:none;font-size:2u;letter-spacing:.12em;text-transform:uppercase;padding:.6u 1.6u;border-radius:99u;color:#fff}
+.sl.t-vf .va.si{background:#1F7A55}.t-vf .va.no{background:#B3261E}
+.sl.t-cuenta .k26{align-items:center;text-align:center;gap:2u}.t-cuenta .k{font-size:2.6u}
+.sl.t-cuenta .cd{font-family:var(--fd);font-size:24u;line-height:1;font-weight:var(--tw);font-variant-numeric:tabular-nums;color:var(--fg)}
+.sl.t-anuncio .a26{gap:2.4u}.t-anuncio .h{font-size:calc(7.6u*var(--hm,1))}
+.sl.t-anuncio .ad{display:flex;gap:5u;flex-wrap:wrap;font-size:3u}.t-anuncio .ad div{display:flex;flex-direction:column;gap:.6u}
+.sl.t-anuncio .al{font-size:1.5u;letter-spacing:.18em;text-transform:uppercase;color:var(--ac);font-weight:700}
+.sl.t-anuncio.v-b .a26{align-items:center;text-align:center}.t-anuncio.v-b .ad{justify-content:center}
+/* fondo con foto */
+.sl .bgimg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;filter:blur(var(--bgb,0px));transform:scale(1.04)}
+.sl .bgdim{position:absolute;inset:0;z-index:1;background:var(--bg1);opacity:var(--bgo,.55)}
+`;
+(function(){const css=V26SLIDECSS.replace(/(-?\d*\.?\d+)u(?![a-zA-Z0-9_-])/g,(m,n)=>'calc(var(--u)*'+n+')');const st=document.createElement('style');st.id='v26slide';st.textContent=css;document.head.appendChild(st)})();
+
+/* buscadores dentro de los campos nuevos */
+const V26D={};
+const v26Data=p=>V26D[p]||(V26D[p]=fetch('datos/'+p).then(r=>{if(!r.ok)throw 0;return r.json()}).catch(e=>{delete V26D[p];throw e}));
+const v26fieldHTML0=fieldHTML;
+fieldHTML=function(sl,x){const [k,l,t,ph]=x;
+  if(t==='findorig'||t==='findper'||t==='findlug')return '<div class="fld"><span class="lbl">'+l+'</span><div class="v26-find"><input class="inp" type="search" id="v26fq" data-find="'+t+'" placeholder="'+(t==='findorig'?'gracia, ágape, G26…':t==='findper'?'Abraham, Débora, Pedro…':'Jerusalén, Betel, Corinto…')+'"><button class="btn" data-act="v26find" data-t="'+t+'">'+ic('search')+'Buscar</button></div><div id="v26fr" class="v26-res"></div><span class="hint">'+(t==='findlug'?'Los lugares salen del mapa de la app, sin internet.':'Sale de los datos de estudio del Taller (interlineal y personajes).')+'</span></div>';
+  if(t==='refcmp')return '<div class="fld"><span class="lbl">'+l+'</span><div class="v26-find"><input class="inp" type="text" data-k="ref" value="'+esc(sl.f.ref||'')+'" placeholder="'+esc(ph)+'"><button class="btn" data-act="v26cmp">'+ic('search')+'Buscar</button></div><span class="hint">Trae el texto de hasta tres de sus Biblias.</span></div>';
+  return v26fieldHTML0(sl,x)};
+const v26cleanHeb=s=>String(s||'').replace(/[֑-ֽ֯׀׃]/g,'');
+async function v26FindRun(t,q){const out=$('#v26fr');if(!out)return;q=String(q||'').trim();if(!q){out.innerHTML='';return}out.innerHTML='<span class="hint">Buscando…</span>';
+  try{if(t==='findorig'){const [H,G]=await Promise.all([v26Data('lex-h.json'),v26Data('lex-g.json')]);const qq=nq(q),qs=qq.replace(/\s+/g,'');let L;
+      if(/^[hg]\d+[a-z]?$/i.test(qs)){const m=qs.match(/^([hg])(\d+)([a-z]?)$/i);const base=m[1].toUpperCase()+m[2].padStart(4,'0');L=[...Object.entries(H),...Object.entries(G)].filter(([k])=>k.startsWith(base))}
+      else L=[...Object.entries(H),...Object.entries(G)].filter(([k,x])=>nq(x[3]).includes(qq)||nq(x[4]).includes(qq)||nq(String(x[1]).replace(/\./g,'')).includes(qs)).sort((a,b)=>b[1][5]-a[1][5]);
+      V26D._res=L.slice(0,25);out.innerHTML=V26D._res.length?V26D._res.map(([k,x],i)=>'<button data-act="v26pick" data-i="'+i+'" data-t="orig"><b>'+esc(v26cleanHeb(x[0]))+' · '+esc(x[3]||x[4])+'</b><small>'+esc(String(x[1]).replace(/\./g,''))+' · '+esc(k.replace(/^([HG])0*/,'$1'))+' · '+x[5]+' veces</small></button>').join(''):'<span class="hint">No se encontró.</span>'}
+    else if(t==='findper'){const P=await v26Data('personas.json');const qq=nq(q);V26D._per=P;V26D._res=Object.entries(P.p).filter(([u,p])=>p.t!=='Place'&&nq(p.n+' '+p.en).includes(qq)).slice(0,25);
+      out.innerHTML=V26D._res.length?V26D._res.map(([u,p],i)=>'<button data-act="v26pick" data-i="'+i+'" data-t="per"><b>'+esc(p.n)+'</b><small>'+esc((p.de||'').slice(0,80))+'</small></button>').join(''):'<span class="hint">No se encontró.</span>'}
+    else{if(!V26LUG)V26LUG=await (await fetch('lugares.json')).json();const k=v26norm(q);V26D._res=V26LUG.filter(p=>v26norm(p.n+' '+(p.e||'')).includes(k)).slice(0,25);
+      out.innerHTML=V26D._res.length?V26D._res.map((p,i)=>'<button data-act="v26pick" data-i="'+i+'" data-t="lug"><b>'+esc(p.n)+'</b><small>'+esc(p.v.length+' versículos')+'</small></button>').join(''):'<span class="hint">No se encontró.</span>'}}
+  catch(e){out.innerHTML='<span class="hint">Estos datos todavía no están guardados. Ábralos una vez con internet o, en el Taller, vaya a Biblioteca de consulta → Sin internet → Guardar todo.</span>'}}
+const v26Names=(P,ids)=>(ids||[]).map(x=>P.p[x]&&P.p[x].n).filter(Boolean).join(', ');
+Object.assign(window.ACT2,{
+  v26find:e=>v26FindRun(e.dataset.t,($('#v26fq')||{}).value),
+  v26pick:async e=>{const s=sel(),i=+e.dataset.i,t=e.dataset.t,r=V26D._res[i];if(!r)return;
+    if(t==='orig'){const [k,x]=r;Object.assign(s.f,{w:v26cleanHeb(x[0]),tr:String(x[1]).replace(/\./g,''),st:k.replace(/^([HG])0*/,'$1'),mean:x[3]||x[4]})}
+    if(t==='per'){const [u,p]=r,P=V26D._per;Object.assign(s.f,{name:p.n,pa:v26Names(P,[...(p.pa||[]),...(p.ma||[])]),co:v26Names(P,p.co),hn:v26Names(P,p.hn),hi:v26Names(P,p.hi)})}
+    if(t==='lug'){s.f.name=r.n}
+    saveDeck(curDeck());refreshAll();toast('Listo: revise y ajuste lo que quiera')},
+  v26cmp:async()=>{const s=sel(),ref=s.f.ref||'';const ids=[S.set.b1,S.set.b2,...BVLIST.map(b=>b.abbr)].filter((x,i,a)=>x&&a.indexOf(x)===i).slice(0,3);let n=0;
+    for(const [j,[v,t]] of [['vA','tA'],['vB','tB'],['vC','tC']].entries()){const id=ids[j];if(!id)continue;const r=await v26Verse(ref,id);if(r){s.f[v]=r.ver;s.f[t]=r.text;if(!n)s.f.ref=r.label;n++}}
+    if(!n){toast('No encontré esa cita. Revise libro, capítulo y versículo');return}saveDeck(curDeck());refreshAll();toast('Texto de '+n+(n===1?' versión':' versiones'))}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='v26fq'){e.preventDefault();v26FindRun(e.target.dataset.find,e.target.value)}});
+/* hoja de nuevas diapositivas, agrupada */
+ACT.addsheet=()=>{const g=[['Para predicar',['portada','seccion','versiculo','punto','frase','cierre']],['Para enseñar',['original','familia','personaje','mapa','linea','comparar','columnas','pasos','imagen']],['Para talleres y la iglesia',['reflexion','completar','vf','cuenta','anuncio']]];
+  openSheet(sheetHead('Nueva diapositiva')+g.map(([t,ks])=>'<div class="v26-tg">'+t+'</div><div class="type-grid">'+ks.filter(k=>TYPES[k]).map(k=>'<button data-act="addtype" data-t="'+k+'">'+ic(TYPES[k].i)+TYPES[k].n+'</button>').join('')+'</div>').join(''))};
+/* hoja para los asistentes: también los tipos nuevos */
+const v26hand0=handBlocks;
+handBlocks=function(d){const out=v26hand0(d);const L=n=>'<div class="ln"></div>'.repeat(n);
+  d.slides.forEach(s=>{const f=s.f||{};let h='';
+    if(s.type==='original')h='<div class="hb"><h3>'+esc(f.w||'')+' · '+esc(f.tr||'')+(f.st?' ('+esc(f.st)+')':'')+'</h3><p>'+rich(f.mean||'')+'</p>'+(f.note?'<p>'+rich(f.note)+'</p>':'')+L(2)+'</div>';
+    else if(s.type==='linea')h='<div class="hb"><h3>'+esc(f.title||'')+'</h3><ul>'+lines(f.items).map(x=>'<li>'+esc(x.replace('|',' — '))+'</li>').join('')+'</ul></div>';
+    else if(s.type==='completar')h='<div class="hb"><p class="vs">'+esc(String(f.text||'').replace(/==(.*?)==/g,(m,a)=>'_'.repeat(Math.max(6,a.length+2))))+'</p>'+(f.by?'<p>'+esc(f.by)+'</p>':'')+'</div>';
+    else if(s.type==='vf')h='<div class="hb"><h3>'+esc(f.title||'')+'</h3><ol>'+lines(f.items).map(x=>'<li>'+esc(x.replace(/\s*\|\s*[VvFf]\w*\s*$/,''))+'  ( V )  ( F )</li>').join('')+'</ol></div>';
+    else if(s.type==='comparar')h='<div class="hb"><h3>'+esc(f.ref||'')+'</h3>'+[['vA','tA'],['vB','tB'],['vC','tC']].filter(([v,t])=>f[t]).map(([v,t])=>'<p class="vs"><b>'+esc(f[v])+':</b> '+rich(f[t])+'</p>').join('')+'</div>';
+    else if(s.type==='familia')h='<div class="hb"><h3>'+esc(f.name||'')+'</h3>'+[['Padres','pa'],['Esposo o esposa','co'],['Hermanos','hn'],['Hijos','hi']].filter(([a,k])=>f[k]).map(([a,k])=>'<p><b>'+a+':</b> '+esc(f[k])+'</p>').join('')+'</div>';
+    if(h)out.push(h)});return out};
+
+/* ---------- 5. Diseños 2026 (con las letras de la app, sin internet) ---------- */
+THEMES.unshift(
+{id:'t26-hojas',name:'Taller · Claro',desc:'El diseño del Taller: claro, azul profundo y dorado',
+ vars:'--bg1:#F7F8FA;--fg:#13233F;--mut:#5C6678;--ac:#B5862F;--ac2:#15305B;--hl:rgba(227,199,126,.55);--hlc:#13233F;--vc:#13233F;--v2:#1F6B4E;--fd:"Cormorant Garamond",Georgia,serif;--fb:"Literata",Georgia,serif;--tt:none;--tw:600;--ls:0;--hm:1.12;--bm:1;--card:rgba(21,48,91,.05);--line2:rgba(181,134,47,.45);--onac:#FFFFFF;--hc:#15305B;--mkr:50%;--mkt:0deg',
+ css:()=>`.th-t26-hojas .bg{background:radial-gradient(ellipse at 85% 110%,#E6EDF7 0%,transparent 60%),linear-gradient(180deg,#FFFFFF,#F2F5FA)}
+.th-t26-hojas .orn{background:linear-gradient(90deg,#15305B 0 1.2u,transparent 1.2u) 0 0/100% 100% no-repeat}
+.th-t26-hojas .frm{inset:3u;border:.18u solid #B5862F;opacity:.6;border-radius:1.2u}`},
+{id:'t26-noche',name:'Taller · Noche dorada',desc:'Azul de medianoche y oro, como el tema Noche',
+ vars:'--bg1:#0A1120;--fg:#EDE6D4;--mut:#AEB9CC;--ac:#E3C77E;--ac2:#D6B25E;--hl:rgba(214,178,94,.36);--vc:#EDE6D4;--v2:#9FC1EA;--fd:"Cormorant Garamond",Georgia,serif;--fb:"Literata",Georgia,serif;--tt:none;--tw:600;--ls:0;--hm:1.12;--card:rgba(255,255,255,.06);--line2:rgba(227,199,126,.4);--onac:#0A1120;--mkr:50%;--mkt:0deg',
+ css:()=>`.th-t26-noche .bg{background:radial-gradient(ellipse at 80% 115%,#1A2E52 0%,transparent 58%),linear-gradient(165deg,#101B33,#070D19)}
+.th-t26-noche .orn{background:radial-gradient(circle at 92% 12%,rgba(227,199,126,.16) 0 .4u,transparent .5u) 0 0/14u 14u}
+.th-t26-noche .frm{inset:3u;border:.16u solid #E3C77E;opacity:.5;border-radius:1.2u}`},
+{id:'t26-pergamino',name:'Taller · Pergamino',desc:'Papel cálido, tinta azul y oro viejo',
+ vars:'--bg1:#F2EADB;--fg:#2A2216;--mut:#6B5E48;--ac:#9C7423;--ac2:#1E3557;--hl:rgba(240,221,156,.8);--hlc:#2A2216;--vc:#2A2216;--v2:#2E6A4C;--fd:"Cormorant Garamond",Georgia,serif;--fb:"Literata",Georgia,serif;--tt:none;--tw:600;--ls:0;--hm:1.12;--card:rgba(120,90,30,.07);--line2:rgba(156,116,35,.45);--onac:#FBF6EC;--hc:#1E3557;--mkr:2px;--mkt:45deg',
+ css:()=>`.th-t26-pergamino .bg{background:radial-gradient(ellipse at 50% 40%,#FBF6EC 0%,#F2EADB 60%,#E3D4B6 100%)}
+.th-t26-pergamino .frm{inset:2.6u;border:.5u double #9C7423;opacity:.55}`},
+{id:'t26-ipuc',name:'Azul y ocre',desc:'Los colores de la IPUC: azul, ocre y celeste',
+ vars:'--bg1:#15305B;--fg:#FFFFFF;--mut:#CFE0F5;--ac:#E0A930;--ac2:#8EC3EE;--hl:rgba(224,169,48,.45);--vc:#FFFFFF;--v2:#BFE0FA;--fd:"Cormorant Garamond",Georgia,serif;--fb:-apple-system,"SF Pro Text",system-ui,sans-serif;--tt:none;--tw:700;--ls:0;--hm:1.1;--card:rgba(255,255,255,.08);--line2:rgba(224,169,48,.5);--onac:#15305B;--mkr:50%;--mkt:0deg',
+ css:()=>`.th-t26-ipuc .bg{background:linear-gradient(180deg,#183767 0%,#112750 100%)}
+.th-t26-ipuc .orn{background:linear-gradient(0deg,#E0A930 0 1u,#8EC3EE 1u 1.8u,transparent 1.8u) 0 100%/100% 100% no-repeat}
+.th-t26-ipuc .frm{display:none}`});
+/* la hoja de diseños: los del Taller primero */
+
+/* ---------- 6. Fondo con foto (para todo el taller o una diapositiva) ---------- */
+const v26slideHTML1=slideHTML;
+slideHTML=function(sl,o){let h=v26slideHTML1(sl,o);const d=(o&&o.deck)||curDeck()||{};const id=sl.bg||d.bg;const u=id&&IMG[id];
+  if(u){const dim=(sl.bg?sl.bgo:d.bgo);const blur=(sl.bg?sl.bgb:d.bgb);h=h.replace(/(<div class="sl [^"]*"[^>]*>)/,'$1<div class="bgimg" style="background-image:url(\''+u+'\');--bgb:'+((blur==null?0:blur)/10)+'u"></div><div class="bgdim" style="--bgo:'+((dim==null?55:dim)/100)+'"></div>')}
+  return h};
+const v26settings0=settingsHTML;
+settingsHTML=function(){const d=curDeck();const u=d.bg&&IMG[d.bg];return v26settings0().replace('<button class="btn pri" data-act="close">Listo</button>','<div class="fld"><span class="lbl">Foto de fondo para toda la presentación</span><div class="row">'+(u?'<img src="'+u+'" alt="" style="height:54px;border-radius:8px">':'')+'<button class="btn" data-act="v26bg" data-s="deck">'+ic('image')+(u?'Cambiar foto':'Elegir foto')+'</button>'+(u?'<button class="btn danger" data-act="v26bgx" data-s="deck">Quitar</button>':'')+'</div>'+(u?'<label class="fld"><span class="lbl">Oscurecer la foto: '+(d.bgo==null?55:d.bgo)+'%</span><input type="range" min="0" max="90" value="'+(d.bgo==null?55:d.bgo)+'" data-v26bgo="deck"></label><label class="fld"><span class="lbl">Desenfoque: '+(d.bgb||0)+'</span><input type="range" min="0" max="20" value="'+(d.bgb||0)+'" data-v26bgb="deck"></label>':'')+'<span class="hint">Use una foto suya o de la iglesia. La app la oscurece para que el texto se lea bien.</span></div><button class="btn pri" data-act="close">Listo</button>')};
+const v26refreshInsp0=refreshInsp;
+refreshInsp=function(){v26refreshInsp0();const el=$('#insp');const s=sel();if(!el||!s)return;const u=s.bg&&IMG[s.bg];
+  el.insertAdjacentHTML('beforeend','<div class="fld"><span class="lbl">Foto de fondo de esta diapositiva</span><div class="row">'+(u?'<img src="'+u+'" alt="" style="height:44px;border-radius:8px">':'')+'<button class="btn sm" data-act="v26bg" data-s="one">'+ic('image')+(u?'Cambiar':'Elegir foto')+'</button>'+(u?'<button class="btn sm danger" data-act="v26bgx" data-s="one">Quitar</button>':'')+'</div>'+(u?'<label class="fld"><span class="lbl">Oscurecer: '+(s.bgo==null?55:s.bgo)+'%</span><input type="range" min="0" max="90" value="'+(s.bgo==null?55:s.bgo)+'" data-v26bgo="one"></label>':'')+'<input type="file" id="v26bgin" accept="image/*" hidden></div>')};
+Object.assign(window.ACT2,{
+  v26bg:e=>{let inp=$('#v26bgin');if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='v26bgin';inp.hidden=true;document.body.appendChild(inp)}inp.dataset.s=e.dataset.s;inp.onchange=async()=>{const f=inp.files[0];if(!f)return;toast('Preparando la foto…');const id=await addImage(f,'photo');const d=curDeck();if(inp.dataset.s==='deck'){d.bg=id;openSheet(settingsHTML())}else sel().bg=id;saveDeck(d);refreshAll()};inp.click()},
+  v26bgx:e=>{const d=curDeck();if(e.dataset.s==='deck'){d.bg=null;openSheet(settingsHTML())}else sel().bg=null;saveDeck(d);refreshAll()}});
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset)return;const d=curDeck();if(!d)return;
+  if(t.dataset.v26bgo){const o=t.dataset.v26bgo==='deck'?d:sel();o.bgo=+t.value;t.previousElementSibling.textContent=(t.dataset.v26bgo==='deck'?'Oscurecer la foto: ':'Oscurecer: ')+t.value+'%';saveSoon();refreshStage();thumbRefresh()}
+  if(t.dataset.v26bgb){d.bgb=+t.value;t.previousElementSibling.textContent='Desenfoque: '+t.value;saveSoon();refreshStage();thumbRefresh()}});
+
+/* ---------- 7. Letra que se ajusta sola: nada se corta en el proyector ---------- */
+function v26Fit(sl){if(!sl||!sl.isConnected)return;const inn=sl.querySelector(':scope > .in');if(!inn)return;const fit=sl.parentElement;if(!fit||!fit.clientWidth)return;
+  sl.style.removeProperty('--u');const base=fit.style.getPropertyValue('--u');const px=base?parseFloat(base):fit.clientWidth/100;
+  const jc=inn.style.justifyContent;inn.style.justifyContent='flex-start';const over=()=>inn.scrollHeight>inn.clientHeight+2||inn.scrollWidth>inn.clientWidth+2;
+  let k=1;for(let i=0;i<10&&over();i++){k*=.9;sl.style.setProperty('--u',(px*k)+'px')}inn.style.justifyContent=jc}
+let V26FQ=new Set(),V26FT=null;
+const v26FitSoon=()=>{if(V26FT)return;V26FT=requestAnimationFrame(()=>{V26FT=null;const L=[...V26FQ];V26FQ.clear();L.forEach(v26Fit)})};
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;if(n.classList&&n.classList.contains('sl'))V26FQ.add(n);n.querySelectorAll&&n.querySelectorAll('.sl').forEach(x=>V26FQ.add(x))}if(V26FQ.size)v26FitSoon()}).observe(document.documentElement,{childList:true,subtree:true});
+addEventListener('resize',()=>{document.querySelectorAll('.sl').forEach(x=>V26FQ.add(x));v26FitSoon()});
+/* exportar: esperar el ajuste antes de fotografiar la diapositiva */
+const v26canvas0=slideCanvas;
+slideCanvas=async function(sl,i,n,scale){const d=curDeck();const host=document.createElement('div');host.style.cssText='position:fixed;left:-99999px;top:0;width:1280px;height:720px;pointer-events:none';
+  host.innerHTML='<div class="fit" style="width:1280px;height:720px;aspect-ratio:auto;container-type:normal;--u:12.8px">'+slideHTML(sl,{deck:d,i,n})+'</div>';document.body.appendChild(host);
+  try{await sleep(50);v26Fit(host.querySelector('.sl'));await sleep(10);return await html2canvas(host.firstChild,{scale,backgroundColor:'#000',useCORS:true,logging:false,width:1280,height:720,windowWidth:1280,windowHeight:720})}finally{host.remove()}};
+
+/* ---------- 8. Mientras predica: versículo al vuelo, solo el logo, cuenta regresiva ---------- */
+function v26DeckRefs(d){const out=[];const add=r=>{r=String(r||'').trim();if(r&&!out.includes(r))out.push(r)};
+  const re=/\b((?:[123]\s)?[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s(?:de\s)?[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)\s(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?/g;
+  (d?d.slides:[]).forEach(s=>{const f=s.f||{};if(f.ref)add(f.ref);Object.values(f).forEach(v=>{if(typeof v!=='string')return;let m;re.lastIndex=0;while((m=re.exec(v)))if(parseRef(m[0]))add(m[0])})});return out.slice(0,40)}
+function v26HudExtra(){const hud=$('#phud');if(!hud||hud.querySelector('[data-act=v26fly]'))return;const g=hud.querySelector('.grow');
+  g.insertAdjacentHTML('beforebegin','<button class="btn sm" data-act="v26fly">'+ic('book')+'Versículo</button><button class="btn sm" data-act="v26logo">Solo el logo</button><button class="btn sm" data-act="v26remote">'+ic('phone')+'Control remoto</button>');
+  const el=$('#pres');if(!$('#plogo'))el.insertAdjacentHTML('beforeend','<div class="plogo" id="plogo" data-act="v26logo"></div><div class="pfly" id="pfly"></div>')}
+function v26LogoHTML(){const d=curDeck()||{};const th=d.th||'medianoche';const u=S.set.logo&&IMG[S.set.logo];
+  return '<div class="pstage" style="position:absolute;inset:0;display:grid;place-items:center"><div class="pfit fit"><div class="sl th-'+th+'"><div class="bg"></div><div class="orn"></div>'+(S.set.frame?'<div class="frm"></div>':'')+'<div class="in" style="align-items:center;justify-content:center;text-align:center">'+(u?'<img src="'+u+'" alt="" style="max-height:52%;max-width:60%;object-fit:contain">':'<h1 class="h" style="font-size:calc(var(--u)*7)">'+esc(d.title||'')+'</h1>')+(u?'':'<div class="rule" style="margin:0 auto"></div><div class="sub">'+esc(S.set.sign||'')+'</div>')+'</div></div></div></div>'}
+function v26Logo(on){const el=$('#plogo');if(!el)return;const v=on==null?!el.classList.contains('on'):on;if(v)el.innerHTML=v26LogoHTML();el.classList.toggle('on',v);v26Send()}
+async function v26FlyShow(ref){const r=await v26Verse(ref);if(!r){toast('No encontré esa cita');return false}const d=curDeck()||{};const s=blank('versiculo',{ref:r.label,text:r.text,ver1:r.ver});
+  if(S.set.b2&&S.set.b2!==S.set.b1){const r2=await v26Verse(ref,S.set.b2);if(r2&&r.text.length<380){s.f.text2=r2.text;s.f.ver2=r2.ver}}
+  const el=$('#pfly');el.innerHTML='<button class="btn sm fx" data-act="v26flyx">'+ic('x')+'Volver a la presentación</button><div class="pfit fit" data-act="v26flyx">'+slideHTML(s,{deck:d,i:P.i,n:d.slides.length})+'</div>';el.classList.add('on');P.fly=r.label;closeSheet();v26Send();return true}
+function v26FlyClose(){const el=$('#pfly');if(el){el.classList.remove('on');el.innerHTML=''}P.fly=null;v26Send()}
+function v26FlySheet(){const refs=v26DeckRefs(curDeck());openSheet(sheetHead('Proyectar un versículo')+'<p class="hint" style="margin:0">Aparece encima de la presentación. Toque la pantalla para volver.</p><div class="v26-find"><input class="inp" type="text" id="v26fr2" placeholder="Juan 3:16, Salmo 23:1-3…" autocomplete="off"><button class="btn pri" data-act="v26flygo">Proyectar</button></div>'+(refs.length?'<div class="lbl">Citas de esta presentación</div><div class="row">'+refs.map(r=>'<button class="btn sm" data-act="v26flyref" data-r="'+esc(r)+'">'+esc(r)+'</button>').join('')+'</div>':''));setTimeout(()=>{const i=$('#v26fr2');i&&i.focus()},80)}
+Object.assign(window.ACT2,{v26fly:()=>v26FlySheet(),v26flygo:()=>v26FlyShow(($('#v26fr2')||{}).value||''),v26flyref:e=>v26FlyShow(e.dataset.r),v26flyx:()=>v26FlyClose(),v26logo:()=>v26Logo()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='v26fr2'){e.preventDefault();v26FlyShow(e.target.value)}if(P.on&&e.key==='Escape'&&P.fly){e.stopImmediatePropagation();v26FlyClose()}if(P.on&&(e.key==='l'||e.key==='L')&&!/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))v26Logo()},true);
+const v26pdraw0=pdraw;
+pdraw=function(full){if(full){P.slideT=Date.now();if(P.fly)v26FlyClose()}v26pdraw0(full);v26Count();v26Send()};
+const v26pclose0=pclose;
+pclose=function(){const d=curDeck();v26pclose0();const sh=$('#sheet');if(sh&&sh.parentElement!==document.body)document.body.appendChild(sh);if(d&&d.temp){S.view='lib';render();try{if(window.parent!==window&&parent.closeSlides&&V26RET)parent.closeSlides()}catch(e){}}if(d&&!d.temp)saveDeck(d)};
+let V26RET=false;
+function v26Count(){if(!P.on)return;const d=curDeck(),s=d&&d.slides[P.i];const el=$('#pfit .cd');if(!s||s.type!=='cuenta'||!el)return;
+  const ms=(parseFloat(s.f.mins)||0)*60000-(Date.now()-(P.slideT||Date.now()));el.textContent=mmss(Math.max(0,ms));el.style.opacity=ms<=0?(Math.floor(Date.now()/600)%2?'.35':'1'):'1'}
+const v26tick0=tick;tick=function(){v26tick0();v26Count();if(P.on&&V26R.dc&&V26R.dc.readyState==='open'&&Date.now()-(V26R.last||0)>4000)v26Send()};
+
+/* ---------- 9. Control remoto desde el iPhone (sin internet: conexión directa por la red del lugar) ---------- */
+const V26R={pc:null,dc:null,role:null,last:0,st:null,cam:null};
+const v26b64=u8=>{let s='';u8.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+const v26unb64=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function v26Pack(tag,sdp){const raw=new TextEncoder().encode(sdp.split('\r\n').filter(l=>!/^a=(extmap|msid-semantic|ice-options|max-message-size)/.test(l)).join('\r\n'));
+  try{if(window.CompressionStream){const cs=new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'));const out=new Uint8Array(await new Response(cs).arrayBuffer());return tag+'z'+v26b64(out)}}catch(e){}return tag+'r'+v26b64(raw)}
+async function v26Unpack(str){const m=String(str||'').match(/^(TP[12])([zr])(.+)$/);if(!m)return null;let u8=v26unb64(m[3]);
+  if(m[2]==='z'){const ds=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));u8=new Uint8Array(await new Response(ds).arrayBuffer())}let sdp=new TextDecoder().decode(u8);if(!/\r\n$/.test(sdp))sdp+='\r\n';return {tag:m[1],sdp}}
+const v26Ice=pc=>new Promise(res=>{if(pc.iceGatheringState==='complete')return res();const t=setTimeout(res,3000);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);res()}})});
+async function v26QR(text){await loadScript('qrcode.js');const q=qrcode(0,'L');q.addData(text,'Byte');q.make();return q.createDataURL(6,2)}
+async function v26Scan(box,facing,onCode){await loadScript('jsQR.js');v26ScanStop();let st;try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing||'environment',width:{ideal:1280}},audio:false})}catch(e){box.innerHTML='<p class="hint">No se pudo abrir la cámara. Dé permiso a la cámara para esta app en Ajustes del iPad o iPhone → Safari → Cámara.</p>';return}
+  V26R.cam=st;box.innerHTML='<div class="v26-cam"><video playsinline muted autoplay></video></div>';const v=box.querySelector('video');v.srcObject=st;try{await v.play()}catch(e){}
+  const c=document.createElement('canvas'),x=c.getContext('2d',{willReadFrequently:true});const loop=()=>{if(!V26R.cam)return;if(v.videoWidth){const w=Math.min(720,v.videoWidth),h=Math.round(w*v.videoHeight/v.videoWidth);c.width=w;c.height=h;x.drawImage(v,0,0,w,h);const r=jsQR(x.getImageData(0,0,w,h).data,w,h,{inversionAttempts:'dontInvert'});if(r&&/^TP[12]/.test(r.data)){v26ScanStop();onCode(r.data);return}}requestAnimationFrame(loop)};requestAnimationFrame(loop)}
+function v26ScanStop(){if(V26R.cam){V26R.cam.getTracks().forEach(t=>t.stop());V26R.cam=null}}
+function v26Close(){try{V26R.dc&&V26R.dc.close()}catch(e){}try{V26R.pc&&V26R.pc.close()}catch(e){}V26R.pc=V26R.dc=null;v26ScanStop()}
+const v26Strip=h=>String(h||'').replace(/url\(\\?'data:[^']*\\?'\)/g,'none').replace(/src="data:[^"]*"/g,'src=""');
+function v26Send(){const dc=V26R.dc;if(!dc||dc.readyState!=='open'||V26R.role!=='host'||!P.on)return;const d=curDeck(),s=d.slides[P.i],nx=d.slides[P.i+1];V26R.last=Date.now();
+  try{dc.send(JSON.stringify({t:'st',i:P.i,n:d.slides.length,step:P.step,steps:pSteps(d,s),title:d.title,cur:v26Strip(slideHTML(s,{deck:d,i:P.i,n:d.slides.length})),nx:nx?v26Strip(slideHTML(nx,{deck:d,i:P.i+1,n:d.slides.length})):'',notes:s.notes||'',el:Date.now()-P.t0,plan:(+d.target||0)*60000,blank:$('#pblank')?.classList.contains('on')||false,logo:$('#plogo')?.classList.contains('on')||false,fly:P.fly||'',refs:v26DeckRefs(d)}))}catch(e){}}
+function v26Cmd(c){if(!P.on)return;if(c.c==='next')pnext();else if(c.c==='prev')pprev();else if(c.c==='blank'){$('#pblank').classList.toggle('on');v26Send()}else if(c.c==='logo')v26Logo();else if(c.c==='fly')v26FlyShow(c.r);else if(c.c==='flyx')v26FlyClose();else if(c.c==='go'){P.i=Math.max(0,Math.min(curDeck().slides.length-1,c.i));P.step=0;pdraw(true)}}
+function v26Wire(dc){V26R.dc=dc;dc.onopen=()=>{if(V26R.role==='host'){closeSheet();toast('El iPhone ya maneja la presentación');v26Send()}else v26RemDraw()};dc.onclose=()=>{if(V26R.role==='rem'){V26R.st=null;v26RemDraw('La conexión con el iPad se cerró.')}else toast('El control remoto se desconectó')};
+  dc.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(V26R.role==='host'&&m.t==='cmd')v26Cmd(m);if(V26R.role==='rem'&&m.t==='st'){V26R.st=m;V26R.stT=Date.now();v26RemDraw()}}}
+/* iPad: muestra su código y luego lee el del iPhone */
+async function v26HostStart(){v26Close();V26R.role='host';openSheet(sheetHead('Control remoto desde el iPhone')+'<div class="v26-qr" id="v26hq"><p class="hint">Preparando el código…</p></div>');
+  try{const pc=V26R.pc=new RTCPeerConnection({iceServers:[]});v26Wire(pc.createDataChannel('taller',{ordered:true}));await pc.setLocalDescription(await pc.createOffer());await v26Ice(pc);
+    const code=V26R.code=await v26Pack('TP1',pc.localDescription.sdp);const img=await v26QR(code);
+    $('#v26hq').innerHTML='<ol class="hint" style="text-align:left;font-size:14.5px;margin:0;padding-left:20px;display:grid;gap:4px"><li>El iPad y el iPhone deben estar en la misma red wifi (o el iPad conectado al «Punto de acceso» del iPhone).</li><li>En el iPhone abra el Taller → Diapositivas → <b>Usar como control remoto</b> y apunte la cámara a este código.</li><li>Cuando el iPhone muestre su código, toque abajo <b>Leer el código del iPhone</b>.</li></ol><img src="'+img+'" alt="Código para el iPhone"><div class="row" style="justify-content:center"><button class="btn pri" data-act="v26hscan" data-f="user">Leer el código del iPhone</button><button class="btn" data-act="v26hscan" data-f="environment">Usar la cámara de atrás</button></div><div id="v26hcam"></div>'}
+  catch(e){$('#v26hq').innerHTML='<p class="hint">Este equipo no permite la conexión directa: '+esc(e.message||e)+'</p>'}}
+Object.assign(window.ACT2,{v26remote:()=>v26HostStart(),
+  v26hscan:e=>v26Scan($('#v26hcam'),e.dataset.f,v26HostGot),
+  remoteJoin:()=>v26RemStart()});
+const v26closeSheet0=closeSheet;closeSheet=function(){v26ScanStop();v26closeSheet0()};
+async function v26HostGot(code){const u=await v26Unpack(code);if(!u||u.tag!=='TP2'){toast('Ese no es el código del iPhone');return}try{await V26R.pc.setRemoteDescription({type:'answer',sdp:u.sdp});const c=$('#v26hcam');if(c)c.innerHTML='<p class="hint">Conectando…</p>'}catch(x){toast('No se pudo conectar: '+(x.message||x))}}
+/* iPhone: control remoto */
+function v26RemEl(){let r=$('#rem');if(!r){r=document.createElement('div');r.id='rem';document.body.appendChild(r)}return r}
+function v26RemStart(){v26Close();V26R.role='rem';V26R.st=null;const r=v26RemEl();r.className='open';
+  r.innerHTML='<div class="rh"><b>Control remoto</b><button class="btn sm" data-act="v26remx">'+ic('x')+'Salir</button></div><div class="rwait"><p style="font-size:17px;margin:0 0 10px">En el iPad, al proyectar, toque <b>Control remoto</b> y apunte aquí la cámara a su código.</p><div id="v26rcam"></div><div id="v26rqr" class="v26-qr"></div></div>';
+  v26Scan($('#v26rcam'),'environment',v26RemGot)}
+async function v26RemGot(code){{const u=await v26Unpack(code);if(!u||u.tag!=='TP1'){toast('Ese no es el código del iPad');v26RemStart();return}
+    try{const pc=V26R.pc=new RTCPeerConnection({iceServers:[]});pc.ondatachannel=e=>v26Wire(e.channel);await pc.setRemoteDescription({type:'offer',sdp:u.sdp});await pc.setLocalDescription(await pc.createAnswer());await v26Ice(pc);
+      const ans=V26R.code=await v26Pack('TP2',pc.localDescription.sdp);$('#v26rcam').innerHTML='';$('#v26rqr').innerHTML='<p style="margin:0">Ahora, en el iPad, toque <b>Leer el código del iPhone</b> y muéstrele este código:</p><img src="'+await v26QR(ans)+'" alt="Código para el iPad">'}
+    catch(x){$('#v26rqr').innerHTML='<p class="hint">No se pudo preparar la conexión: '+esc(x.message||x)+'</p>'}}}
+function v26RemSend(c){const dc=V26R.dc;if(dc&&dc.readyState==='open')dc.send(JSON.stringify({t:'cmd',...c}))}
+function v26RemDraw(msg){const r=v26RemEl();const st=V26R.st;if(!st){if(msg){r.innerHTML='<div class="rh"><b>Control remoto</b><button class="btn sm" data-act="v26remx">'+ic('x')+'Salir</button></div><div class="rwait"><p>'+esc(msg)+'</p><button class="btn pri" data-act="remoteJoin">Conectar de nuevo</button></div>'}return}
+  const el=st.el+(Date.now()-(V26R.stT||Date.now()));
+  r.innerHTML='<div class="rh"><b>'+esc(st.title)+'</b><span class="tm'+(st.plan&&el>st.plan?' over':'')+'" id="v26rtm">'+mmss(el)+(st.plan?' / '+mmss(st.plan):'')+'</span><span class="rst ok">'+(st.i+1)+' / '+st.n+'</span><button class="btn sm" data-act="v26remx" aria-label="Salir">'+ic('x')+'</button></div>'+
+   '<div class="rfit"><div class="fit">'+st.cur+'</div></div>'+(st.fly?'<div class="rst" style="align-self:flex-start">Proyectando '+esc(st.fly)+' · <button class="btn sm" data-act="v26rcmd" data-c="flyx">Volver</button></div>':'')+
+   '<div class="rnx">'+(st.nx?'<div class="fit">'+st.nx+'</div>':'<span class="hint" style="color:#b6c2e0">Última diapositiva</span>')+'<div class="rnotes">'+(st.notes?esc(st.notes):'<span style="opacity:.6">Sin notas</span>')+'</div></div>'+
+   '<div class="row"><button class="btn sm'+(st.blank?' gold':'')+'" data-act="v26rcmd" data-c="blank">Pantalla negra</button><button class="btn sm'+(st.logo?' gold':'')+'" data-act="v26rcmd" data-c="logo">Solo el logo</button><input class="inp" type="text" id="v26rref" placeholder="Proyectar una cita" style="flex:1;min-width:140px;background:#111a30;color:#fff;border-color:#33415f"><button class="btn sm" data-act="v26rfly">Proyectar</button></div>'+
+   (st.refs&&st.refs.length?'<div class="row" style="gap:6px">'+st.refs.slice(0,16).map(x=>'<button class="btn sm" data-act="v26rcmd" data-c="fly" data-r="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>':'')+
+   '<div class="rbtns"><button class="btn" data-act="v26rcmd" data-c="prev">'+ic('left')+'Anterior</button><button class="btn gold" data-act="v26rcmd" data-c="next">Siguiente'+ic('right')+'</button></div>'}
+setInterval(()=>{if(V26R.role==='rem'&&V26R.st){const t=$('#v26rtm');if(t){const st=V26R.st,el=st.el+(Date.now()-V26R.stT);t.textContent=mmss(el)+(st.plan?' / '+mmss(st.plan):'');t.classList.toggle('over',!!st.plan&&el>st.plan)}}},1000);
+Object.assign(window.ACT2,{v26rcmd:e=>v26RemSend({c:e.dataset.c,r:e.dataset.r}),v26rfly:()=>{const v=($('#v26rref')||{}).value;if(v)v26RemSend({c:'fly',r:v})},
+  v26remx:()=>{v26Close();V26R.role=null;const r=$('#rem');if(r){r.className='';r.innerHTML=''}}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='v26rref'){e.preventDefault();const v=e.target.value;if(v)v26RemSend({c:'fly',r:v})}});
+
+/* ---------- 10. Crear más rápido: desde la Biblia, el esquema y la enseñanza ---------- */
+const v26RefLbl=(b,c,v1,v2)=>CANON[b]+' '+c+(v1?':'+v1+(v2&&v2>v1?'-'+v2:''):'');
+async function v26VerseSlides(b,c,v1,v2,opt){opt=opt||{};const out=[];const B=await ensureBib(S.set.b1)||await ensureBib('RV1909');const bid=B&&B.id;
+  const ch=B&&B.books[b]&&B.books[b][c-1]||[];if(!v1){v1=1;v2=ch.length}if(!v2)v2=v1;const lbl=v26RefLbl(b,c,v1,v2);
+  const all=[];for(let v=v1;v<=v2;v++)if(ch[v-1])all.push([v,ch[v-1].replace(/\s+/g,' ')]);
+  const total=all.reduce((a,x)=>a+x[1].length,0);
+  if(!opt.split&&total<=420){const s=blank('versiculo',{ref:lbl,text:all.map(([v,t])=>(all.length>1?'{'+v+'} ':'')+t).join(' '),ver1:B?B.name:''});s.min=2;out.push(s)}
+  else{let cur=[],len=0;const flush=()=>{if(!cur.length)return;const a=cur[0][0],z=cur[cur.length-1][0];const s=blank('versiculo',{ref:v26RefLbl(b,c,a,z),text:cur.map(([v,t])=>(cur.length>1?'{'+v+'} ':'')+t).join(' '),ver1:B?B.name:''});s.min=1;out.push(s);cur=[];len=0};
+    for(const x of all){if(len+x[1].length>(opt.split?1:300)&&cur.length)flush();cur.push(x);len+=x[1].length}flush()}
+  if(opt.two&&S.set.b2&&S.set.b2!==bid){const B2=await ensureBib(S.set.b2);if(B2)for(const s of out){const r=lookup(s.f.ref,S.set.b2);if(r&&r.text.length<420){s.f.text2=r.text;s.f.ver2=B2.name}}}
+  return {slides:out,label:lbl}}
+const v26Th=()=>S.set.lastTh&&THEMES.find(t=>t.id===S.set.lastTh)?S.set.lastTh:'t26-noche';
+async function v26Params(){const q=new URLSearchParams(location.search);const get=k=>q.get(k);if(!['proj','vers','esq'].some(k=>q.has(k)))return;history.replaceState(null,'',location.pathname);
+  const rng=s=>{const m=String(s).match(/^(\d+)\.(\d+)(?:\.(\d+)(?:-(\d+))?)?$/);return m?{b:+m[1],c:+m[2],v1:m[3]?+m[3]:0,v2:m[4]?+m[4]:(m[3]?+m[3]:0)}:null};
+  if(get('proj')){const r=rng(get('proj'));if(!r)return;const {slides,label}=await v26VerseSlides(r.b,r.c,r.v1,r.v2,{two:false});if(!slides.length){toast('No encontré esos versículos en su Biblia');return}
+    const d=newDeck(label,v26Th(),null,slides);d.id='v26rapida';d.temp=true;d.reveal=false;S.decks[d.id]=d;saveDeck(d);V26RET=true;openDeck(d.id);setTimeout(()=>startPresent('p'),80);return}
+  if(get('vers')){const r=rng(get('vers'));if(!r)return;const {slides,label}=await v26VerseSlides(r.b,r.c,r.v1,r.v2,{two:true});const p=blank('portada',{kicker:'Estudio bíblico',title:label,sub:''});
+    const d=newDeck(label,v26Th(),null,[p,...slides,blank('cierre',{title:label,sub:''})]);S.decks[d.id]=d;saveDeck(d);openDeck(d.id);toast('Listo: '+d.slides.length+' diapositivas');return}
+  if(get('esq')){const k=get('esq');let all=await kvGet('tp_esquemas');try{if(typeof all==='string')all=JSON.parse(all)}catch(e){}const e=all&&all[k];if(!e){toast('No encontré ese esquema');return}
+    const [bb,cc,rg]=k.split('.');const [a1,a2]=rg.split('-').map(Number);const {slides}=await v26VerseSlides(+bb,+cc,a1,a2,{two:false});
+    const out=[blank('portada',{kicker:'Esquema del pasaje',title:e.t,sub:''}),...slides];let cur=null;const ROL={idea:'Idea principal',mand:'Mandato',prom:'Promesa',razon:'Razón',prop:'Propósito',res:'Resultado',contr:'Contraste',cond:'Condición',tiem:'Tiempo',ej:'Ejemplo',adv:'Advertencia',ora:'Oración'};
+    for(const l of e.l||[]){if(!l.n||!cur){cur=blank('punto',{title:(l.r?ROL[l.r]+': ':'')+l.s,items:'',hl:l.c||''});out.push(cur)}else{cur.f.items+=(cur.f.items?'\n':'')+(l.r?'=='+ROL[l.r]+'== ':'')+l.s+(l.c?' — '+l.c:'')}}
+    out.push(blank('cierre',{title:e.t,sub:''}));const d=newDeck('Esquema · '+e.t,v26Th(),null,out);S.decks[d.id]=d;saveDeck(d);openDeck(d.id);toast('Listo: el esquema ya está en diapositivas')}}
+ACT2.frombib=()=>openSheet(sheetHead('Desde la Biblia')+'<label class="fld"><span class="lbl">Pasaje</span><input class="inp" type="text" id="v26bref" placeholder="Salmo 23, Juan 3:16-18, Romanos 8:28" autocomplete="off"></label><label class="row" style="gap:8px"><input type="checkbox" id="v26bsplit"> Un versículo por diapositiva</label><label class="row" style="gap:8px"><input type="checkbox" id="v26btwo" checked> Añadir la otra versión cuando quepa</label><div class="row"><button class="btn gold" data-act="v26bgo" data-m="proj">'+ic('play')+'Proyectar ahora</button><button class="btn pri" data-act="v26bgo" data-m="make">Crear presentación</button></div>');
+ACT2.v26bgo=async e=>{const r=parseRef(($('#v26bref')||{}).value||'');if(!r){toast('Escriba una cita: libro, capítulo y versículos');return}const split=$('#v26bsplit').checked,two=$('#v26btwo').checked;
+  const {slides,label}=await v26VerseSlides(r.b,r.c,r.v1,r.v2,{split,two});if(!slides.length){toast('No encontré esos versículos');return}closeSheet();
+  if(e.dataset.m==='proj'){const d=newDeck(label,v26Th(),null,slides);d.id='v26rapida';d.temp=true;d.reveal=false;S.decks[d.id]=d;saveDeck(d);V26RET=false;openDeck(d.id);setTimeout(()=>startPresent('p'),80)}
+  else{const d=newDeck(label,v26Th(),null,[blank('portada',{kicker:'Estudio bíblico',title:label,sub:''}),...slides,blank('cierre',{title:label,sub:''})]);S.decks[d.id]=d;saveDeck(d);openDeck(d.id)}};
+/* recordar el último diseño elegido para lo que se crea rápido */
+const v26applyTheme0=applyTheme;applyTheme=function(id,scope){if(scope==='deck'&&id){S.set.lastTh=id;saveSettings()}return v26applyTheme0(id,scope)};
+/* desde una enseñanza: elegir qué entra */
+const v26makeDeck0=makeDeck;
+makeDeck=async function(md,meta){meta=meta||{};if(meta._ok)return v26makeDeck0(md,meta);V26M={md,meta};
+  openSheet(sheetHead('¿Qué entra en las diapositivas?')+'<p class="hint" style="margin:0">'+esc(meta.titulo||'')+'</p>'+
+   '<label class="row" style="gap:8px"><input type="checkbox" id="v26o1" checked> Los puntos de cada sección</label><label class="row" style="gap:8px"><input type="checkbox" id="v26o2" checked> Las frases de impacto</label><label class="row" style="gap:8px"><input type="checkbox" id="v26o3" checked> Los versículos completos, con su número</label><label class="row" style="gap:8px"><input type="checkbox" id="v26o4"> Un versículo por diapositiva (para leer despacio)</label><label class="row" style="gap:8px"><input type="checkbox" id="v26o5" checked> La otra versión junto a la principal, con otro color</label>'+
+   '<div class="fld"><span class="lbl">Diseño</span><select id="v26oth">'+THEMES.map(t=>'<option value="'+t.id+'"'+(t.id===v26Th()?' selected':'')+'>'+esc(t.name)+' — '+esc(t.desc)+'</option>').join('')+'</select></div><button class="btn pri" data-act="v26mk">Armar las diapositivas</button>')};
+let V26M=null;
+ACT2.v26mk=async()=>{const o={pts:$('#v26o1').checked,fr:$('#v26o2').checked,vs:$('#v26o3').checked,one:$('#v26o4').checked,two:$('#v26o5').checked,th:$('#v26oth').value};S.set.lastTh=o.th;saveSettings();
+  await v26makeDeck0(V26M.md,{...V26M.meta,_ok:1});const d=curDeck();if(!d)return;d.th=o.th;
+  const out=[];for(const s of d.slides){if(s.type==='frase'&&!o.fr)continue;if(s.type==='punto'&&!o.pts)continue;
+    if(s.type==='versiculo'){if(!o.vs)continue;const r=parseRef(s.f.ref||'');if(r&&r.v1&&(o.one||o.two||!s.f.text)){const {slides}=await v26VerseSlides(r.b,r.c,r.v1,r.v2,{split:o.one,two:o.two});if(slides.length){slides.forEach(x=>{x.notes=s.notes});out.push(...slides);continue}}}
+    out.push(s)}
+  d.slides=out;S.sel=0;saveDeck(d);refreshAll();toast('Listo: '+d.slides.length+' diapositivas. Revíselas y ajuste lo que quiera.',3800)};
+
+/* plantillas */
+const V26TPL=[['blank','Solo portada','Para empezar desde cero'],['taller','Esqueleto básico','Portada, sección, versículo, punto, frase y cierre'],['estudio','Estudio bíblico','Pasaje, contexto, palabra original, puntos y cierre'],['mensaje','Mensaje para el púlpito','Versículo, tres puntos con sus frases y cierre'],['dinamicas','Taller con dinámicas','Cuenta regresiva, preguntas, completar y verdadero o falso'],['personaje','Estudio de un personaje','Su familia, el mapa, la línea de tiempo y lecciones'],['anuncios','Anuncios del culto','Bienvenida, anuncios y cuenta regresiva']];
+newSheetHTML=function(){return sheetHead('Nueva presentación')+'<label class="fld"><span class="lbl">Título</span><input class="inp" type="text" id="ntitle" placeholder="Ej. El poder de la oración"></label><div class="lbl">Plantilla</div><div class="v26-new" style="margin:0">'+V26TPL.map(([k,n,d],i)=>'<button data-act="v26tpl" data-k="'+k+'" class="'+(i===2?'on':'')+'">'+ic('grid')+'<span><b>'+n+'</b><small>'+d+'</small></span></button>').join('')+'</div><input type="hidden" id="v26tplk" value="estudio"><div class="fld"><span class="lbl">Diseño inicial</span><select id="nth">'+THEMES.map(t=>'<option value="'+t.id+'"'+(t.id===v26Th()?' selected':'')+'>'+t.name+' — '+esc(t.desc)+'</option>').join('')+'</select></div><button class="btn pri" data-act="donew">Crear presentación</button>'};
+ACT2.v26tpl=e=>{$$('[data-act=v26tpl]').forEach(b=>b.classList.toggle('on',b===e));$('#v26tplk').value=e.dataset.k};
+ACT.donew=()=>{const t=$('#ntitle').value.trim()||'Presentación sin título',k=$('#v26tplk').value,th=$('#nth').value;const B=(ty,f,m)=>{const s=blank(ty,f);if(m!=null)s.min=m;return s};let sl;
+  if(k==='blank')sl=[B('portada',{title:t})];
+  else if(k==='taller')sl=null;
+  else if(k==='estudio')sl=[B('portada',{kicker:'Estudio bíblico',title:t}),B('versiculo',{ref:''}),B('seccion',{num:'I',title:'El contexto'}),B('punto',{title:'Lo que estaba pasando'}),B('original',{}),B('seccion',{num:'II',title:'Lo que enseña'}),B('punto',{title:''}),B('frase',{}),B('reflexion',{text:''}),B('cierre',{title:'Para llevar'})];
+  else if(k==='mensaje')sl=[B('portada',{kicker:'Mensaje',title:t}),B('versiculo',{}),B('seccion',{num:'I'}),B('punto',{}),B('frase',{}),B('seccion',{num:'II'}),B('punto',{}),B('frase',{}),B('seccion',{num:'III'}),B('punto',{}),B('frase',{}),B('cierre',{})];
+  else if(k==='dinamicas')sl=[B('cuenta',{title:'Comenzamos en',mins:'5'}),B('portada',{kicker:'Taller',title:t}),B('reflexion',{label:'Para empezar',text:''}),B('seccion',{num:'I'}),B('punto',{}),B('completar',{}),B('seccion',{num:'II'}),B('punto',{}),B('vf',{items:''}),B('reflexion',{label:'En grupos',text:''}),B('cierre',{})];
+  else if(k==='personaje')sl=[B('portada',{kicker:'Personaje bíblico',title:t}),B('familia',{}),B('mapa',{}),B('linea',{}),B('personaje',{}),B('punto',{title:'Lo que aprendemos'}),B('cierre',{})];
+  else sl=[B('portada',{kicker:'Bienvenidos',title:t||'Bienvenidos a la casa de Dios'}),B('anuncio',{}),B('anuncio',{}),B('anuncio',{}),B('cuenta',{title:'El culto comienza en',mins:'5'})];
+  const d=newDeck(t,th,k==='taller'?'taller':null,sl||undefined);S.set.lastTh=th;saveSettings();S.decks[d.id]=d;saveDeck(d);closeSheet();openDeck(d.id)};
+
+/* ---------- 11. Compartir: imágenes para WhatsApp y estados, y hoja con líneas para apuntes ---------- */
+async function v26ShareFiles(files){if(isIOS&&navigator.canShare&&navigator.canShare({files})){return await new Promise(res=>{openSheet(sheetHead(files.length>1?'Sus '+files.length+' imágenes están listas':'Su imagen está lista')+'<div class="row"><button class="btn pri" id="v26sh">'+ic('share')+'Compartir o guardar</button></div><p class="hint" style="margin:0">Elija WhatsApp, «Guardar imagen» o la app que quiera.</p>');
+    $('#v26sh').onclick=async()=>{try{await navigator.share({files});closeSheet();res(true)}catch(e){if(e&&e.name==='AbortError')return;files.forEach(f=>anchorSave(f,f.name));closeSheet();res(true)}}})}
+  files.forEach(f=>anchorSave(f,f.name));return true}
+async function v26Img(sl,i,n,fmt){const d=curDeck();const W=fmt==='sq'?1080:fmt==='vt'?1080:1920,H=fmt==='sq'?1080:fmt==='vt'?1920:1080;const host=document.createElement('div');host.style.cssText='position:fixed;left:-99999px;top:0;width:'+W+'px;height:'+H+'px;pointer-events:none';
+  host.innerHTML='<div class="fit" style="width:'+W+'px;height:'+H+'px;aspect-ratio:auto;container-type:normal;--u:'+(fmt==='hz'?19.2:fmt==='vt'?13.5:12.4)+'px">'+slideHTML(sl,{deck:d,i,n})+'</div>';document.body.appendChild(host);
+  try{await sleep(50);v26Fit(host.querySelector('.sl'));await sleep(10);const c=await html2canvas(host.firstChild,{scale:1,backgroundColor:'#000',useCORS:true,logging:false,width:W,height:H,windowWidth:W,windowHeight:H});return await new Promise(r=>c.toBlob(r,'image/png'))}finally{host.remove()}}
+ACT2.v26imgs=()=>openSheet(sheetHead('Imágenes para WhatsApp y estados')+'<div class="fld"><span class="lbl">Forma</span><div class="v26-seg" id="v26fmt"><button class="on" data-f="sq">Cuadrada</button><button data-f="vt">Vertical (estados)</button><button data-f="hz">Horizontal</button></div></div><div class="row"><button class="btn pri" data-act="v26imgo" data-w="one">Esta diapositiva</button><button class="btn" data-act="v26imgo" data-w="all">Todas</button></div><p class="hint" style="margin:0">La diapositiva se acomoda a la forma elegida y se comparte como imagen.</p>');
+document.addEventListener('click',e=>{const b=e.target.closest('#v26fmt button');if(!b)return;$$('#v26fmt button').forEach(x=>x.classList.toggle('on',x===b))});
+ACT2.v26imgo=async e=>{const fmt=($('#v26fmt .on')||{}).dataset?.f||'sq';const all=e.dataset.w==='all';closeSheet();const d=curDeck();
+  try{await loadScript(L_H2C);await ensureFonts(d.slides.map(s=>s.th||d.th));const idx=all?d.slides.map((_,i)=>i):[S.sel];const files=[];
+    for(const i of idx){toast('Imagen '+(files.length+1)+' de '+idx.length+'…',1200);const bl=await v26Img(d.slides[i],i,d.slides.length,fmt);files.push(new File([bl],safeName(d.title)+'-'+String(i+1).padStart(2,'0')+'.png',{type:'image/png'}))}
+    await v26ShareFiles(files)}catch(x){toast(x.message||'No se pudieron crear las imágenes',4000)}};
+ACT2.v26notes=async()=>{closeSheet();const d=curDeck();try{await Promise.all([loadScript(L_H2C),loadScript(L_PDF)]);const imgs=await renderAll(1,.86);
+  const pdf=new window.jspdf.jsPDF({unit:'pt',format:'a4',compress:true});const W=595,M=40,iw=250,ih=iw*9/16,gap=24;let y=M,page=0;
+  const head=()=>{pdf.setFont('times','bold');pdf.setFontSize(18);pdf.setTextColor(21,48,91);pdf.text(d.title,M,M+6,{maxWidth:W-2*M});pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.setTextColor(110,110,110);pdf.text((d.date?fmtDate(d.date)+' · ':'')+(S.set.sign||''),M,M+22);y=M+40};
+  head();imgs.forEach((im,i)=>{if(y+ih>842-M){pdf.addPage();page++;y=M}pdf.addImage(im,'JPEG',M,y,iw,ih);pdf.setDrawColor(190,195,205);pdf.setLineWidth(.6);for(let k=1;k<=Math.floor(ih/18);k++){const ly=y+k*18;pdf.line(M+iw+16,ly,W-M,ly)}pdf.setFontSize(8);pdf.setTextColor(140,140,140);pdf.text(String(i+1),M+iw+16,y+8);y+=ih+gap});
+  const ok=await saveFile(safeName(d.title)+'-apuntes.pdf',pdf.output('arraybuffer'));if(ok)toast('Hoja de apuntes lista')}catch(x){toast(x.message||'No se pudo crear la hoja',4000)}};
+menuHTML=function(){const b=(a,i,t)=>'<button class="btn" style="justify-content:flex-start;min-height:52px" data-act="'+a+'">'+ic(i)+t+'</button>';
+  return sheetHead('Más opciones')+'<div class="v26-tg">Compartir</div><div style="display:grid;gap:8px">'+b('v26imgs','wa','Imágenes para WhatsApp y estados')+b('v26notes','file','Diapositivas con líneas para apuntes (PDF)')+b('exporthand','file','Hoja para los asistentes (PDF)')+b('exportpdf','download','PDF de las diapositivas')+b('exportpptx','download','PowerPoint (.pptx)')+'</div>'+
+   '<div class="v26-tg">Presentación</div><div style="display:grid;gap:8px">'+b('settings','clock','Ajustes: título, fecha, duración y foto de fondo')+b('ident','user','Identidad: firma, logo de la iglesia y borde')+b('bible','book','Biblias')+b('ai','spark','Generar con IA')+'</div>'};
+
+/* ---------- 12. En pantalla completa solo se ve la proyección: las hojas y avisos van dentro de ella ---------- */
+const v26openSheet0=openSheet;
+openSheet=function(html){const sh=$('#sheet'),pr=$('#pres');if(P.on&&pr&&sh.parentElement!==pr)pr.appendChild(sh);else if(!P.on&&sh.parentElement!==document.body)document.body.appendChild(sh);return v26openSheet0(html)};
+toast=function(msg,ms){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(t);setTimeout(()=>t.remove(),ms||2600)};
+document.addEventListener('pointerup',e=>{if(e.target.closest&&e.target.closest('#pres #sheet'))e.stopPropagation()},true);
+(function(){const st=document.createElement('style');st.textContent='#pres #sheet{color:var(--ink);user-select:text;-webkit-user-select:text}#pres #sheet .btn{background:var(--panel);color:var(--ink);border-color:var(--line)}#pres #sheet .btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}#pres #sheet .btn.gold{background:var(--gold);color:#16110a}';document.head.appendChild(st)})();
+
 /* ===== Arranque ===== */
 (async function boot(){
   try{IDBX=await idbOpen()}catch(e){IDBX=null}
@@ -977,6 +1488,7 @@ Object.assign(window.ACT2,{fromens:()=>fromEnsSheet(),enstab:e=>{ENSTAB=e.datase
   await loadAllImgs();await loadBibles();
   render();
   try{const q=new URLSearchParams(location.search).get('ens');if(q){history.replaceState(null,'',location.pathname);await createFromEns(q)}const l=new URLSearchParams(location.search).get('lib');if(l!=null){history.replaceState(null,'',location.pathname);const it=(await libItems()).find(x=>x.i===+l);if(it)await makeDeck(libMd(it),{titulo:it.t});else toast('No encontré esa enseñanza')}}catch(e){console.error(e)}
+  try{await v26Params()}catch(e){console.error(e)}
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&curDeck())saveDeck(curDeck())});
 })();
 </script>

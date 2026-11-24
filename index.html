@@ -1900,7 +1900,7 @@ document.addEventListener("click",e=>{const t=e.target.closest(".brand b,.top .m
 const SLD={wrap:null,frame:null};
 function openSlides(qs){
   if(!SLD.wrap){const w=document.createElement("div");w.id="dpwrap";w.hidden=true;
-    w.innerHTML='<iframe id="dpf" title="Diapositivas" allow="fullscreen; screen-wake-lock" allowfullscreen></iframe>';
+    w.innerHTML='<iframe id="dpf" title="Diapositivas" allow="fullscreen; screen-wake-lock; camera" allowfullscreen></iframe>';
     document.body.appendChild(w);SLD.wrap=w;SLD.frame=w.querySelector("iframe")}
   const q=String(qs||"").replace(/^\?/,"");
   if(q||!SLD.frame.getAttribute("src"))SLD.frame.src="diapositivas.html"+(q?"?"+q:"");
@@ -2660,7 +2660,7 @@ function viewGuia(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargando l
   const nv=(BIBLE[r.b].chs[r.c-1]||[]).length;const v2=r.v2||nv;
   v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Guía del pasaje</h1><p class="lede">Todo lo que la app sabe de un pasaje, reunido en una página: el libro, las palabras originales, las personas y lugares, las referencias, sus enseñanzas y sus notas.</p>
   ${bePassPicker(r,"gupass")}
-  <div class="row be-acts" style="margin:10px 0 4px"><button class="btn" data-a="leer">Leer en la Biblia</button><button class="btn" data-a="esq">Esquema del pasaje</button><button class="btn" data-a="par">En paralelo</button><button class="btn" data-a="cuad">Guardar en cuaderno</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.comentario?`<button class="btn primary" data-a="ia">Comentario con IA</button>`:""}</div>
+  <div class="row be-acts" style="margin:10px 0 4px"><button class="btn" data-a="leer">Leer en la Biblia</button><button class="btn" data-a="esq">Esquema del pasaje</button><button class="btn" data-a="par">En paralelo</button><button class="btn" data-a="cuad">Guardar en cuaderno</button>${typeof openSlides==="function"?`<button class="btn" data-a="dp">Hacer diapositivas</button>`:""}${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.comentario?`<button class="btn primary" data-a="ia">Comentario con IA</button>`:""}</div>
   <div class="gu-grid">
    <section class="card gu-sec" id="gulib"><p class="muted">…</p></section>
    <section class="card gu-sec"><h2>${esc(beRLbl(r))}</h2><div class="gu-txt">${[...Array(v2-r.v1+1)].map((_,i)=>{const n=r.v1+i;const t=vText(r.b,r.c,n);return t?`<span><sup>${n}</sup>${esc(t)}</span> `:""}).join("")}</div><p class="muted" style="font-size:12px;margin:6px 0 0">${esc(BVER.name)}</p></section>
@@ -2677,6 +2677,7 @@ function viewGuia(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargando l
       if(k==="par"){BSTATE={b:r.b,c:r.c};go("paralelo")}
       if(k==="ia")go("comentario",{prefill:{pasaje:lbl}});
       if(k==="cuad")cuAddPick({tipo:"ref",ref:[r.b,r.c,r.v1,r.v2||nv],t:lbl,n:stCut([...Array((r.v2||nv)-r.v1+1)].map((_,i)=>vText(r.b,r.c,r.v1+i)).join(" "),400)});
+      if(k==="dp"&&typeof openSlides==="function")openSlides("vers="+r.b+"."+r.c+"."+r.v1+"-"+(r.v2||nv));
       if(k==="intro")beIntroSheet(r.b);return}
     const w=e.target.closest("[data-k]");if(w){beWord(w.dataset.k,w.dataset.ref?{b:r.b,c:r.c,v:+w.dataset.ref}:{});return}
     const u=e.target.closest("[data-u]");if(u){go("quien",{id:u.dataset.u});return}
@@ -2751,7 +2752,7 @@ function viewEsquema(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargand
   const lista=Object.entries(esAll()).filter(([kk])=>kk!==k).sort((a,b)=>(b[1].f||"").localeCompare(a[1].f||"")).slice(0,12);
   v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Esquema del pasaje</h1><p class="lede">Divida el pasaje en frases, sangre las ideas que dependen de otras y márquelas: así se ve la estructura y nace el bosquejo. Se guarda solo.</p>
    ${bePassPicker(r,"espass")}
-   <div class="row be-acts" style="margin:10px 0"><button class="btn" data-e="txt">Copiar como texto</button><button class="btn" data-e="add">Añadir a una enseñanza</button><button class="btn" data-e="cuad">Guardar en cuaderno</button><button class="btn ghost" data-e="reset">Empezar de nuevo</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.bosquejo?`<button class="btn primary" data-e="ia">Bosquejo con IA</button>`:""}</div>
+   <div class="row be-acts" style="margin:10px 0"><button class="btn" data-e="txt">Copiar como texto</button><button class="btn" data-e="add">Añadir a una enseñanza</button><button class="btn" data-e="cuad">Guardar en cuaderno</button>${typeof openSlides==="function"?`<button class="btn" data-e="dp">Hacer diapositivas</button>`:""}<button class="btn ghost" data-e="reset">Empezar de nuevo</button>${BE_IA&&typeof TOOLS!=="undefined"&&TOOLS.bosquejo?`<button class="btn primary" data-e="ia">Bosquejo con IA</button>`:""}</div>
    <div class="card es-box"><div id="esl" class="es-list"></div>
    <div id="estool" class="es-tool" hidden><button class="ibtn" data-e="out" aria-label="Quitar sangría" title="Quitar sangría">${icon("atras","")}</button><button class="ibtn" data-e="in" aria-label="Sangrar" title="Sangrar">${icon("adelante","")}</button>
      <select id="esrol" aria-label="Etiqueta">${ES_ROL.map(([a,b])=>`<option value="${a}">${b}</option>`).join("")}</select>
@@ -2775,6 +2776,7 @@ function viewEsquema(v,opts={}){if(!BIBLE){v.innerHTML='<p class="muted">Cargand
     if(a==="txt")copyText(esText(d));
     if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Esquema del pasaje",titulo:d.t,texto:esText(d)}));
     if(a==="cuad")cuAddPick({tipo:"nota",t:"Esquema de "+d.t,n:esText(d)});
+    if(a==="dp"&&typeof openSlides==="function"){save();openSlides("esq="+encodeURIComponent(k))}
     if(a==="ia")go("bosquejo",{prefill:{pasaje:d.t}})};
   $("#esrol").onchange=e=>{const x=d.l[ESQ.sel];if(x){x.r=e.target.value;save();draw()}};
   let tm;$("#escom").oninput=e=>{const x=d.l[ESQ.sel];if(!x)return;x.c=e.target.value;clearTimeout(tm);tm=setTimeout(()=>{save();const ln=v.querySelector(`.es-line[data-i="${ESQ.sel}"]`);if(ln){let c=ln.querySelector(".es-c");if(!c&&x.c){c=document.createElement("span");c.className="es-c";ln.appendChild(c)}if(c)c.textContent=x.c}},400)}}
@@ -3988,7 +3990,7 @@ function updateActionbar(){
   bar.innerHTML=`<span class="ref">${esc(label)}</span>
    <button class="btn small" data-a="copy">Copiar</button><button class="btn small" data-a="add">Añadir a un sermón</button>
    <button class="btn small" data-a="comentario">Comentario</button><button class="btn small" data-a="bosquejo">Exégesis y homilética</button><button class="btn small" data-a="paralelos">Referencias cruzadas</button>
-   <button class="btn small" data-a="cmpv">Comparar versiones</button>${typeof viewGuia==="function"?`<button class="btn small" data-a="guia">Guía del pasaje</button><button class="btn small" data-a="esquema">Esquema</button>`:""}
+   <button class="btn small" data-a="cmpv">Comparar versiones</button>${typeof viewGuia==="function"?`<button class="btn small" data-a="guia">Guía del pasaje</button><button class="btn small" data-a="esquema">Esquema</button>`:""}${typeof openSlides==="function"?`<button class="btn small gold" data-a="proj">Proyectar</button>`:""}
    <button class="btn small ghost" data-a="clear">Quitar marcas</button>`;
   bar.hidden=false;
   bar.onclick=e=>{const a=e.target.closest("[data-a]")?.dataset.a;if(!a)return;const {b,c}=BSTATE;const ch=BIBLE[b].chs[c-1];const txt=SEL.map(n=>`${n} ${ch[n-1]}`).join("\n");
@@ -3996,6 +3998,7 @@ function updateActionbar(){
     if(a==="add")pickSermon(sid=>Store.addMaterial(sid,{tipo:"Texto bíblico",titulo:label+" ("+BVER.abbr+")",texto:SEL.map(n=>`**${n}** ${ch[n-1]}`).join(" ")}));
     if(a==="cmpv")return compareVersions(r);
     if(a==="guia"||a==="esquema")return go(a,{b,c,v1:SEL[0],v2:SEL[SEL.length-1]});
+    if(a==="proj"&&typeof openSlides==="function")return openSlides("proj="+b+"."+c+"."+SEL[0]+"-"+SEL[SEL.length-1]);
     if(a==="clear"){SEL=[];document.querySelectorAll(".vs.sel").forEach(x=>x.classList.remove("sel"));updateActionbar();refPanel(b,c,[])}
     if(["comentario","bosquejo","paralelos"].includes(a))go(a,{prefill:{pasaje:rangeLabel}});
   };
