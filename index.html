@@ -2610,7 +2610,7 @@ function quDesc(p){if(p.t==="Place")return "Lugar"+(p.ar&&p.ar!==">"?" · "+quTr
   if(m){const r=m[1].trim();let rol=QU_ROL[r];if(!rol){const mm=r.match(/^(\w+)'s? (son|daughter|wife|brother|sister|father|mother|husband|compatriot|warrior|adversary|servant|relative|uncle|nephew)s?$/);
       if(mm){const rel={son:"hijo",daughter:"hija",wife:"esposa",brother:"hermano",sister:"hermana",father:"padre",mother:"madre",husband:"esposo",compatriot:"compañero",warrior:"guerrero",adversary:"adversario",servant:"siervo",relative:"pariente",uncle:"tío",nephew:"sobrino"}[mm[2]];rol=rel[0].toUpperCase()+rel.slice(1)+" de "+mm[1]}}
     const ep=QU_EPO[m[2].trim().replace(/^the time of /,"")]||QU_EPO[m[2].trim()];s=(rol||s)+(ep?(d.includes("before Israel")?" · "+ep:" · época de "+ep):"")}
-  if(p.tr&&p.tr!==">")s+=" · "+quTr(p.tr);return s}
+  if(p.tr&&p.tr!==">")s+=" · "+quTr(p.tr);return s.replace(/\bde el\b/g,"del")}
 let QU={q:"",tipo:""};
 function viewQuien(v,opts={}){if(opts.id){QU.id=opts.id}
   v.innerHTML=`<p class="label" style="margin:0 0 4px">Estudio</p><h1>Personajes y lugares</h1><p class="lede">Más de 4.000 personas y lugares de la Biblia, con su familia, sus versículos y su nombre en hebreo o griego. Sin internet.</p><div id="quw"><p class="muted">Cargando…</p></div>`;
@@ -2967,6 +2967,470 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-il]"))ls.set("t
 .pdfv-p{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15);display:grid;place-items:center;max-width:100%}
 @media (max-width:600px){.pdfv-s input{width:110px}}
 `;document.head.appendChild(s)})();
+
+/* ============ Preparar el sermón (nov 2026) ============
+   1 Estudio del sermón · 2 La IA escribe con los datos de la app · 3 Medidor de solidez por punto ·
+   4 Tiempo estimado · 5 Botones para añadir dentro de cada punto · 6 Banco propio y avisos de repetición ·
+   7 Tres enfoques · 8 Escribir y retocar por partes · 9 Tono y duración · 10 Revisor de estilo, doctrina y voz ·
+   11 Revisión de citas · 12 Notas de cómo le fue.  Y «voz humana»: que no se note la IA.
+   Se engancha a las funciones del Taller sin cambiar sus nombres de almacenamiento: lo nuevo se guarda
+   dentro del mismo sermón (campos estudio y post) y en tp_banco / tp_svritmo / tp_svdur.
+   En el Armador (sin IA) quedan las partes que no usan IA. Toda llamada a la IA empieza con DOCTRINA. */
+
+const SV_IA=window.__AP!=="ar_";
+const SV={ctx:{},run:{},cand:[],names:null,fidx:null,open:{},enf:{}};
+const SV_ROM=["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+const SV_NOPER=new Set(["dios","senor","jesus","cristo","jesucristo","espiritu","santo","padre","hijo","israel","jehova","iglesia","biblia","rey","reina","faraon","mesias","emanuel"]);
+const SV_PERS0=["Abraham","Isaac","Jacob","José","Moisés","Aarón","Josué","Caleb","Gedeón","Sansón","Rut","Noemí","Ana","Samuel","Saúl","David","Jonatán","Salomón","Elías","Eliseo","Isaías","Jeremías","Daniel","Ester","Nehemías","Job","Jonás","Noé","Adán","Eva","Sara","Rebeca","Raquel","Débora","Pedro","Pablo","Juan","Santiago","Andrés","Felipe","Tomás","Mateo","Bernabé","Esteban","Timoteo","María","Marta","Lázaro","Zaqueo","Nicodemo","Bartimeo","Cornelio","Lidia","Saulo","Pilato","Herodes","Judas","Goliat","Naamán","Ezequías","Josafat","Nabucodonosor","Agar","Esaú","Rahab","Betsabé","Absalón","Mefiboset","Abigail","Booz","Ezequiel","Oseas","Elisabet","Simeón","Jairo","Priscila","Apolos","Silas","Onésimo","Gamaliel","Jezabel","Acab","Manasés","Josías","Elí","Jacob","Lot","Labán","Jetro","Miriam","Aquila","Tito","Filemón","Ananías","Safira","Dorcas","Marcos","Lucas","Mardoqueo","Amán","Esdras","Zorobabel","Hageo"];
+
+/* ---------- utilidades ---------- */
+const svNow=()=>Date.now();
+const svUid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function svTexto(){const e=$("#e_texto");return (e?e.value:OPEN?.texto)||""}
+function svRange(str){const r=parseRef(str||"");if(!r)return null;const nv=(BIBLE[r.b].chs[r.c-1]||[]).length;const v1=r.v1||1;const v2=Math.min(r.v2||r.v1||Math.min(nv,30),nv);return {b:r.b,c:r.c,v1,v2,lbl:`${bName(r.b)} ${r.c}:${v1}${v2!==v1?"-"+v2:""}`}}
+function svCita(b,c,v1,v2){v2=v2||v1;let vs=null;try{if(typeof bvHas==="function"&&bvHas("RVR1960"))vs=verseList("RVR1960",{b,c,a:v1,z:v2})}catch(e){}
+  if(!vs){vs=[];for(let v=v1;v<=v2;v++){const t=vText(b,c,v);if(t)vs.push([v,t])}}
+  return vs&&vs.length?vs.map(x=>x[1]).join(" "):""}
+function svLbl(b,c,v1,v2){return `${bName(b)} ${c}:${v1}${v2&&v2!==v1?"-"+v2:""}`}
+function svWords(t){return String(t||"").replace(/^#{1,4}\s.*$/gm," ").replace(/[*=>#_—–]/g," ").split(/\s+/).filter(w=>/\p{L}/u.test(w)).length}
+function svCuerpo(t){const i=String(t||"").search(/^#### Textos de apoyo/m);return i<0?t:t.slice(0,i)}
+function svRitmo(){const r=ls.get("tp_svritmo",null);return r&&r.w>0?r.w:31}
+function svMin(t){return Math.max(1,Math.round(svWords(svCuerpo(t))/svRitmo()))}
+function svDur(){return +ls.get("tp_svdur",50)||50}
+function svSplit(t){const L=String(t||"").split("\n");const parts=[];let cur={h:"",lines:[]};for(const l of L){if(/^## /.test(l)){parts.push(cur);cur={h:l.slice(3).trim(),lines:[l]}}else cur.lines.push(l)}parts.push(cur);
+  return parts.map((p,i)=>({h:p.h,txt:p.lines.join("\n"),kind:!p.h?"pre":/^introducci/i.test(p.h)?"intro":/^conclusi/i.test(p.h)?"concl":"punto"}))}
+const svImpRe=/^\*\*([^*\n]{4,})\*\*\s*$/gm;
+function svImps(t){return [...String(t||"").matchAll(svImpRe)].map(m=>m[1].trim())}
+function svQuitaRayas(t){return String(t||"").split("\n").map(l=>{if(/^\s*(>|#)/.test(l))return l;
+  return l.replace(/\s+[—–]\s+([^—–\n]{1,140}?)\s+[—–]\s+/g,", $1, ").replace(/\s*—\s*/g,", ").replace(/\s+–\s+/g,", ").replace(/([.!?:;¡¿])(\*\*)?,\s/g,"$1$2 ").replace(/,\s*([.,;:!?])/g,"$1").replace(/^(\s*-\s*),\s*/,"$1")}).join("\n")}
+function svPlain(t){return String(t||"").replace(/[*=_#>]/g,"")}
+
+/* nombres de personajes bíblicos (para saber si un punto tiene un ejemplo bíblico) */
+function svNames(){if(SV.names)return SV.names;const s=new Set(SV_PERS0.map(x=>norm(x)));
+  if(typeof bePer==="function")bePer().then(P=>{for(const u in P.p){const p=P.p[u];if(p.t==="Place"||!p.n)continue;const n=norm(String(p.n).split(/[ ,(]/)[0]);if(n.length>=4&&!SV_NOPER.has(n))s.add(n)}}).catch(()=>{});
+  SV.names=s;return s}
+function svPersonas(t){const S=svNames();const out=new Set();let s=svPlain(svCuerpo(t)).split("\n").filter(l=>!/^\s*>/.test(l)).join("\n");if(REFRE)s=s.replace(REFRE,"$1 ");for(const m of s.matchAll(/\p{Lu}\p{Ll}{2,}/gu)){const n=norm(m[0]);if(S.has(n)&&!SV_NOPER.has(n))out.add(m[0])}return out}
+
+/* ---------- 3. Medidor de solidez ---------- */
+const SV_CRIT=[["vers","Versículo citado"],["expl","Explicación del texto"],["pers","Personaje o ejemplo bíblico"],["apl","Aplicación a la vida"],["imp","Frase de impacto"]];
+function svSolidez(t,o={}){const tx=String(t||"");const plain=svPlain(tx);const words=svWords(tx);
+  const c={vers:o.vers??(/«[^»]{6,}»\s*\(/.test(tx)||/^> /m.test(tx)),
+    expl:o.expl??(words>=140||/^#### Para profundizar/m.test(tx)),
+    pers:o.pers??(svPersonas(plain).size>0),
+    apl:/\b(usted|ustedes|hermanos?|hermanas?|tu vida|su vida|su casa|su hogar|su familia|hoy|nosotros|nuestra|nuestro|nuestras|nuestros|el trabajo|la iglesia de hoy)\b/i.test(plain),
+    imp:o.imp??svImps(tx).length>0};
+  const n=Object.values(c).filter(Boolean).length;return {c,n,words,flojo:n<=2}}
+function svDots(s){return `<span class="sv-dots" aria-label="${s.n} de 5">${SV_CRIT.map(([k,l])=>`<i class="${s.c[k]?"on":""}" title="${esc(l)}"></i>`).join("")}</span>`}
+function svMeterHTML(s,label){const falta=SV_CRIT.filter(([k])=>!s.c[k]).map(([,l])=>l.toLowerCase());
+  return `<div class="sv-meter${s.flojo?" flojo":s.n===5?" ok":""}">${label?`<b>${esc(label)}</b>`:""}${svDots(s)}<span class="sv-mt">${s.flojo?"Flojo":s.n===5?"Sólido":"Casi"}</span>${falta.length?`<small>Le falta: ${esc(falta.join(", "))}</small>`:""}</div>`}
+function svCroqSol(p){const t=[p.t,p.ap,p.cref,p.ctexto,...p.vin.map(v=>v.i+" "+v.d),p.prof,p.imp].join("\n");
+  return svSolidez(t,{vers:!!(p.cref.trim()||/«[^»]{6,}»/.test(t)),expl:svWords([p.ap,...p.vin.map(v=>v.d),p.prof].join(" "))>=110||!!p.prof.trim(),imp:!!p.imp.trim()||/¡[^!]{6,}!/.test(t)})}
+
+/* ---------- 4. Tiempo estimado ---------- */
+function svTimeHTML(t,target){const m=svMin(t);target=target||svDur();const lo=Math.max(20,target-8),hi=target+8;const pc=x=>Math.min(100,Math.round(x/75*100));
+  const est=m<lo?"corto":m>hi?"largo":"bien";
+  return `<div class="sv-time"><div class="sv-time-h"><b>≈ ${m} min</b><span class="muted">predicando a su ritmo · meta ${target} min</span><span class="sv-tag ${est}">${est==="bien"?"Le alcanza":est==="corto"?"Le falta material":"Le sobra material"}</span></div>
+  <div class="sv-bar"><i class="sv-band" style="left:${pc(40)}%;width:${pc(60)-pc(40)}%"></i><i class="sv-pos" style="left:${pc(m)}%"></i><span style="left:${pc(40)}%">40</span><span style="left:${pc(60)}%">60</span></div></div>`}
+
+/* ---------- 10. Revisor de estilo, doctrina y voz humana ---------- */
+const SV_CLICHE=[["en un mundo (donde|que|lleno|cada vez)","«en un mundo donde…»"],["hoy m[aá]s que nunca","«hoy más que nunca»"],["profundiz(ar|amos|emos)","«profundizar»"],["crucial(es)?","«crucial»"],["fundamental(es)?","«fundamental»"],["esencial(es)?","«esencial»"],["transformador(a|es|as)?","«transformador»"],["viaje (espiritual|de fe|interior)","«viaje espiritual»"],["traves[ií]a","«travesía»"],["sumerg(irnos|imos|ámonos)","«sumergirnos»"],["adentr(arnos|émonos|amos)","«adentrarnos»"],["explor(ar|emos|amos)","«explorar»"],["naveg(ar|amos) (por|la|las|los|el)","«navegar»"],["desentra[ñn]ar","«desentrañar»"],["tapiz","«tapiz»"],["faro de","«faro de…»"],["resuena(n)?","«resuena»"],["(poderoso|potente) recordatorio|recordatorio (poderoso|potente)","«poderoso recordatorio»"],["nos invita a (reflexionar|considerar|pensar)","«nos invita a reflexionar»"],["cabe (destacar|mencionar|se[ñn]alar)","«cabe destacar»"],["es importante (destacar|se[ñn]alar|notar|recordar|mencionar)","«es importante señalar»"],["en definitiva","«en definitiva»"],["en [uú]ltima instancia","«en última instancia»"],["sin lugar a dudas","«sin lugar a dudas»"],["inquebrantable(s)?","«inquebrantable»"],["aut[eé]ntic[oa]s?","«auténtico»"],["genuin[oa]s?","«genuino»"],["significativ[oa]s?|de manera significativa","«significativo»"],["empoder(ar|a|ados?)","«empoderar»"],["potenci(ar|a) (tu|su|nuestra)","«potenciar»"],["paradigma","«paradigma»"],["hol[ií]stic[oa]","«holístico»"],["en este sentido","«en este sentido»"],["a lo largo de (la historia|los siglos)","«a lo largo de la historia»"],["no se trata (solo|solamente|simplemente) de","«no se trata solo de»"],["m[aá]s all[aá] de lo (que|imaginable)","«más allá de…»"],["un testimonio vivo","«un testimonio vivo»"],["en resumen|en conclusi[oó]n,","«en resumen / en conclusión»"],["dinámica(s)? (espiritual|de)","«dinámica»"],["(?:verdaderamente|profundamente|realmente) (transforma|impacta|cambia)","«verdaderamente transforma»"]];
+function svSinCitas(t){return String(t||"").replace(/«[^»]*»/g," ").split("\n").filter(l=>!/^\s*>/.test(l)).join("\n")}
+function svRevisar(t){const T=String(t||"");const parts=svSplit(T);const prosa=svSinCitas(T).split("\n").filter(l=>!/^\s*#/.test(l)).join("\n");const words=svWords(T)||1;
+  const doc=[],est=[],ia=[];const add=(L,k,msg,n,ej)=>L.push({k,msg,n,ej});
+  /* doctrina */
+  const sc=svSinCitas(T);
+  if(/\btrinidad\b|\btrin[oa]\b|\btriun[oa]\b|tres personas|segunda persona|tercera persona|\bdios hijo\b|dios el hijo|dios esp[ií]ritu santo|personas divinas/i.test(sc))add(doc,"trin","Hay lenguaje trinitario (Trinidad, «tres personas», «Dios Hijo»…). Cámbielo por la unicidad de Dios.",1);
+  if(/en el nombre del padre,? (y )?del hijo,? y del esp[ií]ritu santo/i.test(sc)&&!/nombre de (jes[uú]s|jesucristo|nuestro se[ñn]or jes[uú]s)/i.test(sc))add(doc,"baut","Menciona la fórmula de Mateo 28:19 sin explicar que el Nombre es Jesús (Hechos 2:38).",1);
+  for(const p of T.split(/\n{2,}/)){if(/bautiz|bautismo en agua|ser bautizad/i.test(p)&&!/esp[ií]ritu santo|fuego/i.test(p.match(/bautismo (del|en el|con el) [^.]{0,20}/i)?.[0]||"")&&!/nombre de (jes[uú]s|jesucristo|nuestro se[ñn]or jes[uú]s|el se[ñn]or jes[uú]s)|hechos 2:38/i.test(p)){add(doc,"baut2","Habla del bautismo sin decir que es en el nombre de Jesús.",1,p.slice(0,110));break}}
+  /* estilo del pastor */
+  const esc1=T.match(/\((?:pausa|silencio|con fuerza|levantando|gritando|se[ñn]alando|mirando|haga|hacer una pausa|en voz)[^)]*\)|\[[^\]\n]{3,40}\]|\b(haga una pausa|levante la voz|pida a la (congregaci[oó]n|iglesia)|mire a la (congregaci[oó]n|iglesia)|diga con fuerza|invite a la (iglesia|congregaci[oó]n) a)\b/gi);if(esc1)add(est,"esc","Tiene indicaciones de cómo predicar (pausas, gestos, «levante la voz»). Quítelas.",esc1.length,esc1[0]);
+  if(/^#+\s*oraci[oó]n/im.test(T)||/\b(oremos|inclinemos (nuestros|el|los) (rostros?|cabezas?)|cerremos (los|nuestros) ojos)\b/i.test(T))add(est,"ora","Termina o incluye una oración final. Usted no la pone en el sermón.",1);
+  if(/\b(idea central|prop[oó]sito( del mensaje| de (esta|la) enseñanza| de hoy)?)\s*:|^#+\s*(idea central|prop[oó]sito)/im.test(T))add(est,"prop","Tiene rótulo de «idea central» o «propósito». Quítelo.",1);
+  if(/vers[ií]culo para memorizar|preguntas para (conversar|reflexionar|discutir|la semana)/i.test(T))add(est,"mem","Tiene versículo para memorizar o preguntas para conversar.",1);
+  if(/declar(e|emos|amos) (con|en voz|juntos)|repita conmigo|r[ée]pitale a|d[ií]gale a (su|el) (hermano|vecino)/i.test(T))add(est,"decl","Tiene declaraciones o frases para repetir.",1);
+  const dia=T.match(/\b(esta mañana|esta noche|este domingo|esta tarde|escuela dominical)\b/gi);if(dia)add(est,"dia","Menciona el día o el culto («"+dia[0]+"»). Mejor «hoy».",dia.length);
+  const concl=parts.find(p=>p.kind==="concl");if(!concl)add(est,"nocon","No tiene «## Conclusión».",1);else{const ci=svImps(svCuerpo(concl.txt)).length;if(ci<2)add(est,"cimp","La conclusión tiene "+(ci?"una sola frase":"ninguna frase")+" de impacto; usted cierra con dos.",1);else if(ci>3)add(est,"cimp","La conclusión tiene "+ci+" frases de impacto; con dos basta.",1);
+    const cw=svWords(svCuerpo(concl.txt));if(cw>260)add(est,"clar","La conclusión es larga ("+cw+" palabras). Usted la prefiere corta y firme.",1)}
+  const imps=svImps(T).length;if(imps>8)add(est,"imps","Tiene "+imps+" frases de impacto. Pocas y bien ganadas pegan más.",1);else if(imps<3)add(est,"imps","Tiene pocas frases de impacto ("+imps+"). Reparta alguna en la introducción y en los puntos.",1);
+  const ini=T.match(/^> (?!\()([^—\n]+?)(?: — (.*))?$/m);if(!ini)add(est,"ini","No tiene el versículo inicial (> Referencia — texto) antes de la introducción.",1);else{const x=parseRef(ini[1]);if(x&&x.v2&&x.v1&&x.v2>x.v1&&ini[2]&&!/[¹²³⁴⁵⁶⁷⁸⁹⁰]/.test(ini[2]))add(est,"sup","El texto inicial abarca varios versículos y no tiene sus números (¹ ² ³).",1)}
+  if(/«[^»]*\*\*[^»]*»/.test(T))add(est,"neg","Hay citas bíblicas en negrita; el texto bíblico va en verde sin negrita.",1);
+  if(REFRE){let sin=0,ej="";REFRE.lastIndex=0;let m;while((m=REFRE.exec(T))){if(!m[4]&&!/^salmos?$/i.test(m[2])){sin++;if(!ej)ej=m[2]+" "+m[3]}}if(sin)add(est,"sinv","Hay "+sin+" cita"+(sin>1?"s":"")+" sin número de versículo (por ejemplo «"+ej+"»).",sin,ej)}
+  const pers=svPersonas(T);if(pers.size>4)add(est,"pers","Aparecen "+pers.size+" personajes ("+[...pers].slice(0,6).join(", ")+"). Usted prefiere pocos y bien desarrollados.",pers.size);
+  /* voz humana: lo que delata a la IA */
+  const ray=(prosa.match(/—|\s–\s/g)||[]).length;if(ray>1)add(ia,"raya","Usa la raya larga (—) "+ray+" veces. Es la marca más clara de texto hecho por IA.",ray);
+  const noes=(prosa.match(/\bno (es|son|fue|era|se trata de|está|estaba)\b[^.;:!?\n]{1,70}?,\s*(sino|es|son|fue|era)\b/gi)||[]).length+(prosa.match(/\bno es [^.!?\n]{1,40}\. es\b/gi)||[]).length;if(noes>1)add(ia,"noes","Repite el molde «no es esto, es aquello» ("+noes+" veces).",noes);
+  const nosolo=(prosa.match(/\bno (solo|solamente|s[oó]lo)\b[^.!?\n]{1,90}\bsino (tambi[eé]n|que)\b/gi)||[]).length;if(nosolo>1)add(ia,"nosolo","Repite «no solo… sino también» ("+nosolo+" veces).",nosolo);
+  const tri=(prosa.match(/\b\p{L}{3,},\s+\p{L}{3,}\s+y\s+\p{L}{3,}\b/gu)||[]).length;if(tri>3)add(ia,"tri","Tiene muchas listas de tres palabras («A, B y C»): "+tri+".",tri);
+  const cl=[];for(const [re,l] of SV_CLICHE){const r=new RegExp("\\b(?:"+re+")\\b","gi");const n=(prosa.match(r)||[]).length;if(n)cl.push(l+(n>1?" ×"+n:""))}if(cl.length)add(ia,"cli","Palabras de manual que suenan a IA: "+cl.join(", ")+".",cl.length);
+  const rq=(prosa.match(/¿(El|La|Lo|Los|Las|Y el|Y la) [\p{L} ]{2,22}\?\s+\p{Lu}/gu)||[]).length;if(rq>1)add(ia,"rq","Usa preguntas tipo anuncio («¿El resultado? …») "+rq+" veces.",rq);
+  const anun=(prosa.match(/\b(en este punto|en esta secci[oó]n|a continuaci[oó]n) (veremos|vamos a ver|exploraremos|analizaremos)/gi)||[]).length;if(anun)add(ia,"anun","Anuncia lo que va a decir («en este punto veremos…»).",anun);
+  /* viñetas que arrancan igual y estructura muy pareja */
+  const pts=parts.filter(p=>p.kind==="punto");let mismas=0;const nb=[];
+  for(const p of pts){const bl=[...p.txt.matchAll(/^- (?:\*\*)?(\p{L}+)/gmu)].map(m=>norm(m[1]));nb.push(bl.length);const cnt={};bl.forEach(w=>{cnt[w]=(cnt[w]||0)+1});if(Object.values(cnt).some(n=>n>=3))mismas++}
+  if(mismas)add(ia,"vin","En "+mismas+" punto"+(mismas>1?"s":"")+" varias viñetas empiezan con la misma palabra.",mismas);
+  const prof=pts.filter(p=>/^#### Para profundizar/m.test(p.txt)).length;
+  if(pts.length>=3&&nb.every(n=>n===nb[0])&&(prof===0||prof===pts.length))add(ia,"par","Todos los puntos tienen exactamente la misma forma ("+nb[0]+" viñetas cada uno). Varíelos un poco.",1);
+  const sent=prosa.replace(/^\s*-\s*/gm,"").split(/[.!?]+\s+/).map(s=>svWords(s)).filter(n=>n>2);
+  if(sent.length>=15){const mu=sent.reduce((a,b)=>a+b,0)/sent.length;const sd=Math.sqrt(sent.reduce((a,b)=>a+(b-mu)**2,0)/sent.length);if(sd/mu<0.38)add(ia,"lar","Casi todas las oraciones tienen el mismo largo. Mezcle frases cortas con otras más largas.",1)}
+  const W={raya:Math.min(25,ray*3),noes:noes*5,nosolo:nosolo*4,tri:Math.max(0,tri-3)*3,cli:cl.length*4,rq:rq*5,anun:anun*5,vin:mismas*4,par:8,lar:8};
+  let pen=0;for(const it of ia)pen+=W[it.k]||4;const voz=Math.max(0,Math.min(100,100-Math.round(pen*(1200/Math.max(800,Math.min(words,2400)))**0.3)));
+  return {doc,est,ia,voz,words}}
+function svVozTag(v){return v>=85?["ok","Suena a usted"]:v>=65?["mid","Revise algunas cosas"]:["bad","Se nota escrito por máquina"]}
+
+/* ---------- 11. Revisión de citas ---------- */
+function svCitas(t){const r={ok:0,fixed:0,bad:0,noex:[],sinBiblia:false};
+  try{const f=fixCitas(t);r.sinBiblia=f.sinBiblia;r.ok=f.ok;r.fixed=f.fixed.length;r.bad=f.bad.length}catch(e){}
+  if(REFRE&&BIBLE){REFRE.lastIndex=0;let m;const seen=new Set();while((m=REFRE.exec(t))){const b=bookIndex(m[2]);if(b==null)continue;const c=+m[3];const ch=BIBLE[b].chs[c-1];const key=m[2]+" "+m[3]+(m[4]?":"+m[4]:"");if(seen.has(key))continue;seen.add(key);
+    if(!ch||(m[4]&&+m[4]>ch.length)||(m[5]&&+m[5]>ch.length))r.noex.push(key)}}
+  return r}
+
+/* ---------- 6. Banco propio y avisos de repetición ---------- */
+function svDias(f){const d=Date.parse((f||"")+"T12:00");return isNaN(d)?null:Math.round((svNow()-d)/864e5)}
+function svUltima(src){try{const l=predLog(src);return l&&l.length?l[0]:null}catch(e){return null}}
+function svCuando(u){if(!u)return "";return (u.f?"el "+fmtDate(u.f):"")+(u.l?" en "+u.l:"")}
+async function svFidx(){if(SV.fidx)return SV.fidx;const m=new Map();const put=(t,src)=>{const k=norm(t).replace(/[^a-z0-9 ]/g,"").trim();if(k.length<12)return;if(!m.has(k))m.set(k,new Set());m.get(k).add(src)};
+  try{await loadLib();LIB.items.forEach((it,i)=>{if(it.md)svImps(it.md).forEach(f=>put(f,"L"+i));else (it.p||[]).forEach(([kk,tx])=>{if(kk==="i")put(tx,"L"+i)})});SV.fidx=m}catch(e){}
+  return m}
+async function svReuse(id,t){const out=[];const me="S"+id;const fr=svImps(t).filter(f=>f.length>=12);
+  const idx=new Map(await svFidx());for(const s of SERMONS){if(s.id===id||!s.ensenanza)continue;svImps(s.ensenanza).forEach(f=>{const k=norm(f).replace(/[^a-z0-9 ]/g,"").trim();if(!idx.has(k))idx.set(k,new Set());idx.set(k,new Set([...idx.get(k),"S"+s.id]))})}
+  for(const f of fr){const k=norm(f).replace(/[^a-z0-9 ]/g,"").trim();const srcs=[...(idx.get(k)||[])].filter(s=>s!==me);if(!srcs.length)continue;
+    const inf=srcs.map(s=>({s,i:refSrcInfo(s),u:svUltima(s)})).filter(x=>x.i).sort((a,b)=>((b.u?.f)||"").localeCompare((a.u?.f)||""));if(!inf.length)continue;const x=inf[0];const d=x.u?svDias(x.u.f):null;
+    out.push({lvl:d!=null&&d<365?"warn":"info",html:`La frase <b>«${esc(f.replace(/^\*+|\*+$/g,""))}»</b> ya está en «${esc(x.i.t)}»${x.u?`, que predicó ${esc(svCuando(x.u))}`:""}.`})}
+  const r=svRange(OPEN?.texto||"");if(r&&typeof refIdxBuild==="function"){try{const ix=await refIdxBuild();const mm=ix.get(r.b+":"+r.c);if(mm){const rows=[...mm.entries()].filter(([s,e])=>s!==me&&(e.whole||[...e.vs].some(v=>v>=r.v1&&v<=r.v2))).map(([s])=>({s,i:refSrcInfo(s),u:svUltima(s)})).filter(x=>x.i&&x.u).sort((a,b)=>(b.u.f||"").localeCompare(a.u.f||""));
+      rows.slice(0,3).forEach(x=>{const d=svDias(x.u.f);out.push({lvl:d!=null&&d<365?"warn":"info",html:`Ya predicó este texto en «${esc(x.i.t)}», ${esc(svCuando(x.u))}.`})})}}catch(e){}}
+  return out}
+function svBancoAdd(items){const a=bancoAll();const seen=new Set(a.map(x=>norm(x.texto)));let n=0;for(const it of items){if(!it.texto||seen.has(norm(it.texto)))continue;seen.add(norm(it.texto));a.unshift({id:AR.uid(),tipo:it.tipo,texto:it.texto,ref:it.ref||"",temas:it.temas||[],k:it.k,fecha:arHoy(),usos:it.usos||[]});n++}bancoSave(a);return n}
+function svBancoUso(x){const a=bancoAll();const it=a.find(y=>y.id===x.id);if(!it||!OPEN)return "";const prev=(it.usos||[]).filter(u=>u.s!==OPEN.id).sort((p,q)=>(q.f||"").localeCompare(p.f||""))[0];
+  it.usos=(it.usos||[]).filter(u=>u.s!==OPEN.id);it.usos.push({s:OPEN.id,f:arHoy()});bancoSave(a);
+  if(!prev)return "";const d=svDias(prev.f);const s=SERMONS.find(z=>z.id===prev.s);return d!=null&&d<180?`Ojo: ya lo usó hace ${d} días${s?` en «${s.titulo}»`:""}.`:""}
+
+/* ---------- 1. Estudio del sermón ---------- */
+function svEst(){if(!OPEN)return {items:[]};if(!OPEN.estudio||!Array.isArray(OPEN.estudio.items))OPEN.estudio={items:[]};return OPEN.estudio}
+async function svGather(r){const g={libro:null,words:[],pers:[],xr:[],esq:[]};if(!r)return g;
+  try{const I=await beIntros();g.libro=I[r.b]||null}catch(e){}
+  try{const [D,LX,P]=await Promise.all([beIL(r.b),beLexAll(r.b>=NT_START?"G":"H"),bePer().catch(()=>null)]);const cap=D[r.c-1]||[];const cnt=new Map(),first=new Map(),per=new Map();
+    for(let n=r.v1;n<=r.v2;n++)for(const w of (cap[n-1]||[])){const k=w[2];if(!k||BE_FUNC.has(k))continue;const L=LX[k];if(!L)continue;
+      if(P&&P.i[k]){const u=P.i[k];if(P.p[u]&&!per.has(u))per.set(u,P.p[u]);continue}
+      if(/Prep|Conj|Part|Pron|Art|Intg|Neg|Rel|Dem|Pers/.test(L[2]))continue;cnt.set(k,(cnt.get(k)||0)+1);if(!first.has(k))first.set(k,n)}
+    const tot=r.b>=NT_START?138000:305000;g.words=[...cnt.entries()].map(([k,n])=>[k,n*Math.log(tot/Math.max(1,LX[k][5]))]).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k])=>({k,L:LX[k],v:first.get(k)}));
+    g.pers=[...per.entries()].slice(0,12)}catch(e){}
+  try{const X=await stXref();const seen=new Set();for(let n=r.v1;n<=r.v2&&g.xr.length<12;n++){for(const s of String(X[`${r.b}.${r.c}.${n}`]||"").split(";").filter(Boolean).slice(0,3)){const m=s.match(/^(\d+)\.(\d+)\.(\d+)(?:-(?:(\d+)\.)?(\d+))?$/);if(!m||seen.has(s))continue;seen.add(s);const b=+m[1],c=+m[2],v=+m[3];const v2=m[4]&&+m[4]!==c?v:(m[5]?Math.min(+m[5],v+3):v);g.xr.push({b,c,v,v2,from:n});if(g.xr.length>=12)break}}}catch(e){}
+  try{const E=esAll();for(const k in E){const [b,c,rg]=k.split(".");if(+b!==r.b||+c!==r.c)continue;const [a,z]=rg.split("-").map(Number);if(z>=r.v1&&a<=r.v2)g.esq.push({k,d:E[k]})}}catch(e){}
+  return g}
+const svLang=k=>k&&k[0]==="G"?"griego":"hebreo";
+function svPalItem(w){const L=w.L;const es=L[3]||L[4];const tr=String(L[1]||"").replace(/\./g,"");
+  return {tipo:"palabra",t:`“${es}”: ${tr} (${svLang(w.k)}, ${beStrongNum(w.k)})`,d:`La palabra que se traduce “${es}” es, en el ${svLang(w.k)}, ${tr}. Aparece ${L[5]} veces en la Biblia.`,k:w.k}}
+function svPerItem(u,p){return {tipo:"persona",t:p.n,d:quDesc(p),u}}
+function svXrItem(x){const lb=svLbl(x.b,x.c,x.v,x.v2);const tx=svCita(x.b,x.c,x.v,x.v2);return {tipo:"ref",t:lb,d:tx?`«${tx}» (${lb})`:lb,ref:lb}}
+function svLibItem(b,it){return {tipo:"libro",t:`El libro de ${bName(b)}`,d:`${bName(b)} lo escribió ${it.a}. ${it.f}. Fue escrito para ${it.d}. ${it.p}`}}
+const SV_TIPO={palabra:"Palabra original",persona:"Personaje",ref:"Referencia",libro:"Contexto del libro",nota:"Nota",esquema:"Esquema",frase:"Frase de impacto",ejemplo:"Ejemplo",cita:"Cita"};
+let SVEST={tab:""};
+function svEstHTML(){return `<div class="section-head" id="svest-h"><h2>Estudio del sermón</h2><span class="muted" style="font-size:13px">Lo que la app sabe del texto clave, para pasarlo a sus puntos</span></div><div class="card sv-est" id="svest"></div>`}
+async function svEstDraw(){const box=$("#svest");if(!box||!OPEN)return;const E=svEst();const r=svRange(svTexto());
+  const tabs=[["reu",`Reunido (${E.items.length})`],["lib","El libro"],["pal","Palabras"],["per","Personajes"],["xr","Referencias"],["esq","Esquema"],["nota","Mi nota"]];
+  if(!SVEST.tab)SVEST.tab=E.items.length?"reu":"pal";
+  box.innerHTML=`<div class="sv-est-top"><span>${r?`<b>${esc(r.lbl)}</b>`:`<span class="muted">Escriba el texto clave en «Datos y notas» (por ejemplo Juan 4:13-14).</span>`}</span>${r?`<button class="btn small ghost" data-sv="guia">Abrir la guía del pasaje</button>`:""}</div>
+  <div class="seg sv-tabs">${tabs.map(([k,l])=>`<button class="btn small ${SVEST.tab===k?"on":""}" data-svt="${k}">${esc(l)}</button>`).join("")}</div><div id="svestc" class="sv-estc"><p class="muted">Buscando…</p></div>`;
+  const c=$("#svestc");SV.cand=[];
+  const row=(it,j)=>`<div class="sv-row"><div><b>${esc(it.t)}</b><small>${esc(stCut(it.d,220))}</small></div><button class="btn small" data-sv="add" data-j="${j}" ${E.items.some(x=>x.t===it.t&&x.tipo===it.tipo)?"disabled":""}>${E.items.some(x=>x.t===it.t&&x.tipo===it.tipo)?"Reunido":"Reunir"}</button></div>`;
+  const list=a=>{const base=SV.cand.length;SV.cand.push(...a);return a.length?a.map((it,i)=>row(it,base+i)).join("")+`<div class="row" style="margin-top:8px"><button class="btn small ghost" data-sv="addall" data-a="${base}" data-z="${base+a.length}">Reunir todo</button></div>`:`<p class="muted">No hay nada para este pasaje.</p>`};
+  const t=SVEST.tab;
+  if(t==="reu"){const n=(OPEN.croquis?.puntos||[]).length||3;
+    c.innerHTML=E.items.length?E.items.map(it=>`<div class="sv-row"><div><span class="label" style="margin:0">${esc(SV_TIPO[it.tipo]||it.tipo)}${it.p?` · en el punto ${esc(it.p)}`:""}</span><b>${esc(it.t)}</b><small>${esc(stCut(it.d,240))}</small></div><span class="row" style="gap:6px"><select data-sv="to" data-id="${it.id}" aria-label="Pasar a"><option value="">Pasar a…</option><option value="intro">Introducción</option>${[...Array(n)].map((_,i)=>`<option value="${i}">Punto ${SV_ROM[i]}</option>`).join("")}<option value="${n}">Un punto nuevo</option></select><button class="btn small ghost" data-sv="del" data-id="${it.id}" aria-label="Quitar">✕</button></span></div>`).join("")+`<p class="muted" style="font-size:12.5px;margin:10px 0 0">«Pasar a» lo pone en el croquis («Armarla yo mismo»).${SV_IA?" Si la prepara con Claude, todo lo reunido se le entrega para que escriba con estos datos.":""}</p>`
+      :`<p class="muted" style="margin:0">Todavía no ha reunido nada. Mire las pestañas «Palabras», «Personajes», «Referencias» y toque «Reunir» en lo que le sirva.</p>`;return}
+  if(t==="nota"){c.innerHTML=`<div class="field"><label for="svnota">Una idea, un dato o una ilustración para este sermón</label><textarea id="svnota" rows="3"></textarea></div><button class="btn small primary" data-sv="nota">Reunir</button>`;return}
+  if(!r){c.innerHTML=`<p class="muted">Primero el texto clave.</p>`;return}
+  const g=await svGather(r);if(!$("#svestc"))return;
+  if(t==="lib")c.innerHTML=g.libro?`<dl class="gu-dl"><dt>Autor</dt><dd>${esc(g.libro.a)}</dd><dt>Época</dt><dd>${esc(g.libro.f)}</dd><dt>Escrito para</dt><dd>${esc(g.libro.d)}</dd><dt>Tema</dt><dd>${esc(g.libro.t)}</dd></dl><p>${esc(g.libro.p)}</p>`+list([svLibItem(r.b,g.libro),{tipo:"nota",t:`Cristo en ${bName(r.b)}`,d:g.libro.c}]):`<p class="muted">${esc(BE_SIN)}</p>`;
+  if(t==="pal")c.innerHTML=g.words.length?list(g.words.map(svPalItem))+`<p class="muted" style="font-size:12px">Las más propias de este pasaje. Toque «Guía del pasaje» para ver cada una a fondo.</p>`:`<p class="muted">${esc(BE_SIN)}</p>`;
+  if(t==="per")c.innerHTML=list(g.pers.map(([u,p])=>svPerItem(u,p)));
+  if(t==="xr")c.innerHTML=list(g.xr.map(svXrItem))+`<p class="muted" style="font-size:11.5px">Texto de su Biblia${typeof bvHas==="function"&&bvHas("RVR1960")?" (RVR1960)":""}. Referencias: OpenBible.info (CC BY).</p>`;
+  if(t==="esq")c.innerHTML=g.esq.length?g.esq.map(e=>`<div class="sv-row"><div><b>${esc(e.d.t||e.k)}</b><small style="white-space:pre-wrap">${esc(stCut(e.d.l.filter(x=>x.n===0).map(x=>x.s).join("\n"),400))}</small></div><span class="row" style="gap:6px"><button class="btn small" data-sv="esq" data-k="${esc(e.k)}">Usar como puntos</button></span></div>`).join(""):`<p class="muted" style="margin:0">No ha hecho el esquema de este pasaje. <button class="btn small" data-sv="mkesq">Hacer el esquema</button></p>`;
+}
+function svCroqTarget(){return ($("#armform")&&ARM)?ARM:(OPEN.croquis||(OPEN.croquis=newCroquis(OPEN)))}
+function svInsert(C,idx,item){const add=(o,k,txt)=>{o[k]=(o[k]&&String(o[k]).trim()?String(o[k]).trim()+"\n":"")+txt};
+  if(idx==="intro"){if(item.tipo==="frase"&&!C.introImp.trim())C.introImp=item.d;else add(C,"intro",item.tipo==="persona"?item.t+": "+item.d:item.d);return "la introducción"}
+  idx=+idx;while(C.puntos.length<=idx)C.puntos.push(newPunto());const P=C.puntos[idx];
+  const vin=(i,d)=>{const e=P.vin.find(v=>!v.i.trim()&&!v.d.trim());if(e){e.i=i;e.d=d}else P.vin.push({i,d})};
+  if(item.tipo==="palabra")add(P,"prof",item.d);else if(item.tipo==="persona")vin(item.t,item.d);else if(item.tipo==="ref"||item.tipo==="cita")vin("",item.d);
+  else if(item.tipo==="frase"){if(!P.imp.trim())P.imp=item.d;else vin("",item.d)}else if(item.tipo==="libro"||item.tipo==="nota")add(P,"ap",item.d);else vin(item.t&&item.t.length<60?item.t:"",item.d);
+  return "el punto "+SV_ROM[idx]}
+function svEstWire(){const box=$("#svest");if(!box||box.__w)return;box.__w=1;
+  box.addEventListener("click",e=>{const t=e.target.closest("[data-svt]");if(t){SVEST.tab=t.dataset.svt;svEstDraw();return}
+    const b=e.target.closest("[data-sv]");if(!b||b.tagName==="SELECT")return;const k=b.dataset.sv;const E=svEst();
+    if(k==="guia"){const r=svRange(svTexto());if(r){clearTimeout(saveTimer);saveOpen();go("guia",{b:r.b,c:r.c,v1:r.v1,v2:r.v2})}return}
+    if(k==="mkesq"){const r=svRange(svTexto());if(r){clearTimeout(saveTimer);saveOpen();go("esquema",{b:r.b,c:r.c,v1:r.v1,v2:r.v2})}return}
+    if(k==="add"||k==="addall"){const js=k==="add"?[+b.dataset.j]:[...Array(+b.dataset.z-+b.dataset.a)].map((_,i)=>+b.dataset.a+i);let n=0;
+      for(const j of js){const it=SV.cand[j];if(!it||E.items.some(x=>x.t===it.t&&x.tipo===it.tipo))continue;E.items.push({id:svUid(),...it});n++}
+      saveOpen();toast(n?(n===1?"Reunido en el estudio del sermón":n+" cosas reunidas"):"Ya estaba reunido");svEstDraw();return}
+    if(k==="del"){E.items=E.items.filter(x=>x.id!==b.dataset.id);saveOpen();svEstDraw();return}
+    if(k==="nota"){const tx=$("#svnota").value.trim();if(!tx){toast("Escriba la nota");return}E.items.push({id:svUid(),tipo:"nota",t:stCut(tx,60),d:tx});saveOpen();SVEST.tab="reu";svEstDraw();toast("Nota reunida");return}
+    if(k==="esq"){const d=esAll()[b.dataset.k];if(!d)return;const C=svCroqTarget();const tops=d.l.filter(x=>x.n===0).slice(0,6);const [bb,cc]=b.dataset.k.split(".").map(Number);
+      const vacios=C.puntos.every(p=>!p.t.trim());if(!vacios){toast("Su croquis ya tiene títulos en los puntos; el esquema quedó reunido como nota");E.items.push({id:svUid(),tipo:"esquema",t:d.t||"Esquema",d:esText(d)});saveOpen();svEstDraw();return}
+      C.puntos=tops.map(x=>{const p=newPunto();p.t=stCut(x.s.replace(/[,;:.]+$/,""),70);p.cref=svLbl(bb,cc,x.v);p.ctexto=svCita(bb,cc,x.v);return p});if(!C.puntos.length)C.puntos=[newPunto()];saveOpen();toast("El croquis ya tiene "+C.puntos.length+" puntos con su esquema");return}
+  });
+  box.addEventListener("change",e=>{const s=e.target.closest("[data-sv=to]");if(!s||s.value==="")return;const E=svEst();const it=E.items.find(x=>x.id===s.dataset.id);if(!it)return;const C=svCroqTarget();const where=svInsert(C,s.value,it);it.p=s.value==="intro"?"Intro":SV_ROM[+s.value];saveOpen();toast("Pasado a "+where+" del croquis");svEstDraw()})}
+
+/* ---------- 12. Después de predicar ---------- */
+function svPostHTML(){const L=(OPEN.post||[]).slice().sort((a,b)=>(b.f||"").localeCompare(a.f||""));
+  return `<div class="section-head" id="svpost-h"><h2>Cómo me fue al predicarla</h2></div><div class="card sv-post" id="svpost">
+  ${L.length?L.map(x=>`<div class="sv-pn"><span class="label" style="margin:0">${esc(x.f?fmtDate(x.f):"Sin fecha")}${x.l?" · "+esc(x.l):""}${x.m?" · "+x.m+" min":""}</span>${x.si?`<p><b>Funcionó:</b> ${esc(x.si)}</p>`:""}${x.no?`<p><b>Mejoraría:</b> ${esc(x.no)}</p>`:""}${x.fr?`<p><b>Frases que pegaron:</b> ${esc(x.fr)}</p>`:""}</div>`).join(""):`<p class="muted" style="margin:0 0 8px">Después de predicarla anote cómo le fue. La app lo tiene en cuenta en la próxima preparación, aprende cuánto tarda usted predicando y guarda en su banco las frases que pegaron.</p>`}
+  <details class="sv-pf"${L.length?"":" open"}><summary class="btn small">Anotar cómo me fue</summary>
+  <div class="editor" style="margin-top:10px"><div class="field"><label for="svp_f">Fecha</label><input type="date" id="svp_f" value="${esc(predToday())}"></div><div class="field"><label for="svp_l">Lugar o iglesia</label><input type="text" id="svp_l" placeholder="Ej.: Urumita, culto de jóvenes"></div>
+  <div class="field"><label for="svp_m">¿Cuántos minutos predicó?</label><input type="number" id="svp_m" min="5" max="180" inputmode="numeric" placeholder="45"></div>
+  <div class="field wide"><label for="svp_si">Lo que funcionó</label><textarea id="svp_si" rows="2" placeholder="La historia de Elías en Querit tocó a los jóvenes…"></textarea></div>
+  <div class="field wide"><label for="svp_no">Lo que mejoraría</label><textarea id="svp_no" rows="2" placeholder="El punto II quedó largo; faltó un ejemplo de la vida diaria…"></textarea></div>
+  <div class="field wide"><label for="svp_fr">Frases que pegaron (una por línea)</label><textarea id="svp_fr" rows="2"></textarea></div></div>
+  <div class="row"><button class="btn primary small" data-svp="save">Guardar</button></div></details></div>`}
+function svPostWire(id){const box=$("#svpost");if(!box)return;box.onclick=e=>{const b=e.target.closest("[data-svp=save]");if(!b)return;
+  const x={f:$("#svp_f").value,l:$("#svp_l").value.trim(),m:+$("#svp_m").value||0,si:$("#svp_si").value.trim(),no:$("#svp_no").value.trim(),fr:$("#svp_fr").value.trim()};
+  if(!x.si&&!x.no&&!x.m&&!x.fr){toast("Escriba algo de cómo le fue");return}
+  OPEN.post=(OPEN.post||[]).concat([x]);
+  if(x.m&&OPEN.ensenanza){const w=svWords(svCuerpo(OPEN.ensenanza))/x.m;if(w>8&&w<120){const r=ls.get("tp_svritmo",null)||{w:31,n:0};const n=Math.min(r.n||0,6);ls.set("tp_svritmo",{w:Math.round(((r.w||31)*n+w)/(n+1)*10)/10,n:n+1})}}
+  let nb=0;if(x.fr)nb=svBancoAdd(x.fr.split("\n").map(s=>s.trim()).filter(Boolean).map(s=>({tipo:"frase",texto:s,ref:OPEN.titulo||"",k:"S"+id})));
+  try{const k="S"+id;const l=predLog(k);if(x.f&&!l.some(y=>y.f===x.f)){l.push({f:x.f,l:x.l});predLogSave(k,l);predSync(k,true);const pb=document.querySelector(`.predbox[data-pk="${k}"]`);if(pb)pb.outerHTML=predBox(k)}}catch(e){}
+  saveOpen();toast("Anotado"+(nb?` · ${nb} frase${nb>1?"s":""} al banco`:"")+(x.m?" · la app ajustó su ritmo":""));const h=$("#svpost-h");box.remove();h.remove();svPostPlace(id)}}
+function svPostPlace(id){const anchor=[...document.querySelectorAll(".section-head")].find(h=>/Datos y notas/.test(h.textContent));if(!anchor)return;anchor.insertAdjacentHTML("beforebegin",svPostHTML());svPostWire(id)}
+
+/* ---------- 10/11/6/8. Panel de revisión dentro de la enseñanza ---------- */
+function svRevHTML(id,t){const R=svRevisar(t);const C=svCitas(t);const parts=svSplit(t);const run=SV.run[id];const [vk,vl]=svVozTag(R.voz);
+  const li=(L,cls)=>L.map(x=>`<li class="${cls}">${esc(x.msg)}${x.ej&&x.k==="baut2"?`<br><small class="muted">«${esc(x.ej)}…»</small>`:""}</li>`).join("");
+  const sol=parts.filter(p=>p.kind==="punto").map(p=>svMeterHTML(svSolidez(p.txt),p.h)).join("");
+  const opts=parts.map((p,i)=>p.kind==="pre"?"":`<option value="${i}">${esc(p.kind==="punto"?p.h:p.h)}</option>`).join("");
+  const nbad=R.doc.length+R.est.length;
+  return `<details class="sv-rev" id="svrev" ${SV.open[id]!==false?"open":""}><summary><span class="label" style="margin:0">Revisión antes de guardar</span><span class="sv-sum"><span class="sv-tag ${vk}">Voz: ${R.voz}/100</span><span class="sv-tag ${nbad?"mid":"ok"}">${nbad?nbad+" detalle"+(nbad>1?"s":"")+" de estilo":"Estilo y doctrina en orden"}</span><span class="sv-tag ${C.bad||C.noex.length?"mid":"ok"}">Citas: ${C.sinBiblia?"sin RVR1960":C.bad+C.noex.length?C.bad+C.noex.length+" por revisar":"bien"}</span><span class="sv-tag">≈ ${svMin(t)} min</span></span></summary>
+  <div class="sv-revb">
+   <section><h3>Tiempo</h3>${svTimeHTML(t)}</section>
+   <section><h3>Solidez de cada punto</h3>${sol||'<p class="muted">No encontré puntos (## I. …).</p>'}<p class="muted sv-note">Cada punto fuerte tiene: versículo, explicación, personaje o ejemplo bíblico, aplicación y una frase de impacto.</p></section>
+   <section><h3>Voz humana <span class="sv-tag ${vk}">${esc(vl)}</span></h3>${R.ia.length?`<ul class="sv-ul">${li(R.ia,"ia")}</ul>`:'<p class="sv-okp">No encontré marcas de texto hecho por máquina.</p>'}
+     <div class="row" style="gap:6px">${R.ia.some(x=>x.k==="raya")?`<button class="btn small" data-svr="rayas">Quitar las rayas (—)</button>`:""}${SV_IA?`<button class="btn small ${R.voz<85?"gold":""}" data-svr="hum" ${run?"disabled":""}>Humanizar con Claude</button>`:""}</div></section>
+   <section><h3>Estilo y doctrina</h3>${R.doc.length||R.est.length?`<ul class="sv-ul">${li(R.doc,"doc")}${li(R.est,"est")}</ul>`:'<p class="sv-okp">Sin indicaciones escénicas, sin oración final, sin rótulos; conclusión con sus frases; nada contra la unicidad ni el bautismo en el nombre de Jesús.</p>'}</section>
+   <section><h3>Citas</h3>${C.sinBiblia?`<p class="muted">Cargue la Reina-Valera 1960 en Ajustes para comparar el texto de cada cita.</p>`:`<p style="margin:0 0 6px"><b>${C.ok}</b> coinciden con su Biblia${C.fixed?` · <b>${C.fixed}</b> se pueden corregir`:""}${C.bad?` · <b>${C.bad}</b> para revisar`:""}.</p>`}${C.noex.length?`<p class="sv-warn">No existen en la Biblia: ${esc(C.noex.join(", "))}</p>`:""}<button class="btn small" data-e="verif">Ver y corregir las citas</button></section>
+   <section><h3>Su banco y lo que ya predicó</h3><div id="svreuse"><p class="muted">Buscando…</p></div><div class="row" style="gap:6px"><button class="btn small" data-svr="banco">Guardar las frases de impacto en mi banco</button></div></section>
+   ${SV_IA?`<section><h3>Trabajar por partes</h3><div class="row" style="gap:6px;align-items:center"><select id="svpart" aria-label="Parte">${opts}</select>
+     <button class="btn small" data-svk="hondo">Más hondo</button><button class="btn small" data-svk="ejemplo">Otro ejemplo bíblico</button><button class="btn small" data-svk="avivado">Más avivado</button><button class="btn small" data-svk="corto">Más corto</button><button class="btn small" data-svk="desarrollar">Desarrollarlo completo</button><button class="btn small ghost" data-svk="rehacer">Rehacerlo</button></div>
+     ${run?`<div class="prep-out" style="margin-top:8px">${run.out?`<div class="md paper">${md(run.out)}</div>`:""}<div class="thinking"><span class="dot"></span>${esc(run.msg||"Trabajando…")}</div><button class="btn small" data-svr="stop">Detener</button></div>`:`<p class="muted sv-note">Claude reescribe solo esa parte. Usted ve la versión nueva y decide si la deja.</p>`}</section>`:""}
+  </div></details>`}
+function svRevPlace(id){const box=$("#ensbox");if(!box||OPEN?.id!==id||!OPEN.ensenanza)return;const ui=ENSUI[id]||{};if(ui.mode!=="view")return;const old=$("#svrev");if(old)old.remove();
+  const pw=box.querySelector(".paperwrap");if(!pw)return;pw.insertAdjacentHTML("afterend",svRevHTML(id,OPEN.ensenanza));const el=$("#svrev");
+  el.addEventListener("toggle",()=>{SV.open[id]=el.open});
+  svReuse(id,OPEN.ensenanza).then(L=>{const b=$("#svreuse");if(b)b.innerHTML=L.length?`<ul class="sv-ul">${L.map(x=>`<li class="${x.lvl==="warn"?"est":"info"}">${x.html}</li>`).join("")}</ul>`:'<p class="sv-okp">No repite frases de impacto de otras enseñanzas, y no hay otra predicación de este texto anotada.</p>'}).catch(()=>{const b=$("#svreuse");if(b)b.innerHTML=""});
+  el.onclick=e=>{const b=e.target.closest("[data-svr],[data-svk]");if(!b)return;e.stopPropagation();const k=b.dataset.svr;
+    if(k==="rayas"){const nt=svQuitaRayas(OPEN.ensenanza);if(nt!==OPEN.ensenanza){OPEN.ensanterior=OPEN.ensenanza;OPEN.ensenanza=nt;saveOpen();toast("Listo: cambié las rayas por comas. Puede volver a la anterior.")}renderEns(id);return}
+    if(k==="banco"){const n=svBancoAdd(svImps(OPEN.ensenanza).map(f=>({tipo:"frase",texto:f.replace(/\*/g,""),ref:OPEN.titulo||"",k:"S"+id})));toast(n?n+" frase"+(n>1?"s":"")+" guardada"+(n>1?"s":"")+" en su banco":"Ya estaban en su banco");return}
+    if(k==="hum")return svHumanizar(id);
+    if(k==="stop"){SV.run[id]?.ctl?.abort();return}
+    if(b.dataset.svk){const i=+$("#svpart").value;return svParte(id,i,b.dataset.svk)}}}
+
+/* ---------- IA: voz humana, partes, enfoques, datos ---------- */
+const SV_VOZ=`VOZ HUMANA (muy importante: el pastor comparte sus sermones con otros pastores y no debe notarse que lo ayudó una máquina):
+- Escribe como habla el pastor Antonio Sierra en el púlpito, no como un libro ni como un asistente. Mezcla frases cortas con otras largas; alguna exclamación suelta está bien.
+- No uses la raya larga (—) dentro de la predicación: usa comas, puntos o paréntesis. La raya solo va en la línea del texto inicial (> Referencia — texto).
+- El molde «no es esto, es aquello» o «no es esto, sino aquello» como mucho una vez en todo el sermón. Nada de «no solo… sino también».
+- No hagas listas de tres palabras seguidas («fe, esperanza y amor») salvo que estén en el texto bíblico.
+- Palabras prohibidas: «en un mundo donde», «hoy más que nunca», «profundizar» (salvo el rótulo «Para profundizar»), crucial, fundamental, esencial, transformador, viaje espiritual, travesía, sumergirnos, adentrarnos, explorar, navegar, desentrañar, tapiz, faro, resuena, «poderoso recordatorio», «nos invita a reflexionar», «cabe destacar», «es importante señalar», «en definitiva», «en última instancia», «sin lugar a dudas», inquebrantable, auténtico, genuino, significativo, empoderar.
+- No empieces dos viñetas seguidas con la misma palabra. Varía el largo de viñetas y párrafos. Que los puntos no tengan todos la misma forma ni el mismo número de viñetas.
+- No anuncies lo que vas a decir («en este punto veremos…») ni resumas al final de cada punto lo que acabas de decir.
+- Nada de preguntas tipo anuncio seguidas de su respuesta («¿El resultado? …», «¿La clave? …»).
+- Usa con naturalidad, sin abusar, giros del predicador pentecostal colombiano: «mire», «fíjese», «hermano», «¡gloria a Dios!», «eso es lo que pasa cuando…». Ejemplos de la vida diaria concretos (la tienda del barrio, el bus, la finca, el recibo de la luz, el hijo que no llega), no genéricos.`;
+function svFmtReglas(){return `Formato y estilo del pastor: citas bíblicas dentro del texto así «texto» (Referencia) en Reina-Valera 1960, solo si estás seguro de la redacción, con la referencia completa y su número de versículo; las frases de impacto van solas en su línea así **¡Frase!**; viñetas con "- **Idea.** desarrollo"; ==resaltado== para una idea clave. PROHIBIDO: indicaciones escénicas o de cómo predicar, oración final, declaraciones para repetir, rótulos de «propósito» o «idea central», versículo para memorizar, preguntas para conversar, mencionar el día o el tipo de culto. Doctrina: unicidad de Dios; si toca el bautismo, en el nombre de Jesús; todo apunta a Cristo.`}
+function svClean(t){return String(t||"").replace(/^```(?:markdown|md)?\s*\n?/i,"").replace(/\n?```\s*$/,"").trim()}
+function svRunUI(id){if(ENSUI[id]?.mode==="view")renderEns(id)}
+async function svSample(id,prompt,msg,tier){const sample=await getSample();if(!sample){toast("Esto necesita abrir la app dentro de Claude");return null}
+  const st=SV.run[id]={ctl:new AbortController(),out:"",msg};svRunUI(id);
+  try{const {text}=await sample(prompt,{signal:st.ctl.signal,cache:false,modelTier:tier||"complex",onText:({text})=>{st.out=text;const p=document.querySelector("#svrev .prep-out .md");if(p)p.innerHTML=md(text);else svRunUI(id)}});return text}
+  catch(e){if(e?.code!=="cancelled")toast(ERR[e?.code]||"Hubo un problema de conexión. Intente de nuevo.");return null}
+  finally{delete SV.run[id];}}
+const SV_PARTE={hondo:"Hazla más honda: más sustancia bíblica, explica mejor lo que dice el texto y por qué, confirma con otra Escritura citada con su texto. Que no crezca más de un tercio.",
+  ejemplo:"Cambia o añade el ejemplo bíblico: usa otro personaje u otro pasaje que ilustre mejor la idea y desarróllalo bien (no repitas personajes que ya están en el resto del sermón).",
+  avivado:"Hazla más avivada: más fuego pentecostal, exclamaciones naturales y una frase de impacto fuerte, sin perder la sustancia ni alargarla mucho.",
+  corto:"Hazla más corta y directa, conservando lo mejor: las citas, el ejemplo y la frase de impacto.",
+  desarrollar:"Desarróllala completa según el modelo del pastor: un párrafo que abre (cuenta la escena o explica el texto) y luego 4 o 5 viñetas con sustancia (lo que dice el texto, otro pasaje que lo confirma citado con su texto, el ejemplo del personaje y la enseñanza para la iglesia dicha con naturalidad). Si de verdad aporta, un «#### Para profundizar» corto.",
+  rehacer:"Escríbela de nuevo desde otro ángulo, con la misma idea de fondo."};
+async function svParte(id,i,kind){if(SV.run[id])return;const t=OPEN.ensenanza;const parts=svSplit(t);const p=parts[i];if(!p||p.kind==="pre")return;
+  const datos=SV.ctx[id]||await svCtxText(id).catch(()=>"");
+  const prompt=`${DOCTRINA}
+
+TAREA: en esta enseñanza del Pastor Antonio Sierra J. reescribe SOLO la parte «${p.h}». ${SV_PARTE[kind]||SV_PARTE.hondo}${p.kind==="concl"?" Es la conclusión: corta y firme, y termina con DOS frases de impacto, cada una sola en su línea en **negrita**. Si tenía «#### Textos de apoyo», consérvalo al final igual.":""}${p.kind==="intro"?" Es la introducción: uno o dos párrafos y una frase de impacto sola al final.":""}
+
+${svFmtReglas()}
+
+${SV_VOZ}${datos?"\n\n"+datos:""}
+
+ENSEÑANZA COMPLETA (solo como contexto; no la reescribas):
+${cut(t,30000)}
+
+PARTE A REESCRIBIR:
+${p.txt}
+
+Devuelve SOLO la parte reescrita en Markdown, empezando exactamente por la línea "## ${p.h}". Sin comentarios.`;
+  const r=await svSample(id,prompt,"Reescribiendo «"+p.h+"»…");if(!r){renderEns(id);return}
+  let nt=svClean(r);if(!/^## /.test(nt))nt="## "+p.h+"\n"+nt;const k2=nt.slice(3).search(/^## /m);if(k2>=0)nt=nt.slice(0,k2+3).trimEnd();
+  parts[i].txt=svQuitaRayas(nt)+"\n";setEns(id,parts.map(x=>x.txt).join("\n").replace(/\n{3,}/g,"\n\n"));toast("Revise la versión nueva y decida")}
+async function svHumanizar(id,text,auto){const t=text||OPEN.ensenanza;const R=svRevisar(t);
+  const prob=R.ia.map(x=>"- "+x.msg).join("\n")||"- Nada grave; pule la redacción para que suene más natural.";
+  const prompt=`${DOCTRINA}
+
+TAREA: revisa esta enseñanza del Pastor Antonio Sierra J. para que suene escrita por él, un pastor pentecostal colombiano, y no por una máquina. Otros pastores la van a leer y no debe notarse ninguna ayuda de inteligencia artificial.
+Conserva TODO el contenido: el mismo título y subtítulo, el mismo texto inicial, las mismas secciones con sus mismos títulos y en el mismo orden, todas las citas bíblicas con su texto y su referencia exactos, los «#### Para profundizar», las frases de impacto (puedes pulir su redacción, no quitarlas), los textos de apoyo y el formato Markdown exacto. No alargues ni acortes más de un 10 %.
+Cambia solo la redacción donde suene artificial. Esto fue lo que la app encontró:
+${prob}
+
+${SV_VOZ}
+
+${svFmtReglas()}
+
+Devuelve SOLO la enseñanza completa revisada, sin comentarios antes ni después.
+
+ENSEÑANZA:
+${cut(t,40000)}`;
+  const r=await svSample(id,prompt,auto?"Revisando la voz para que suene a usted…":"Humanizando la enseñanza…");if(!r){if(!auto)renderEns(id);return null}
+  const nt=svQuitaRayas(svClean(r));const h0=(t.match(/^## /gm)||[]).length,h1=(nt.match(/^## /gm)||[]).length;
+  if(h1!==h0||svWords(nt)<svWords(t)*0.75){toast("La revisión cambió la estructura; se conservó la versión anterior");if(!auto)renderEns(id);return null}
+  if(auto)return nt;setEns(id,nt);toast("Revise la versión humanizada y decida");return nt}
+async function svCtxText(id){const S=OPEN||{};const r=svRange(S.texto||"");let out=[];
+  if(r){const g=await svGather(r);
+    if(g.libro)out.push(`EL LIBRO DE ${bName(r.b).toUpperCase()}: autor ${g.libro.a}; época ${g.libro.f}; escrito para ${g.libro.d}; tema: ${g.libro.t}. ${g.libro.p}`);
+    if(g.words.length)out.push("PALABRAS ORIGINALES DEL TEXTO CLAVE ("+r.lbl+"):\n"+g.words.slice(0,8).map(w=>`- “${w.L[3]||w.L[4]}” = ${String(w.L[1]).replace(/\./g,"")} (${svLang(w.k)}, ${beStrongNum(w.k)}), aparece ${w.L[5]} veces en la Biblia (v. ${w.v})`).join("\n"));
+    if(g.pers.length)out.push("PERSONAS Y LUGARES DEL PASAJE:\n"+g.pers.map(([u,p])=>`- ${p.n}: ${quDesc(p)}`).join("\n"));
+    if(g.xr.length)out.push("REFERENCIAS CRUZADAS CON SU TEXTO (de la Biblia del pastor; si citas alguna, copia el texto tal cual):\n"+g.xr.slice(0,8).map(x=>{const lb=svLbl(x.b,x.c,x.v,x.v2);return `- ${lb}: «${stCut(svCita(x.b,x.c,x.v,x.v2),260)}»`}).join("\n"))}
+  const E=svEst().items;if(E.length)out.push("LO QUE EL PASTOR REUNIÓ EN SU ESTUDIO DEL SERMÓN (tiene prioridad; úsalo):\n"+E.map(x=>`- ${SV_TIPO[x.tipo]||x.tipo}: ${x.t}. ${stCut(x.d,400)}`).join("\n"));
+  const posts=[];for(const s of SERMONS){for(const p of (s.id===S.id?(S.post||[]):(s.post||[])))if(p.si||p.no)posts.push({s,p})}
+  posts.sort((a,b)=>(b.p.f||"").localeCompare(a.p.f||""));if(posts.length)out.push("LO QUE EL PASTOR ANOTÓ DESPUÉS DE PREDICAR (aprende de esto):\n"+posts.slice(0,6).map(({s,p})=>`- «${s.titulo}»${p.f?" ("+p.f+")":""}: ${p.si?"funcionó: "+stCut(p.si,200)+". ":""}${p.no?"mejoraría: "+stCut(p.no,200)+".":""}`).join("\n"));
+  const rec=[];for(const s of SERMONS){if(s.id===S.id||!s.ensenanza)continue;const u=svUltima("S"+s.id);const d=u?svDias(u.f):null;if(d!=null&&d<240)svImps(s.ensenanza).forEach(f=>rec.push(f))}
+  if(rec.length)out.push("FRASES DE IMPACTO QUE YA USÓ EN LOS ÚLTIMOS MESES (no las repitas ni las parafrasees):\n"+rec.slice(0,25).map(f=>"- "+f).join("\n"));
+  if(!out.length)return "";
+  return "DATOS DE ESTUDIO DE LA APP DEL PASTOR (úsalos como base y no inventes otros significados de palabras ni datos que los contradigan; si nombras una palabra hebrea o griega, usa la de esta lista con su transliteración):\n\n"+out.join("\n\n")}
+function svDurTxt(d){const w=svRitmo();const a=Math.round(d*w*0.92/50)*50,z=Math.round(d*w*1.05/50)*50;return `DURACIÓN: el pastor la predicará en unos ${d} minutos. Escribe entre ${a.toLocaleString("es-CO")} y ${z.toLocaleString("es-CO")} palabras, con ${d>=55?"4":"3"} secciones (esto manda sobre la extensión indicada arriba).`}
+async function svEnfoques(id){const sample=await getSample();const out=$("#svenfout");if(!sample){toast("Esto necesita abrir la app dentro de Claude");return}
+  const S=OPEN||{};const r=svRange(S.texto||"");const datos=await svCtxText(id).catch(()=>"");
+  out.innerHTML=`<div class="thinking" style="margin-top:10px"><span class="dot"></span>Pensando tres caminos para este mensaje…</div>`;
+  const prompt=`${DOCTRINA}
+
+TAREA: el Pastor Antonio Sierra J. va a preparar una enseñanza. Propón TRES enfoques distintos de verdad (no tres variaciones del mismo) para predicarla.
+Título tentativo: ${S.titulo||"(sin título)"}. Texto clave: ${S.texto||"(no dado)"}.${S.notas?"\nNotas del pastor: "+cut(S.notas,3000):""}${r?`\nTexto (${BVER.name}): ${passageText(r,30)}`:""}${datos?"\n\n"+cut(datos,6000):""}
+
+Responde SOLO con JSON válido, sin nada más: un arreglo de 3 objetos con estas claves:
+"titulo" (corto y con fuerza), "forma" (una de: narrativa, expositiva, pregunta, contraste), "idea" (una frase sencilla, como la diría el pastor, sin la palabra «propósito»), "puntos" (3 o 4 títulos cortos), "personaje" (el personaje bíblico central, o ""), "porque" (una línea: por qué este camino le sirve a la iglesia).
+No uses la raya larga (—).`;
+  try{const {text}=await sample(prompt,{cache:false,modelTier:"default"});const m=text.match(/\[[\s\S]*\]/);const A=JSON.parse(m?m[0]:text);if(!Array.isArray(A)||!A.length)throw 0;SV.enf[id]=A.slice(0,3);svEnfDraw(id)}
+  catch(e){out.innerHTML=`<p class="muted">${esc(ERR[e?.code]||"No salieron los enfoques. Intente otra vez.")}</p>`}}
+function svEnfDraw(id){const out=$("#svenfout");const A=SV.enf[id];if(!out||!A)return;const sel=PREP[id]?.sv?.enfoque;
+  out.innerHTML=`<p class="label" style="margin:12px 0 6px">Escoja un camino</p><div class="sv-enfs">${A.map((x,i)=>`<div class="sv-enf${sel&&sel.titulo===x.titulo?" on":""}"><b>${esc(x.titulo||"")}</b><span class="muted">${esc(FORMAS[x.forma]||x.forma||"")}${x.personaje?" · "+esc(x.personaje):""}</span><p>${esc(x.idea||"")}</p><ol>${(x.puntos||[]).map(p=>`<li>${esc(p)}</li>`).join("")}</ol>${x.porque?`<small>${esc(x.porque)}</small>`:""}<button class="btn small ${sel&&sel.titulo===x.titulo?"primary":""}" data-svenf="${i}">${sel&&sel.titulo===x.titulo?"Escogido":"Usar este"}</button></div>`).join("")}</div>`;
+  out.onclick=e=>{const b=e.target.closest("[data-svenf]");if(!b)return;const x=A[+b.dataset.svenf];const st=PREP[id]||(PREP[id]={});st.sv=st.sv||{};st.sv.enfoque=x;const f=$("#p_forma");if(f&&FORMAS[x.forma])f.value=x.forma;svEnfDraw(id);toast("Listo: Claude escribirá con ese camino")}}
+
+/* ---------- Ganchos en las funciones del Taller ---------- */
+function svStyle(){if(document.getElementById("svcss"))return;const s=document.createElement("style");s.id="svcss";s.textContent=`
+.sv-est{display:grid;gap:10px}.sv-est-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sv-tabs{flex-wrap:wrap}.sv-estc{display:grid;gap:6px}
+.sv-row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}.sv-row:last-of-type{border-bottom:0}
+.sv-row>div{display:grid;gap:2px;min-width:0;flex:1}.sv-row small{color:var(--muted);font-size:13px;line-height:1.4}.sv-row select{max-width:150px}
+.sv-dots{display:inline-flex;gap:3px;vertical-align:middle}.sv-dots i{width:10px;height:10px;border-radius:50%;background:var(--sunk);border:1px solid var(--line)}.sv-dots i.on{background:var(--azul);border-color:var(--azul)}
+.sv-meter{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:7px 10px;border-radius:8px;background:var(--sunk);margin:4px 0;font-size:13.5px}
+.sv-meter b{flex:1 1 100%;font-size:13.5px}.sv-meter small{flex:1 1 100%;color:var(--muted);font-size:12.5px}
+.sv-mt{font-weight:600;font-size:12.5px;color:var(--muted)}.sv-meter.ok .sv-mt{color:var(--verde)}.sv-meter.flojo{background:color-mix(in srgb,var(--danger) 9%,var(--surface))}.sv-meter.flojo .sv-mt{color:var(--danger)}.sv-meter.flojo .sv-dots i.on{background:var(--danger);border-color:var(--danger)}
+.sv-time{display:grid;gap:8px}.sv-time-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.sv-time-h b{font-size:18px}
+.sv-bar{position:relative;height:10px;border-radius:6px;background:var(--sunk);margin:2px 0 16px}.sv-band{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--verde) 35%,transparent);border-radius:6px}
+.sv-pos{position:absolute;top:-4px;width:4px;height:18px;margin-left:-2px;border-radius:2px;background:var(--oro)}.sv-bar span{position:absolute;top:13px;font-size:11px;color:var(--muted);transform:translateX(-50%)}
+.sv-tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--sunk);color:var(--ink2,var(--ink));white-space:nowrap}
+.sv-tag.ok,.sv-tag.bien{background:color-mix(in srgb,var(--verde) 16%,var(--surface));color:var(--verde)}.sv-tag.mid,.sv-tag.corto,.sv-tag.largo{background:var(--oro-soft);color:var(--oro-t,var(--oro))}.sv-tag.bad{background:color-mix(in srgb,var(--danger) 14%,var(--surface));color:var(--danger)}
+.sv-rev{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.sv-rev>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px}
+.sv-rev>summary::-webkit-details-marker{display:none}.sv-sum{display:flex;gap:6px;flex-wrap:wrap}.sv-revb{display:grid;gap:4px;padding:0 14px 14px}
+.sv-revb section{border-top:1px solid var(--line);padding-top:10px}.sv-revb h3{font-size:15px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.sv-ul{margin:0 0 8px;padding-left:18px;display:grid;gap:5px;font-size:14px}.sv-ul li.doc{color:var(--danger);font-weight:600}.sv-ul li.ia::marker{color:var(--oro)}.sv-ul li.est::marker{color:var(--danger)}
+.sv-okp{margin:0 0 8px;color:var(--verde);font-size:14px}.sv-warn{color:var(--danger);font-size:14px;margin:4px 0}.sv-note{font-size:12.5px;margin:6px 0 0}
+.sv-enfs{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.sv-enf{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:6px;align-content:start;background:var(--surface)}
+.sv-enf.on{border-color:var(--oro);box-shadow:0 0 0 2px var(--oro-soft)}.sv-enf p{margin:0;font-size:14px}.sv-enf ol{margin:0;padding-left:18px;font-size:13.5px}.sv-enf small{color:var(--muted);font-size:12.5px}
+.sv-post{display:grid;gap:8px}.sv-pn{border-bottom:1px solid var(--line);padding-bottom:8px}.sv-pn p{margin:4px 0 0;font-size:14px}.sv-pf>summary{list-style:none;display:inline-flex}.sv-pf>summary::-webkit-details-marker{display:none}
+.sv-armtop{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:0 0 14px}
+.sv-armtop .row{gap:6px}.sv-ptools{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px;padding-top:8px;border-top:1px dashed var(--line)}
+.sv-ptools .btn{font-size:13px}.sv-pick{display:grid;gap:4px;max-height:52vh;overflow:auto}.sv-pick button.sv-it{display:grid;gap:2px;text-align:left;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.sv-pick button.sv-it small{color:var(--muted);font-size:12.5px}.sv-pick .ilo{font-size:18px}
+`;document.head.append(s)}
+
+/* croquis: medidor por punto, tiempo, botones para añadir */
+function svArmTop(){const el=$("#svarmtop");if(!el||!ARM)return;const t=croquisToMd(ARM);const sols=ARM.puntos.map(svCroqSol);const fl=sols.filter(s=>s.flojo).length;const n=svEst().items.length;
+  el.innerHTML=`${svTimeHTML(t)}<div class="row"><span class="muted" style="font-size:13.5px;flex:1">${fl?`<b style="color:var(--danger)">${fl} punto${fl>1?"s":""} flojo${fl>1?"s":""}</b> · `:""}${sols.length} puntos</span><button class="btn small" data-sva="est">Estudio reunido (${n})</button><button class="btn small" data-sva="rev">Revisar antes de guardar</button></div>`}
+function svArmMeters(){if(!ARM)return;document.querySelectorAll("#armform [data-svm]").forEach(el=>{const p=ARM.puntos[+el.dataset.svm];if(p)el.innerHTML=svMeterHTML(svCroqSol(p))});svArmTop()}
+function svArmPassage(i){const p=ARM.puntos[i];return svRange(p&&p.cref)||svRange(ARM.ref)||svRange(OPEN?.texto||"")}
+function svPick(title,sub,html,onPick){const box=beSheet(beHead(esc(title),sub?esc(sub):"")+html,"sv-sheet");box.addEventListener("click",e=>{const b=e.target.closest("[data-pk]");if(b)onPick(b.dataset.pk,b)});return box}
+function svArmIns(i,item,msg){svInsert(ARM,i,item);closeSheet();drawArmForm();armChanged();toast(msg||("Añadido al punto "+SV_ROM[i]))}
+async function svArmTool(kind,i){const r=svArmPassage(i);const E=svEst().items;
+  if(kind==="pal"){if(!r){toast("Escriba la cita del punto o el texto inicial");return}const g=await svGather(r);const L=[...E.filter(x=>x.tipo==="palabra"),...g.words.map(svPalItem)];SV.cand=L;
+    svPick("Añadir palabra original",r.lbl+" · va a «Para profundizar» del punto "+SV_ROM[i],`<div class="sv-pick">${L.length?L.map((it,j)=>`<button class="sv-it" data-pk="${j}"><b>${esc(it.t)}</b><small>${esc(it.d)}</small></button>`).join(""):`<p class="muted">${esc(BE_SIN)}</p>`}</div><p class="muted" style="font-size:12px">Después ajuste la frase con sus palabras.</p>`,j=>svArmIns(i,SV.cand[+j]));return}
+  if(kind==="per"){const g=r?await svGather(r):{pers:[]};let P=null;try{P=await bePer()}catch(e){}
+    const base=[...E.filter(x=>x.tipo==="persona"),...g.pers.map(([u,p])=>svPerItem(u,p))];SV.cand=base.slice();
+    const draw=q=>{let L=base;if(q&&P){const nq=norm(q);L=Object.entries(P.p).filter(([u,p])=>p.t!=="Place"&&norm(p.n||"").startsWith(nq)).slice(0,25).map(([u,p])=>svPerItem(u,p))}SV.cand=L;
+      return L.length?L.map((it,j)=>`<button class="sv-it" data-pk="${j}"><b>${esc(it.t)}</b><small>${esc(it.d)}</small></button>`).join(""):`<p class="muted">Escriba el nombre para buscarlo.</p>`};
+    const box=svPick("Añadir personaje","Se añade como viñeta del punto "+SV_ROM[i]+"; usted escribe cómo lo desarrolla",`<input type="search" id="svpq" placeholder="Buscar: Elías, Ana, Bernabé…" style="width:100%;margin:0 0 8px"><div class="sv-pick" id="svpl">${draw("")}</div>`,j=>{const it=SV.cand[+j];svArmIns(i,it,"Personaje añadido al punto "+SV_ROM[i])});
+    box.querySelector("#svpq").oninput=e=>{box.querySelector("#svpl").innerHTML=draw(e.target.value.trim())};return}
+  if(kind==="cita"){const box=svPick("Añadir cita con su texto","Con el texto de su Biblia"+(typeof bvHas==="function"&&bvHas("RVR1960")?" (RVR1960)":""),`<div class="row" style="gap:6px"><input type="text" id="svcr" placeholder="Romanos 8:28" style="flex:1;min-width:160px"><button class="btn small" id="svcv">Ver</button></div><div id="svcp" style="margin:10px 0"></div>`,()=>{});
+    const ver=()=>{const x=svRange(box.querySelector("#svcr").value);const p=box.querySelector("#svcp");if(!x){p.innerHTML=`<p class="muted">Escriba una referencia con su versículo, por ejemplo Romanos 8:28.</p>`;return null}const tx=svCita(x.b,x.c,x.v1,x.v2);
+      p.innerHTML=`<p style="color:var(--verde);font-family:var(--f-text);font-size:16px;margin:0 0 8px">«${esc(tx)}» <span class="muted">(${esc(x.lbl)})</span></p><div class="row" style="gap:6px"><button class="btn small primary" data-ci="vin">Añadir como viñeta</button><button class="btn small" data-ci="blk">Poner como cita en bloque del punto</button></div>`;return {x,tx}};
+    box.querySelector("#svcv").onclick=ver;box.querySelector("#svcr").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();ver()}};
+    box.querySelector("#svcp").onclick=e=>{const b=e.target.closest("[data-ci]");if(!b)return;const o=ver();if(!o)return;if(b.dataset.ci==="vin")svArmIns(i,{tipo:"cita",d:`«${o.tx}» (${o.x.lbl})`},"Cita añadida al punto "+SV_ROM[i]);else{const P=ARM.puntos[i];P.cref=o.x.lbl;P.ctexto=o.x.v2>o.x.v1?[...Array(o.x.v2-o.x.v1+1)].map((_,k)=>sup(o.x.v1+k)+" "+svCita(o.x.b,o.x.c,o.x.v1+k)).join(" "):o.tx;closeSheet();drawArmForm();armChanged();toast("Cita en bloque puesta")}};
+    setTimeout(()=>box.querySelector("#svcr")?.focus(),50);return}
+  if(kind==="xr"){if(!r){toast("Escriba la cita del punto o el texto inicial");return}const g=await svGather(r);const L=[...E.filter(x=>x.tipo==="ref"),...g.xr.map(svXrItem)];SV.cand=L;
+    svPick("Añadir referencia cruzada",r.lbl+" · otra Escritura que lo confirma",`<div class="sv-pick">${L.length?L.map((it,j)=>`<button class="sv-it" data-pk="${j}"><b>${esc(it.t)}</b><small>${esc(stCut(it.d,220))}</small></button>`).join(""):'<p class="muted">Sin referencias para este pasaje.</p>'}</div>`,j=>svArmIns(i,SV.cand[+j],"Referencia añadida al punto "+SV_ROM[i]));return}
+  if(kind==="ban"){const all=bancoAll();const draw=q=>{const nq=norm(q||"");const L=all.filter(x=>!nq||norm([x.texto,x.ref,(x.temas||[]).join(" ")].join(" ")).includes(nq)).slice(0,40);SV.cand=L;
+      return L.length?L.map((x,j)=>{const last=(x.usos||[]).filter(u=>u.s!==OPEN?.id).sort((a,b)=>(b.f||"").localeCompare(a.f||""))[0];const d=last?svDias(last.f):null;return `<button class="sv-it" data-pk="${j}"><b>${esc(stCut(x.texto,160))}</b><small>${esc(BTIPOS[x.tipo]||x.tipo)}${x.ref?" · "+esc(x.ref):""}${d!=null?` · usado hace ${d} días`:""}</small></button>`}).join(""):`<p class="muted">${all.length?"Nada con esa búsqueda.":"Su banco está vacío. Guarde frases desde la revisión de una enseñanza o al anotar cómo le fue."}</p>`};
+    const box=svPick("Del banco","Frases, ejemplos y personajes guardados",`<input type="search" id="svbq" placeholder="Buscar por palabra o tema" style="width:100%;margin:0 0 8px"><div class="sv-pick" id="svbl">${draw("")}</div>`,j=>{const x=SV.cand[+j];const w=svBancoUso(x);svArmIns(i,{tipo:x.tipo==="cita"?"cita":x.tipo,t:x.tipo==="personaje"?stCut(x.texto,50):"",d:x.tipo==="cita"&&x.ref?`«${x.texto}» (${x.ref.replace(/\s*\([A-Z0-9]+\)$/,"")})`:x.texto},w||"Añadido al punto "+SV_ROM[i])});
+    box.querySelector("#svbq").oninput=e=>{box.querySelector("#svbl").innerHTML=draw(e.target.value.trim())};return}}
+function svArmEst(){const E=svEst().items;SV.cand=E;const n=ARM.puntos.length;
+  const box=svPick("Estudio reunido","Toque una cosa y escoja a qué parte pasarla",`<div class="sv-pick">${E.length?E.map((it,j)=>`<div class="sv-it" style="cursor:default"><b>${esc(it.t)}</b><small>${esc(stCut(it.d,200))}</small><div class="row" style="gap:4px;margin-top:4px"><button class="btn small" data-pk="${j}|intro">Intro</button>${[...Array(n)].map((_,i)=>`<button class="btn small" data-pk="${j}|${i}">${SV_ROM[i]}</button>`).join("")}</div></div>`).join(""):`<p class="muted">No ha reunido nada todavía. Vuelva a la enseñanza y use «Estudio del sermón».</p>`}</div>`,k=>{const [j,i]=k.split("|");const it=SV.cand[+j];const where=svInsert(ARM,i,it);it.p=i==="intro"?"Intro":SV_ROM[+i];closeSheet();drawArmForm();armChanged();toast("Pasado a "+where)});return box}
+function svArmRev(){const t=croquisToMd(ARM);const R=svRevisar(t);const [vk,vl]=svVozTag(R.voz);const C=svCitas(t);
+  const li=(L,c)=>L.map(x=>`<li class="${c}">${esc(x.msg)}</li>`).join("");
+  beSheet(beHead("Revisar antes de guardar",esc(ARM.titulo||""))+`<div class="sv-revb" style="padding:0">
+   <section><h3>Solidez</h3>${ARM.puntos.map((p,i)=>svMeterHTML(svCroqSol(p),SV_ROM[i]+". "+(p.t||"Punto "+(i+1)))).join("")}</section>
+   <section><h3>Estilo y doctrina</h3>${R.doc.length||R.est.length?`<ul class="sv-ul">${li(R.doc,"doc")}${li(R.est,"est")}</ul>`:'<p class="sv-okp">Todo en orden.</p>'}</section>
+   <section><h3>Voz <span class="sv-tag ${vk}">${esc(vl)}</span></h3>${R.ia.length?`<ul class="sv-ul">${li(R.ia,"ia")}</ul>`:'<p class="sv-okp">Suena a usted.</p>'}</section>
+   <section><h3>Citas</h3>${C.sinBiblia?'<p class="muted">Cargue la RVR1960 en Ajustes para comparar las citas.</p>':`<p>${C.ok} coinciden con su Biblia${C.fixed?` · ${C.fixed} se corrigen solas al guardar`:""}${C.bad?` · ${C.bad} para revisar`:""}.</p>`}${C.noex.length?`<p class="sv-warn">No existen: ${esc(C.noex.join(", "))}</p>`:""}</section></div>`,"sv-sheet")}
+
+function svInstall(){svStyle();
+  if(typeof openSermon==="function"&&!openSermon.__sv){const o=openSermon;openSermon=function(v,id,opts){const r=o.apply(this,arguments);try{if(OPEN?.id===id&&$("#ensbox")){
+      const ah=[...document.querySelectorAll(".section-head")].find(h=>/Armar la enseñanza yo mismo/.test(h.textContent));if(ah&&!$("#svest")){ah.insertAdjacentHTML("beforebegin",svEstHTML());svEstWire();svEstDraw()}
+      if(!$("#svpost"))svPostPlace(id);
+      const tx=$("#e_texto");if(tx)tx.addEventListener("change",()=>{OPEN.texto=tx.value;svEstDraw()});
+      if(SV_IA&&$("#prepcard")&&!$("#p_svdur")){const st=PREP[id]||{};const d=st.sv?.dur||svDur();
+        $("#p_tono").closest(".field").insertAdjacentHTML("afterend",`<div class="field"><label for="p_svdur">Duración al predicarla</label><select id="p_svdur">${[40,50,60].map(n=>`<option value="${n}" ${n===d?"selected":""}>${n} minutos</option>`).join("")}</select></div>`);
+        $("#p_notas").closest("label").insertAdjacentHTML("afterend",`<label class="row wide" style="gap:8px;font-size:14px"><input type="checkbox" id="p_svdatos" ${st.sv?.datos===false?"":"checked"}> <span style="flex:1;min-width:0">Escribir con los datos de la app (estudio del sermón, palabras originales, personajes)</span></label><label class="row wide" style="gap:8px;font-size:14px"><input type="checkbox" id="p_svhum" ${st.sv?.hum===false?"":"checked"}> <span style="flex:1;min-width:0">Al terminar, revisar la voz para que no se note la IA</span></label>`);
+        const go_=$("#prepgo");go_.insertAdjacentHTML("beforebegin",`<button class="btn" id="svenf">Proponer 3 enfoques</button>`);$("#prepstop").insertAdjacentHTML("afterend",`<button class="btn" id="svpartes" title="Primero la introducción y el esqueleto; luego cada punto cuando usted lo pida">Escribirla por partes</button>`);
+        go_.closest(".row").insertAdjacentHTML("afterend",`<div id="svenfout"></div>`);
+        $("#p_svdur").onchange=e=>{ls.set("tp_svdur",+e.target.value)};
+        $("#svenf").onclick=()=>svEnfoques(id);$("#svpartes").onclick=()=>{const s=PREP[id]||(PREP[id]={});s.sv=s.sv||{};s.sv.partes=true;runPrep(id)};
+        if(SV.enf[id])svEnfDraw(id)}
+    }}catch(e){console.warn("sv",e)}return r};openSermon.__sv=1}
+  if(typeof renderEns==="function"&&!renderEns.__sv){const o=renderEns;renderEns=function(id){const r=o.apply(this,arguments);try{svRevPlace(id)}catch(e){console.warn("sv",e)}return r};renderEns.__sv=1}
+  if(typeof drawArmForm==="function"&&!drawArmForm.__sv){const o=drawArmForm;drawArmForm=function(){const r=o.apply(this,arguments);try{const f=$("#armform");if(f&&ARM){
+      f.insertAdjacentHTML("afterbegin",`<div class="sv-armtop" id="svarmtop"></div>`);
+      f.querySelectorAll(".arm-punto").forEach((sec,i)=>{const h=sec.querySelector(".row");h.insertAdjacentHTML("afterend",`<div data-svm="${i}"></div>`);
+        sec.insertAdjacentHTML("beforeend",`<div class="sv-ptools" data-svp="${i}"><button class="btn small" data-svx="pal">+ Palabra original</button><button class="btn small" data-svx="per">+ Personaje</button><button class="btn small" data-svx="cita">+ Cita con su texto</button><button class="btn small" data-svx="xr">+ Referencia cruzada</button><button class="btn small ghost" data-svx="ban">Del banco</button></div>`)});
+      if(!f.__sv){f.__sv=1;f.addEventListener("click",e=>{const b=e.target.closest("[data-svx]");if(b){e.stopPropagation();svArmTool(b.dataset.svx,+b.closest("[data-svp]").dataset.svp);return}
+        const a=e.target.closest("[data-sva]");if(a){e.stopPropagation();if(a.dataset.sva==="est")svArmEst();else svArmRev()}},true)}
+      svArmMeters()}}catch(e){console.warn("sv",e)}return r};drawArmForm.__sv=1}
+  if(typeof armChanged==="function"&&!armChanged.__sv){const o=armChanged;armChanged=function(){const r=o.apply(this,arguments);clearTimeout(armChanged.svt);armChanged.svt=setTimeout(()=>{try{svArmMeters()}catch(e){}},350);return r};armChanged.__sv=1}
+  if(!SV_IA)return;
+  if(typeof prepPrompt==="function"&&!prepPrompt.__sv){const o=prepPrompt;prepPrompt=function(id,oo){let p=o.apply(this,arguments);const st=PREP[id]||{};const sv=st.sv||{};let add="";
+      if(sv.dur)add+="\n\n"+svDurTxt(sv.dur);
+      if(sv.enfoque){const x=sv.enfoque;add+=`\n\nENFOQUE QUE EL PASTOR ESCOGIÓ (síguelo): «${x.titulo}». ${x.idea||""}${(x.puntos||[]).length?" Puntos: "+x.puntos.join("; ")+".":""}${x.personaje?" Personaje central: "+x.personaje+".":""}`}
+      if(sv.datos!==false&&SV.ctx[id])add+="\n\n"+SV.ctx[id];
+      add+="\n\n"+SV_VOZ;
+      if(sv.partes){p=p.replace("TAREA: escribe la ENSEÑANZA COMPLETA, lista para predicar,","TAREA: escribe el ESQUELETO de la enseñanza (el pastor la completará punto por punto después),");add+="\n\nESQUELETO: escribe completos el título, el subtítulo, el texto inicial, la introducción y la conclusión con sus dos frases de impacto. Para cada sección escribe solo su título, su párrafo de apertura y 2 viñetas cortas con la idea principal. Nada más: el pastor pedirá que se desarrolle cada punto."}
+      const k=p.indexOf("\n\nMODELO NUEVO (obligatorio):");return k>=0?p.slice(0,k)+add+p.slice(k):p+add};prepPrompt.__sv=1}
+  if(typeof runPrep==="function"&&!runPrep.__sv){const o=runPrep;runPrep=async function(id){const st=PREP[id]||(PREP[id]={});if(st.status==="running")return;st.sv=st.sv||{};
+      const d=$("#p_svdur"),da=$("#p_svdatos"),hu=$("#p_svhum");st.sv.dur=d?+d.value:svDur();st.sv.datos=da?da.checked:true;st.sv.hum=hu?hu.checked:true;st.sv.humPending=st.sv.hum&&!st.sv.partes;
+      if(st.sv.datos){const b=$("#prepgo");if(b){b.disabled=true;b.textContent="Reuniendo los datos…"}try{SV.ctx[id]=await svCtxText(id)}catch(e){SV.ctx[id]=""}}
+      try{return await o.apply(this,arguments)}finally{st.sv.partes=false}};runPrep.__sv=1}
+  if(typeof setEns==="function"&&!setEns.__sv){const o=setEns;setEns=function(id,text){const st=PREP[id];
+      if(st&&st.sv&&st.sv.humPending){st.sv.humPending=false;if(st.status==="done"&&text){text=svQuitaRayas(text);const R=svRevisar(text);
+          if(R.voz<85){st.svhum=true;renderPrep(id);return svHumanizar(id,text,true).then(nt=>{st.svhum=false;o(id,nt||text);renderPrep(id)})}}
+        return o(id,text)}
+      return o.apply(this,arguments)};setEns.__sv=1}
+  if(typeof renderPrep==="function"&&!renderPrep.__sv){const o=renderPrep;renderPrep=function(id){const r=o.apply(this,arguments);const st=PREP[id]||{};const box=$("#prepout");
+      if(box&&st.svhum)box.innerHTML=`<div class="prep-out"><div class="thinking"><span class="dot"></span>Ya está escrita. Ahora la reviso para que suene a usted y no se note la IA…</div></div>`;
+      const g=$("#prepgo");if(g&&st.svhum)g.disabled=true;const e=$("#svenf");if(e)e.disabled=st.status==="running"||!!st.svhum;const pa=$("#svpartes");if(pa)pa.hidden=st.status==="running";return r};renderPrep.__sv=1}
+}
+setTimeout(svInstall,0);
 
 /* ============ Escuchar: la Biblia y las enseñanzas en voz alta (nov 2026) ============
    Usa las voces en español que trae el iPad/iPhone (funciona sin internet y sin costo).
